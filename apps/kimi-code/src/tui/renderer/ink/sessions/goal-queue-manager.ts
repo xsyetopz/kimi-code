@@ -1,4 +1,9 @@
-import { Key, matchesKey, truncateToWidth, visibleWidth } from "@moonshot-ai/kimi-tui";
+import {
+  Key,
+  matchesKey,
+  truncateToWidth,
+  visibleWidth,
+} from "@moonshot-ai/kimi-tui";
 
 import type {
   GoalQueueManagerAction,
@@ -185,8 +190,7 @@ export class InkGoalQueueManagerSession implements GoalQueueManagerInkSync {
     result: GoalQueueSnapshot,
     action: Exclude<GoalQueueManagerAction, { kind: "edit" }>,
   ): void {
-    const selectedGoalId =
-      action.kind === "delete" ? undefined : action.goalId;
+    const selectedGoalId = action.kind === "delete" ? undefined : action.goalId;
     this.goals = result.goals;
     if (!this.goals.some((goal) => goal.id === this.movingGoalId)) {
       this.movingGoalId = undefined;
@@ -199,10 +203,7 @@ export class InkGoalQueueManagerSession implements GoalQueueManagerInkSync {
     initialIndex?: number,
   ): SearchableList<UpcomingGoal> {
     const fromId = this.goals.findIndex((goal) => goal.id === selectedGoalId);
-    const index =
-      fromId === -1
-        ? initialIndex
-        : fromId;
+    const index = fromId === -1 ? initialIndex : fromId;
     return new SearchableList({
       items: this.goals,
       toSearchText: (goal) => goal.objective,

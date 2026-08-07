@@ -23,32 +23,34 @@
  * live in the runner. Bound at Session scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IntervalTimer } from '#/_base/utils/timer';
-import { IExternalHooksRunnerService } from '#/app/externalHooksRunner/externalHooksRunner';
-import type { Hooks } from '#/hooks';
-import { IModelService } from '#/kosong/model/model';
+import { Disposable } from "#/_base/di/lifecycle";
 import {
-  ISessionAgentProfileCatalog,
-} from '#/session/sessionAgentProfileCatalog/sessionAgentProfileCatalog';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IntervalTimer } from "#/_base/utils/timer";
+import { IExternalHooksRunnerService } from "#/app/externalHooksRunner/externalHooksRunner";
+import type { Hooks } from "#/hooks";
+import { IModelService } from "#/kosong/model/model";
+import { ISessionAgentProfileCatalog } from "#/session/sessionAgentProfileCatalog/sessionAgentProfileCatalog";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import {
   ISessionLifecycleHooks,
   type SessionCloseReason,
   type SessionCreateSource,
   type SessionLifecycleHookSlots,
-} from '#/session/sessionLifecycleHooks/sessionLifecycleHooks';
-import { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
+} from "#/session/sessionLifecycleHooks/sessionLifecycleHooks";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 import {
   type AgentTaskStartHookContext,
   type AgentTaskStopHookContext,
   ISessionSubagentService,
-} from '#/session/subagent/subagent';
+} from "#/session/subagent/subagent";
 
-import { ISessionExternalHooksService } from './externalHooks';
+import { ISessionExternalHooksService } from "./externalHooks";
 
-type SessionStartHookSource = Exclude<SessionCreateSource, 'fork'>;
+type SessionStartHookSource = Exclude<SessionCreateSource, "fork">;
 
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
@@ -66,9 +68,11 @@ export class SessionExternalHooksService
     @ISessionLifecycleHooks lifecycleHooks: Hooks<SessionLifecycleHookSlots>,
     @ISessionSubagentService subagents: ISessionSubagentService,
     @ISessionMetadata private readonly metadata: ISessionMetadata,
-    @ISessionAgentProfileCatalog private readonly profiles: ISessionAgentProfileCatalog,
+    @ISessionAgentProfileCatalog
+    private readonly profiles: ISessionAgentProfileCatalog,
     @IModelService private readonly models: IModelService,
-    @IExternalHooksRunnerService private readonly runner: IExternalHooksRunnerService,
+    @IExternalHooksRunnerService
+    private readonly runner: IExternalHooksRunnerService,
   ) {
     super();
     void this.metadata
@@ -79,7 +83,7 @@ export class SessionExternalHooksService
       .catch(() => undefined);
     this._register(
       this.metadata.onDidChangeMetadata((event) => {
-        if (!event.changed.includes('title')) return;
+        if (!event.changed.includes("title")) return;
         void this.metadata
           .read()
           .then((meta) => {
@@ -89,26 +93,37 @@ export class SessionExternalHooksService
       }),
     );
     this._register(
-      lifecycleHooks.onDidCreateSession.register('externalHooks', async (event, next) => {
-        if (event.source !== 'fork') {
-          await this.triggerSessionStart(event.source);
-        }
-        await next();
-      }),
+      lifecycleHooks.onDidCreateSession.register(
+        "externalHooks",
+        async (event, next) => {
+          if (event.source !== "fork") {
+            await this.triggerSessionStart(event.source);
+          }
+          await next();
+        },
+      ),
     );
     this._register(
-      lifecycleHooks.onWillCloseSession.register('externalHooks', async (event, next) => {
-        await this.triggerSessionEnd(event.reason);
-        await next();
-      }),
+      lifecycleHooks.onWillCloseSession.register(
+        "externalHooks",
+        async (event, next) => {
+          await this.triggerSessionEnd(event.reason);
+          await next();
+        },
+      ),
     );
     this._register(
-      subagents.hooks.onWillStartAgentTask.register('externalHooks', async (ctx, next) => {
-        await this.runSubagentStart(ctx);
-        await next();
-      }),
+      subagents.hooks.onWillStartAgentTask.register(
+        "externalHooks",
+        async (ctx, next) => {
+          await this.runSubagentStart(ctx);
+          await next();
+        },
+      ),
     );
-    this._register(subagents.onDidStopAgentTask((ctx) => this.notifySubagentStop(ctx)));
+    this._register(
+      subagents.onDidStopAgentTask((ctx) => this.notifySubagentStop(ctx)),
+    );
 
     // Arm the heartbeat only once the configured-hook index has loaded and
     // only when the event has hooks at all, so sessions without a
@@ -121,20 +136,27 @@ export class SessionExternalHooksService
     this._register(this.runner.onDidReload(() => this.syncHeartbeat()));
   }
 
-  private readonly heartbeat = this._register(new IntervalTimer({ unref: true }));
+  private readonly heartbeat = this._register(
+    new IntervalTimer({ unref: true }),
+  );
 
   private syncHeartbeat(): void {
     try {
-      if (this.runner.hasHooksFor('SessionHeartbeat')) {
-        this.heartbeat.cancelAndSet(() => this.tickHeartbeat(), HEARTBEAT_INTERVAL_MS);
+      if (this.runner.hasHooksFor("SessionHeartbeat")) {
+        this.heartbeat.cancelAndSet(
+          () => this.tickHeartbeat(),
+          HEARTBEAT_INTERVAL_MS,
+        );
       } else {
         this.heartbeat.cancel();
       }
     } catch {}
   }
 
-  private async triggerSessionStart(source: SessionStartHookSource): Promise<void> {
-    await this.runner.trigger('SessionStart', {
+  private async triggerSessionStart(
+    source: SessionStartHookSource,
+  ): Promise<void> {
+    await this.runner.trigger("SessionStart", {
       matcherValue: source,
       cwd: this.context.cwd,
       sessionId: this.context.sessionId,
@@ -157,7 +179,7 @@ export class SessionExternalHooksService
   }
 
   private async triggerSessionEnd(reason: SessionCloseReason): Promise<void> {
-    await this.runner.trigger('SessionEnd', {
+    await this.runner.trigger("SessionEnd", {
       matcherValue: reason,
       cwd: this.context.cwd,
       sessionId: this.context.sessionId,
@@ -167,8 +189,8 @@ export class SessionExternalHooksService
 
   private tickHeartbeat(): void {
     try {
-      if (!this.runner.hasHooksFor('SessionHeartbeat')) return;
-      void this.runner.fireAndForgetTrigger('SessionHeartbeat', {
+      if (!this.runner.hasHooksFor("SessionHeartbeat")) return;
+      void this.runner.fireAndForgetTrigger("SessionHeartbeat", {
         cwd: this.context.cwd,
         sessionId: this.context.sessionId,
         inputData: {
@@ -179,9 +201,11 @@ export class SessionExternalHooksService
     } catch {}
   }
 
-  private async runSubagentStart(ctx: AgentTaskStartHookContext): Promise<void> {
+  private async runSubagentStart(
+    ctx: AgentTaskStartHookContext,
+  ): Promise<void> {
     ctx.signal.throwIfAborted();
-    await this.runner.trigger('SubagentStart', {
+    await this.runner.trigger("SubagentStart", {
       matcherValue: ctx.agentName,
       signal: ctx.signal,
       cwd: this.context.cwd,
@@ -196,7 +220,7 @@ export class SessionExternalHooksService
   }
 
   private notifySubagentStop(ctx: AgentTaskStopHookContext): void {
-    void this.runner.fireAndForgetTrigger('SubagentStop', {
+    void this.runner.fireAndForgetTrigger("SubagentStop", {
       matcherValue: ctx.agentName,
       cwd: this.context.cwd,
       sessionId: this.context.sessionId,
@@ -214,5 +238,5 @@ registerScopedService(
   ISessionExternalHooksService,
   SessionExternalHooksService,
   ScopeActivation.OnScopeCreated,
-  'externalHooks',
+  "externalHooks",
 );

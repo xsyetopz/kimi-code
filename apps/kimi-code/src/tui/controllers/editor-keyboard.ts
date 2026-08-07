@@ -679,7 +679,9 @@ export class EditorKeyboardController {
     try {
       const result = await editInExternalEditor(seed, cmd);
       if (result !== undefined) {
-        this.writePromptText(result.replaceAll("\r\n", "\n").replace(/\n$/, ""));
+        this.writePromptText(
+          result.replaceAll("\r\n", "\n").replace(/\n$/, ""),
+        );
       }
     } catch (error) {
       const msg = formatErrorMessage(error);

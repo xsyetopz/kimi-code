@@ -1,16 +1,11 @@
 import type { KimiHarness, Session } from "@moonshot-ai/kimi-code-sdk";
-import {
-  type Component,
-  type Focusable,
-} from "@moonshot-ai/kimi-tui";
+import { type Component, type Focusable } from "@moonshot-ai/kimi-tui";
 import { resolve } from "pathe";
 
 import type { KimiSlashCommand } from "#/tui/commands";
 import type { InkDialogsController } from "#/tui/controllers/ink-dialogs";
 import type { SessionOrchestrationController } from "#/tui/controllers/session-orchestration";
-import {
-  reducePromptEditor,
-} from "#/tui/renderer/prompt-editor-state";
+import { reducePromptEditor } from "#/tui/renderer/prompt-editor-state";
 import type { TerminalTrustPromptView } from "#/tui/renderer/terminal-view-state";
 import type { ApprovalController } from "#/tui/reverse-rpc/approval/controller";
 import type { QuestionController } from "#/tui/reverse-rpc/question/controller";
@@ -364,7 +359,9 @@ export class StartupPanelsController {
     session: SessionRow,
     applyStartupModes: boolean,
   ): Promise<void> {
-    if (resolve(session.work_dir) !== resolve(this.host.state.appState.workDir)) {
+    if (
+      resolve(session.work_dir) !== resolve(this.host.state.appState.workDir)
+    ) {
       await this.host.sessionOrchestration.showResumeOtherWorkDirHint(session);
       if (applyStartupModes) await this.host.stop(0);
       return;
@@ -375,7 +372,9 @@ export class StartupPanelsController {
     );
     if (!switched) return;
     if (applyStartupModes) {
-      await this.host.applyStartupModesToResumedSession(this.host.requireSession());
+      await this.host.applyStartupModesToResumedSession(
+        this.host.requireSession(),
+      );
       this.host.applyStartupPermissionAndPlanToAppState();
     }
     this.hideSessionPicker();

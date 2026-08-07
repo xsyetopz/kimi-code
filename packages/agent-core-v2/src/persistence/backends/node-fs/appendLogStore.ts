@@ -14,15 +14,19 @@
  * retire and hand off to replacement owners. Bound at App scope.
  */
 
-import { toDisposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { toDisposable, type IDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
 import {
   AppendLogCorruptedError,
   IAppendLogStore,
   type AppendLogOptions,
-} from '#/persistence/interface/appendLogStore';
+} from "#/persistence/interface/appendLogStore";
 
 const textEncoder = new TextEncoder();
 
@@ -44,9 +48,17 @@ export class AppendLogStore implements IAppendLogStore {
 
   private readonly logs = new Map<string, LogState>();
 
-  constructor(@IFileSystemStorageService private readonly storage: IFileSystemStorageService) {}
+  constructor(
+    @IFileSystemStorageService
+    private readonly storage: IFileSystemStorageService,
+  ) {}
 
-  append<R>(scope: string, key: string, record: R, options?: AppendLogOptions): void {
+  append<R>(
+    scope: string,
+    key: string,
+    record: R,
+    options?: AppendLogOptions,
+  ): void {
     const state = this.state(scope, key);
     state.pending.push(record);
     if (options?.onError !== undefined && state.onError === undefined) {
@@ -58,18 +70,18 @@ export class AppendLogStore implements IAppendLogStore {
   async *read<R>(scope: string, key: string): AsyncIterable<R> {
     await this.flushLog(scope, key);
     const textDecoder = new TextDecoder();
-    let pending = '';
+    let pending = "";
     let lineNumber = 0;
     for await (const chunk of this.storage.readStream(scope, key)) {
       pending += textDecoder.decode(chunk, { stream: true });
-      let newlineIndex = pending.indexOf('\n');
+      let newlineIndex = pending.indexOf("\n");
       while (newlineIndex !== -1) {
         const raw = pending.slice(0, newlineIndex);
         pending = pending.slice(newlineIndex + 1);
         lineNumber++;
         const record = this.parseLine<R>(raw, scope, key, lineNumber, false);
         if (record !== undefined) yield record;
-        newlineIndex = pending.indexOf('\n');
+        newlineIndex = pending.indexOf("\n");
       }
     }
     pending += textDecoder.decode();
@@ -87,7 +99,7 @@ export class AppendLogStore implements IAppendLogStore {
     lineNumber: number,
     allowTruncated: boolean,
   ): R | undefined {
-    const line = raw.endsWith('\r') ? raw.slice(0, -1) : raw;
+    const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
     if (line.length === 0) return undefined;
     try {
       return JSON.parse(line) as R;
@@ -97,7 +109,11 @@ export class AppendLogStore implements IAppendLogStore {
     }
   }
 
-  async rewrite<R>(scope: string, key: string, records: readonly R[]): Promise<void> {
+  async rewrite<R>(
+    scope: string,
+    key: string,
+    records: readonly R[],
+  ): Promise<void> {
     const encoded = encodeBatch(records);
     const state = this.state(scope, key);
     state.cutoverEpoch++;
@@ -125,7 +141,7 @@ export class AppendLogStore implements IAppendLogStore {
     });
     const settled = await Promise.allSettled(inFlight);
     for (const result of settled) {
-      if (result.status === 'rejected') throw result.reason;
+      if (result.status === "rejected") throw result.reason;
     }
   }
 
@@ -167,7 +183,9 @@ export class AppendLogStore implements IAppendLogStore {
     state.flushScheduled = true;
     queueMicrotask(() => {
       state.flushScheduled = false;
-      void this.flushState(scope, key, state).catch((error) => state.onError?.(error));
+      void this.flushState(scope, key, state).catch((error) =>
+        state.onError?.(error),
+      );
     });
   }
 
@@ -176,9 +194,14 @@ export class AppendLogStore implements IAppendLogStore {
     return this.flushState(scope, key, state);
   }
 
-  private flushState(scope: string, key: string, state: LogState): Promise<void> {
+  private flushState(
+    scope: string,
+    key: string,
+    state: LogState,
+  ): Promise<void> {
     if (state.flushPromise !== undefined) return state.flushPromise;
-    if (state.storageFailure !== undefined) return Promise.reject(state.storageFailure.error);
+    if (state.storageFailure !== undefined)
+      return Promise.reject(state.storageFailure.error);
     return this.ownFlush(scope, key, state, this.drain(scope, key, state));
   }
 
@@ -186,10 +209,16 @@ export class AppendLogStore implements IAppendLogStore {
     state.refCount--;
     if (state.refCount > 0) return;
     state.retired = true;
-    state.retirement = this.settleRetiredState(scope, key, state).catch(() => undefined);
+    state.retirement = this.settleRetiredState(scope, key, state).catch(
+      () => undefined,
+    );
   }
 
-  private async settleRetiredState(scope: string, key: string, state: LogState): Promise<void> {
+  private async settleRetiredState(
+    scope: string,
+    key: string,
+    state: LogState,
+  ): Promise<void> {
     try {
       await this.flushState(scope, key, state);
     } finally {
@@ -240,14 +269,20 @@ export class AppendLogStore implements IAppendLogStore {
     if (failure !== undefined) throw failure.error;
   }
 
-  private async drain(scope: string, key: string, state: LogState): Promise<void> {
+  private async drain(
+    scope: string,
+    key: string,
+    state: LogState,
+  ): Promise<void> {
     const cutoverEpoch = state.cutoverEpoch;
     await state.ready;
     if (state.cutoverEpoch !== cutoverEpoch) return;
     while (state.pending.length > 0) {
       const batch = state.pending.slice();
       try {
-        await this.storage.append(scope, key, encodeBatch(batch), { durable: true });
+        await this.storage.append(scope, key, encodeBatch(batch), {
+          durable: true,
+        });
       } catch (error) {
         const failure = (state.storageFailure ??= { error });
         throw failure.error;
@@ -263,13 +298,15 @@ function logId(scope: string, key: string): string {
 }
 
 function fromLogId(id: string): { scope: string; key: string } {
-  const index = id.indexOf('\n');
+  const index = id.indexOf("\n");
   return { scope: id.slice(0, index), key: id.slice(index + 1) };
 }
 
 function encodeBatch(records: readonly unknown[]): Uint8Array {
   if (records.length === 0) return new Uint8Array(0);
-  const content = records.map((record) => JSON.stringify(record) + '\n').join('');
+  const content = records
+    .map((record) => JSON.stringify(record) + "\n")
+    .join("");
   return textEncoder.encode(content);
 }
 
@@ -278,5 +315,5 @@ registerScopedService(
   IAppendLogStore,
   AppendLogStore,
   ScopeActivation.OnScopeCreated,
-  'storage',
+  "storage",
 );

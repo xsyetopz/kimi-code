@@ -69,9 +69,7 @@ export function InkApprovalPreview({
   const lineFrom = built.lines.length === 0 ? 0 : clampedScroll + 1;
   const lineTo = Math.min(built.lines.length, clampedScroll + viewRows);
   const percent =
-    maxScroll === 0
-      ? 100
-      : Math.round((clampedScroll / maxScroll) * 100);
+    maxScroll === 0 ? 100 : Math.round((clampedScroll / maxScroll) * 100);
 
   const header = fitExactly(
     currentTheme.boldFg("primary", " Preview ") + built.title,

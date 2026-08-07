@@ -20,27 +20,30 @@
  * load.
  */
 
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { unwrapErrorCause } from '#/_base/errors/errors';
-import { ISessionSkillCatalog } from '#/session/sessionSkillCatalog/skillCatalog';
-import { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { unwrapErrorCause } from "#/_base/errors/errors";
+import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
+import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
 import {
   ToolAccesses,
   type ExecutableToolResult,
   type ToolExecution,
-} from '#/tool/toolContract';
-import { registerAgentToolService } from '#/agent/toolRegistry/toolContribution';
+} from "#/tool/toolContract";
+import { registerAgentToolService } from "#/agent/toolRegistry/toolContribution";
 import {
   extendWorkspaceWithSkillRoots,
   resolvePathAccessPath,
   type WorkspaceConfig,
-} from '#/tool/path-access';
-import { MEDIA_SNIFF_BYTES, detectFileType } from '#/agent/media/file-type';
-import { toInputJsonSchema } from '#/tool/input-schema';
-import { literalRulePattern, matchesPathRuleSubject } from '#/tool/rule-match';
-import { makeCarriageReturnsVisible, type LineEndingStyle } from '#/_base/text/line-endings';
-import { renderPrompt } from '#/_base/utils/render-prompt';
+} from "#/tool/path-access";
+import { MEDIA_SNIFF_BYTES, detectFileType } from "#/agent/media/file-type";
+import { toInputJsonSchema } from "#/tool/input-schema";
+import { literalRulePattern, matchesPathRuleSubject } from "#/tool/rule-match";
+import {
+  makeCarriageReturnsVisible,
+  type LineEndingStyle,
+} from "#/_base/text/line-endings";
+import { renderPrompt } from "#/_base/utils/render-prompt";
 import {
   IReadTool,
   MAX_BYTES,
@@ -48,8 +51,8 @@ import {
   MAX_LINES,
   ReadInputSchema,
   type ReadInput,
-} from './read';
-import readDescriptionTemplate from './read.md?raw';
+} from "./read";
+import readDescriptionTemplate from "./read.md?raw";
 
 interface LineEndingFlags {
   hasCrLf: boolean;
@@ -80,13 +83,13 @@ interface FinishReadResultInput {
 
 function truncateLine(line: string, maxLength: number): string {
   if (line.length <= maxLength) return line;
-  const marker = '...';
+  const marker = "...";
   const target = Math.max(maxLength, marker.length);
   return line.slice(0, target - marker.length) + marker;
 }
 
 function stripTrailingLf(line: string): string {
-  return line.endsWith('\n') ? line.slice(0, -1) : line;
+  return line.endsWith("\n") ? line.slice(0, -1) : line;
 }
 
 function updateLineEndingFlags(flags: LineEndingFlags, text: string): void {
@@ -106,19 +109,24 @@ function updateLineEndingFlags(flags: LineEndingFlags, text: string): void {
 }
 
 function lineEndingStyleFromFlags(flags: LineEndingFlags): LineEndingStyle {
-  if (flags.hasLoneCr || (flags.hasCrLf && flags.hasLf)) return 'mixed';
-  if (flags.hasCrLf) return 'crlf';
-  return 'lf';
+  if (flags.hasLoneCr || (flags.hasCrLf && flags.hasLf)) return "mixed";
+  if (flags.hasCrLf) return "crlf";
+  return "lf";
 }
 
-function renderLine(entry: ReadLineEntry, lineEndingStyle: LineEndingStyle): RenderedLine {
+function renderLine(
+  entry: ReadLineEntry,
+  lineEndingStyle: LineEndingStyle,
+): RenderedLine {
   const modelContent =
-    lineEndingStyle === 'crlf' && entry.rawContent.endsWith('\r')
+    lineEndingStyle === "crlf" && entry.rawContent.endsWith("\r")
       ? entry.rawContent.slice(0, -1)
       : entry.rawContent;
   const truncated = truncateLine(modelContent, MAX_LINE_LENGTH);
   const renderedContent =
-    lineEndingStyle === 'mixed' ? makeCarriageReturnsVisible(truncated) : truncated;
+    lineEndingStyle === "mixed"
+      ? makeCarriageReturnsVisible(truncated)
+      : truncated;
   return {
     line: `${String(entry.lineNo)}\t${renderedContent}`,
     wasTruncated: truncated !== modelContent,
@@ -126,7 +134,7 @@ function renderLine(entry: ReadLineEntry, lineEndingStyle: LineEndingStyle): Ren
 }
 
 function renderedLineBytes(renderedLine: string, isFirst: boolean): number {
-  return (isFirst ? 0 : 1) + Buffer.byteLength(renderedLine, 'utf8');
+  return (isFirst ? 0 : 1) + Buffer.byteLength(renderedLine, "utf8");
 }
 
 function renderEntries(
@@ -144,7 +152,10 @@ function renderEntries(
 
   for (const entry of entries) {
     const rendered = renderLine(entry, lineEndingStyle);
-    const lineBytes = renderedLineBytes(rendered.line, renderedLines.length === 0);
+    const lineBytes = renderedLineBytes(
+      rendered.line,
+      renderedLines.length === 0,
+    );
     if (renderedLines.length > 0 && bytes + lineBytes > MAX_BYTES) {
       maxBytesReached = true;
       break;
@@ -166,29 +177,31 @@ function renderEntries(
 
 function isFileNotFoundError(error: unknown): boolean {
   const unwrapped = unwrapErrorCause(error);
-  if (typeof unwrapped !== 'object' || unwrapped === null) return false;
-  const code = (unwrapped as { code?: unknown })['code'];
-  return code === 'ENOENT' || code === 'ENOTDIR';
+  if (typeof unwrapped !== "object" || unwrapped === null) return false;
+  const code = (unwrapped as { code?: unknown })["code"];
+  return code === "ENOENT" || code === "ENOTDIR";
 }
 
 function isTextDecodeError(error: unknown): boolean {
   const unwrapped = unwrapErrorCause(error);
-  if (typeof unwrapped !== 'object' || unwrapped === null) return false;
-  const code = (unwrapped as { code?: unknown })['code'];
-  if (code === 'ERR_ENCODING_INVALID_ENCODED_DATA') return true;
+  if (typeof unwrapped !== "object" || unwrapped === null) return false;
+  const code = (unwrapped as { code?: unknown })["code"];
+  if (code === "ERR_ENCODING_INVALID_ENCODED_DATA") return true;
   if (!(unwrapped instanceof Error)) return false;
-  return /encoded data was not valid|invalid.*encoding|invalid.*utf-?8/i.test(unwrapped.message);
+  return /encoded data was not valid|invalid.*encoding|invalid.*utf-?8/i.test(
+    unwrapped.message,
+  );
 }
 
 function containsNulByte(text: string): boolean {
-  return text.includes('\u0000');
+  return text.includes("\u0000");
 }
 
 function notReadableFileOutput(path: string): string {
   return (
     `"${path}" is not readable as UTF-8 text. ` +
-    'If it is an image or video, use ReadMediaFile. ' +
-    'For other binary formats, use Bash or an MCP tool if available.'
+    "If it is an image or video, use ReadMediaFile. " +
+    "For other binary formats, use Bash or an MCP tool if available."
   );
 }
 
@@ -200,13 +213,15 @@ const READ_DESCRIPTION = renderPrompt(readDescriptionTemplate, {
 
 export class ReadTool implements IReadTool {
   declare readonly _serviceBrand: undefined;
-  readonly name = 'Read' as const;
+  readonly name = "Read" as const;
   readonly description = READ_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(ReadInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(ReadInputSchema);
   constructor(
     @IHostFileSystem private readonly fs: IHostFileSystem,
     @IHostEnvironment private readonly env: IHostEnvironment,
-    @ISessionWorkspaceContext private readonly workspaceCtx: ISessionWorkspaceContext,
+    @ISessionWorkspaceContext
+    private readonly workspaceCtx: ISessionWorkspaceContext,
     @ISessionSkillCatalog private readonly skillCatalog?: ISessionSkillCatalog,
   ) {}
 
@@ -225,12 +240,12 @@ export class ReadTool implements IReadTool {
     const path = resolvePathAccessPath(args.path, {
       env: this.env,
       workspace: this.workspaceConfig,
-      operation: 'read',
+      operation: "read",
     });
     return {
       accesses: ToolAccesses.readFile(path),
       description: `Reading ${args.path}`,
-      display: { kind: 'file_io', operation: 'read', path },
+      display: { kind: "file_io", operation: "read", path },
       approvalRule: literalRulePattern(this.name, path),
       matchesRule: (ruleArgs) =>
         matchesPathRuleSubject(ruleArgs, path, {
@@ -242,9 +257,12 @@ export class ReadTool implements IReadTool {
     };
   }
 
-  private async execution(args: ReadInput, safePath: string): Promise<ExecutableToolResult> {
+  private async execution(
+    args: ReadInput,
+    safePath: string,
+  ): Promise<ExecutableToolResult> {
     try {
-      let stat: Awaited<ReturnType<IHostFileSystem['stat']>>;
+      let stat: Awaited<ReturnType<IHostFileSystem["stat"]>>;
       try {
         stat = await this.fs.stat(safePath);
       } catch (error) {
@@ -259,13 +277,13 @@ export class ReadTool implements IReadTool {
 
       const header = await this.fs.readBytes(safePath, MEDIA_SNIFF_BYTES);
       const fileType = detectFileType(safePath, header);
-      if (fileType.kind === 'image' || fileType.kind === 'video') {
+      if (fileType.kind === "image" || fileType.kind === "video") {
         return {
           isError: true,
           output: `"${args.path}" is a ${fileType.kind} file. Use ReadMediaFile to read image or video files.`,
         };
       }
-      if (fileType.kind === 'unknown') {
+      if (fileType.kind === "unknown") {
         return {
           isError: true,
           output: notReadableFileOutput(args.path),
@@ -311,12 +329,18 @@ export class ReadTool implements IReadTool {
     requestedLines: number,
   ): Promise<ExecutableToolResult> {
     const selectedEntries: ReadLineEntry[] = [];
-    const flags: LineEndingFlags = { hasCrLf: false, hasLf: false, hasLoneCr: false };
+    const flags: LineEndingFlags = {
+      hasCrLf: false,
+      hasLf: false,
+      hasLoneCr: false,
+    };
     let currentLineNo = 0;
     let maxLinesReached = false;
     let collectionClosed = false;
 
-    for await (const rawLine of this.fs.readLines(safePath, { errors: 'strict' })) {
+    for await (const rawLine of this.fs.readLines(safePath, {
+      errors: "strict",
+    })) {
       if (containsNulByte(rawLine)) {
         return { isError: true, output: notReadableFileOutput(displayPath) };
       }
@@ -369,10 +393,16 @@ export class ReadTool implements IReadTool {
   ): Promise<ExecutableToolResult> {
     const tailCount = Math.abs(lineOffset);
     const entries: ReadLineEntry[] = [];
-    const flags: LineEndingFlags = { hasCrLf: false, hasLf: false, hasLoneCr: false };
+    const flags: LineEndingFlags = {
+      hasCrLf: false,
+      hasLf: false,
+      hasLoneCr: false,
+    };
     let currentLineNo = 0;
 
-    for await (const rawLine of this.fs.readLines(safePath, { errors: 'strict' })) {
+    for await (const rawLine of this.fs.readLines(safePath, {
+      errors: "strict",
+    })) {
       if (containsNulByte(rawLine)) {
         return { isError: true, output: notReadableFileOutput(displayPath) };
       }
@@ -404,9 +434,11 @@ export class ReadTool implements IReadTool {
     requestedLines: number;
   }): ExecutableToolResult {
     const lineEndingStyle = lineEndingStyleFromFlags(input.lineEndingFlags);
-    let renderedCandidates = input.entries.slice(0, input.effectiveLimit).map((entry) => {
-      return { entry, rendered: renderLine(entry, lineEndingStyle) };
-    });
+    let renderedCandidates = input.entries
+      .slice(0, input.effectiveLimit)
+      .map((entry) => {
+        return { entry, rendered: renderLine(entry, lineEndingStyle) };
+      });
 
     let totalBytes = 0;
     for (const [index, candidate] of renderedCandidates.entries()) {
@@ -421,7 +453,10 @@ export class ReadTool implements IReadTool {
       for (let i = renderedCandidates.length - 1; i >= 0; i -= 1) {
         const candidate = renderedCandidates[i];
         if (candidate === undefined) continue;
-        const lineBytes = renderedLineBytes(candidate.rendered.line, kept.length === 0);
+        const lineBytes = renderedLineBytes(
+          candidate.rendered.line,
+          kept.length === 0,
+        );
         if (bytes + lineBytes > MAX_BYTES) break;
         kept.unshift(candidate);
         bytes += lineBytes;
@@ -452,20 +487,20 @@ export class ReadTool implements IReadTool {
 
   private finishReadResult(input: FinishReadResultInput): ExecutableToolResult {
     return {
-      output: input.renderedLines.join('\n'),
+      output: input.renderedLines.join("\n"),
       note: `<system>${this.finishMessage(input)}</system>`,
     };
   }
 
   private finishMessage(input: FinishReadResultInput): string {
     const lineCount = input.renderedLines.length;
-    const lineWord = lineCount === 1 ? 'line' : 'lines';
+    const lineWord = lineCount === 1 ? "line" : "lines";
     const parts =
       lineCount > 0
         ? [
             `${String(lineCount)} ${lineWord} read from file starting from line ${String(input.startLine)}.`,
           ]
-        : ['No lines read from file.'];
+        : ["No lines read from file."];
 
     parts.push(`Total lines in file: ${String(input.totalLines)}.`);
     if (input.maxLinesReached) {
@@ -473,18 +508,23 @@ export class ReadTool implements IReadTool {
     } else if (input.maxBytesReached) {
       parts.push(`Max ${String(MAX_BYTES)} bytes reached.`);
     } else if (lineCount < input.requestedLines) {
-      parts.push('End of file reached.');
+      parts.push("End of file reached.");
     }
     if (input.truncatedLineNumbers.length > 0) {
-      parts.push(`Lines [${input.truncatedLineNumbers.join(', ')}] were truncated.`);
-    }
-    if (input.lineEndingStyle === 'mixed') {
       parts.push(
-        'Mixed or lone carriage-return line endings are shown as \\r. Use exact \\r\\n or \\r escapes in Edit.old_string for those lines.',
+        `Lines [${input.truncatedLineNumbers.join(", ")}] were truncated.`,
       );
     }
-    return parts.join(' ');
+    if (input.lineEndingStyle === "mixed") {
+      parts.push(
+        "Mixed or lone carriage-return line endings are shown as \\r. Use exact \\r\\n or \\r escapes in Edit.old_string for those lines.",
+      );
+    }
+    return parts.join(" ");
   }
 }
 
-registerAgentToolService(IReadTool, ReadTool, { name: 'Read', domain: 'os/backends' });
+registerAgentToolService(IReadTool, ReadTool, {
+  name: "Read",
+  domain: "os/backends",
+});

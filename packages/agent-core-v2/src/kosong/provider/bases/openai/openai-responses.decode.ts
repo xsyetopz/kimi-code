@@ -123,7 +123,10 @@ export function asRawObject(value: unknown): RawObject | null {
   return value as RawObject;
 }
 
-export function readStringField(object: RawObject, key: string): string | undefined {
+export function readStringField(
+  object: RawObject,
+  key: string,
+): string | undefined {
   const value = object[key];
   return typeof value === "string" ? value : undefined;
 }
@@ -141,7 +144,10 @@ export function readNullableStringField(
   return typeof value === "string" ? value : undefined;
 }
 
-export function readNumberField(object: RawObject, key: string): number | undefined {
+export function readNumberField(
+  object: RawObject,
+  key: string,
+): number | undefined {
   const value = object[key];
   return typeof value === "number" ? value : undefined;
 }
@@ -436,4 +442,3 @@ interface ResponseToolParam {
   parameters: Record<string, unknown>;
   strict: boolean;
 }
-

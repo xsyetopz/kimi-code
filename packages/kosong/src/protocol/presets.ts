@@ -1,7 +1,4 @@
-import type {
-  ModelProtocolProfile,
-  ProviderTransportProfile,
-} from "./profile";
+import type { ModelProtocolProfile, ProviderTransportProfile } from "./profile";
 
 /** OpenAI Chat Completions — legacy GPT and OpenAI-compatible gateways. */
 export const OPENAI_CHAT_PROTOCOL_PROFILE = {

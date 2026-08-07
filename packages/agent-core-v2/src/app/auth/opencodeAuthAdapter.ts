@@ -115,7 +115,9 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
 
   getFlow(provider: string): OAuthFlowSnapshot | undefined {
     const flow = this.flows.get(provider);
-    return flow === undefined ? undefined : toDeviceOAuthFlowSnapshot(flow, this.now);
+    return flow === undefined
+      ? undefined
+      : toDeviceOAuthFlowSnapshot(flow, this.now);
   }
 
   async cancelLogin(provider: string): Promise<OAuthLoginCancelResponse> {
@@ -252,7 +254,6 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
       throw new Error(`OpenCode OAuth request failed: ${response.status}`);
     return response.json() as Promise<T>;
   }
-
 }
 
 function isDeviceResponse(value: unknown): value is DeviceResponse {
@@ -276,4 +277,3 @@ function isTokenResponse(value: unknown): value is TokenResponse {
     typeof (value as TokenResponse).expires_in === "number"
   );
 }
-

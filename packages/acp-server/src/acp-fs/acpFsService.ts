@@ -15,7 +15,7 @@
  * connection.
  */
 
-import { RequestError } from '@agentclientprotocol/sdk';
+import { RequestError } from "@agentclientprotocol/sdk";
 import {
   HostFileSystem,
   type HostDirEntry,
@@ -25,12 +25,12 @@ import {
   LifecycleScope,
   registerScopedService,
   ScopeActivation,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import { IAcpConnection } from './acpConnection';
+import { IAcpConnection } from "./acpConnection";
 
 /** Options type lifted from `IHostFileSystem.readText` / `readLines`. */
-type ReadTextOptions = NonNullable<Parameters<IHostFileSystem['readText']>[1]>;
+type ReadTextOptions = NonNullable<Parameters<IHostFileSystem["readText"]>[1]>;
 
 function* splitLinesKeepingTerminator(text: string): Generator<string> {
   if (text.length === 0) return;
@@ -96,7 +96,7 @@ export class AcpHostFileSystem implements IHostFileSystem {
     if (!this.connection.fsReadTextFile || !this.connection.fsWriteTextFile) {
       return this.inner.appendText(path, data);
     }
-    let existing = '';
+    let existing = "";
     try {
       existing = await this.readText(path);
     } catch (error) {
@@ -105,7 +105,10 @@ export class AcpHostFileSystem implements IHostFileSystem {
     await this.writeText(path, existing + data);
   }
 
-  async *readLines(path: string, options?: ReadTextOptions): AsyncGenerator<string> {
+  async *readLines(
+    path: string,
+    options?: ReadTextOptions,
+  ): AsyncGenerator<string> {
     const text = await this.readText(path, options);
     yield* splitLinesKeepingTerminator(text);
   }
@@ -124,7 +127,7 @@ export class AcpHostFileSystem implements IHostFileSystem {
     }
     let text: string;
     try {
-      text = new TextDecoder('utf-8', { fatal: true }).decode(data);
+      text = new TextDecoder("utf-8", { fatal: true }).decode(data);
     } catch {
       return this.inner.writeBytes(path, data);
     }
@@ -151,7 +154,10 @@ export class AcpHostFileSystem implements IHostFileSystem {
     return this.inner.readdir(path);
   }
 
-  mkdir(path: string, options?: { readonly recursive?: boolean }): Promise<void> {
+  mkdir(
+    path: string,
+    options?: { readonly recursive?: boolean },
+  ): Promise<void> {
     return this.inner.mkdir(path, options);
   }
 
@@ -165,5 +171,5 @@ registerScopedService(
   IHostFileSystem,
   AcpHostFileSystem,
   ScopeActivation.OnDemand,
-  'acp',
+  "acp",
 );

@@ -118,7 +118,9 @@ function gotoTab(
   questionCount: number,
   target: number,
 ): void {
-  const wrapped = ((target % totalTabs(questionCount)) + totalTabs(questionCount)) % totalTabs(questionCount);
+  const wrapped =
+    ((target % totalTabs(questionCount)) + totalTabs(questionCount)) %
+    totalTabs(questionCount);
   if (wrapped === wizard.tab) return;
   wizard.tab = wrapped;
   wizard.otherMode = false;
@@ -176,7 +178,11 @@ function deriveQuestionAnswers(
       const labels: string[] = [];
       const set = wizard.multiSelections[i] ?? new Set<number>();
       const otherIdx = questionOtherOptionIndex(question);
-      for (let optionIdx = 0; optionIdx < question.options.length; optionIdx++) {
+      for (
+        let optionIdx = 0;
+        optionIdx < question.options.length;
+        optionIdx++
+      ) {
         if (!set.has(optionIdx)) continue;
         const label = question.options[optionIdx]?.label;
         if (label !== undefined && label.length > 0) labels.push(label);
@@ -211,7 +217,10 @@ function deriveQuestionAnswers(
   return answers;
 }
 
-function syncOtherDraft(wizard: InkQuestionWizardState, questionIdx: number): void {
+function syncOtherDraft(
+  wizard: InkQuestionWizardState,
+  questionIdx: number,
+): void {
   wizard.otherDrafts[questionIdx] = wizard.otherText;
 }
 
@@ -242,7 +251,9 @@ function commitOtherInput(
   wizard.committedOther[questionIdx] = value;
 
   if (question.multi_select) {
-    wizard.multiSelections[questionIdx]?.add(questionOtherOptionIndex(question));
+    wizard.multiSelections[questionIdx]?.add(
+      questionOtherOptionIndex(question),
+    );
   } else {
     wizard.singleSelections[questionIdx] = questionOtherOptionIndex(question);
   }

@@ -13,16 +13,20 @@
  * or bucket is ever rewritten here. Bound at App scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IWorkspaceService } from '#/app/workspace/workspace';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IWorkspaceService } from "#/app/workspace/workspace";
 import {
   collectAliasIds,
   readSessionIndexEntries,
-} from '#/app/workspace/workspaceAlias';
-import { IWorkspacePersistence } from '#/app/workspace/workspacePersistence';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
+} from "#/app/workspace/workspaceAlias";
+import { IWorkspacePersistence } from "#/app/workspace/workspacePersistence";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
 
-import { IWorkspaceAliases } from './workspaceAliases';
+import { IWorkspaceAliases } from "./workspaceAliases";
 
 export class WorkspaceAliasesService implements IWorkspaceAliases {
   declare readonly _serviceBrand: undefined;
@@ -30,13 +34,17 @@ export class WorkspaceAliasesService implements IWorkspaceAliases {
   constructor(
     @IWorkspaceService private readonly workspaces: IWorkspaceService,
     @IWorkspacePersistence private readonly store: IWorkspacePersistence,
-    @IFileSystemStorageService private readonly storage: IFileSystemStorageService,
+    @IFileSystemStorageService
+    private readonly storage: IFileSystemStorageService,
   ) {}
 
   async resolveAliasIds(id: string): Promise<readonly string[]> {
     const entry = await this.workspaces.get(id);
     if (entry === undefined) return [id];
-    const catalog = (await this.store.load()) ?? { workspaces: [], deletedIds: [] };
+    const catalog = (await this.store.load()) ?? {
+      workspaces: [],
+      deletedIds: [],
+    };
     return collectAliasIds(
       catalog.workspaces,
       await readSessionIndexEntries(this.storage),
@@ -50,5 +58,5 @@ registerScopedService(
   IWorkspaceAliases,
   WorkspaceAliasesService,
   ScopeActivation.OnScopeCreated,
-  'workspaceAliases',
+  "workspaceAliases",
 );

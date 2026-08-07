@@ -15,33 +15,40 @@
  * Bound at Agent scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
 import {
   IAgentContextInjectorService,
   type ContextInjectionContext,
   type ContextInjectionResult,
-} from '#/agent/contextInjector/contextInjector';
+} from "#/agent/contextInjector/contextInjector";
 import {
   disclosureOfKind,
   pickDisclosureBaseline,
-} from '#/agent/contextInjector/disclosureBaseline';
-import { IAgentProfileService } from '#/agent/profile/profile';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IHostClock } from '#/os/interface/hostClock';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
+} from "#/agent/contextInjector/disclosureBaseline";
+import { IAgentProfileService } from "#/agent/profile/profile";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IHostClock } from "#/os/interface/hostClock";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
 
-import { IAgentDateChangeService } from './dateChange';
+import { IAgentDateChangeService } from "./dateChange";
 
-const DATE_CHANGE_INJECTION_VARIANT = 'date_change';
+const DATE_CHANGE_INJECTION_VARIANT = "date_change";
 
 export const dateChangeSeedKey = defineState<DateDisclosure | undefined>(
-  'dateChange.seed',
+  "dateChange.seed",
   () => undefined,
 );
 
-export class AgentDateChangeService extends Disposable implements IAgentDateChangeService {
+export class AgentDateChangeService
+  extends Disposable
+  implements IAgentDateChangeService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
@@ -54,7 +61,9 @@ export class AgentDateChangeService extends Disposable implements IAgentDateChan
     super();
     this.states.register(dateChangeSeedKey);
     this._register(
-      dynamicInjector.register(DATE_CHANGE_INJECTION_VARIANT, (ctx) => this.reminder(ctx)),
+      dynamicInjector.register(DATE_CHANGE_INJECTION_VARIANT, (ctx) =>
+        this.reminder(ctx),
+      ),
     );
   }
 
@@ -65,7 +74,7 @@ export class AgentDateChangeService extends Disposable implements IAgentDateChan
     const environment = profileData.environmentDisclosure;
     if (
       environment !== undefined &&
-      environment.cwd !== '' &&
+      environment.cwd !== "" &&
       environment.cwd !== this.sessionContext.cwd
     ) {
       return undefined;
@@ -73,7 +82,7 @@ export class AgentDateChangeService extends Disposable implements IAgentDateChan
     const renderGeneration = profileData.renderGeneration ?? 0;
     const current = currentDateDisclosure(this.clock);
     const baseline = pickDisclosureBaseline<DateDisclosure>(
-      disclosureOfKind(lastDisclosure, 'date'),
+      disclosureOfKind(lastDisclosure, "date"),
       this.dateFromProfile(),
       this.states.get(dateChangeSeedKey),
     );
@@ -85,7 +94,7 @@ export class AgentDateChangeService extends Disposable implements IAgentDateChan
     return {
       content: `The date has changed. Today's date is now ${current.localDate}. The date and time stated in your system prompt are stale; rely on this reminder for the current date. DO NOT mention this to the user explicitly.`,
       disclosure: {
-        kind: 'date',
+        kind: "date",
         renderGeneration,
         localDate: current.localDate,
         timeZone: current.timeZone,
@@ -98,7 +107,7 @@ export class AgentDateChangeService extends Disposable implements IAgentDateChan
     const environment = profileData.environmentDisclosure;
     if (
       environment !== undefined &&
-      environment.cwd !== '' &&
+      environment.cwd !== "" &&
       environment.cwd !== this.sessionContext.cwd
     ) {
       return undefined;
@@ -118,19 +127,21 @@ interface DateDisclosure {
   readonly renderGeneration: number;
 }
 
-function currentDateDisclosure(clock: IHostClock): Omit<DateDisclosure, 'renderGeneration'> {
+function currentDateDisclosure(
+  clock: IHostClock,
+): Omit<DateDisclosure, "renderGeneration"> {
   const date = clock.now();
   const timeZone = clock.timeZone();
-  const parts = new Intl.DateTimeFormat('en-US', {
+  const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).formatToParts(date);
   const part = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((candidate) => candidate.type === type)?.value ?? '';
+    parts.find((candidate) => candidate.type === type)?.value ?? "";
   return {
-    localDate: `${part('year')}-${part('month')}-${part('day')}`,
+    localDate: `${part("year")}-${part("month")}-${part("day")}`,
     timeZone,
   };
 }
@@ -140,5 +151,5 @@ registerScopedService(
   IAgentDateChangeService,
   AgentDateChangeService,
   ScopeActivation.OnScopeCreated,
-  'dateChange',
+  "dateChange",
 );

@@ -33,9 +33,7 @@ export function projectCompactionLines(
     data.summary.length > 0
   ) {
     lines.push(
-      ...data.summary
-        .split("\n")
-        .map((line) => currentTheme.dim(`  ${line}`)),
+      ...data.summary.split("\n").map((line) => currentTheme.dim(`  ${line}`)),
     );
   }
   return lines;

@@ -1,19 +1,21 @@
-import type { ResolvedToolExecutionHookContext } from '#/agent/toolExecutor/toolHooks';
-import { isWithinWorkspace } from '#/tool/path-access';
-import { IGitService } from '#/app/git/git';
-import type { IGitService as GitService } from '#/app/git/git';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import type { IHostEnvironment as HostEnvironment } from '#/os/interface/hostEnvironment';
-import { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
-import type { ISessionWorkspaceContext as WorkspaceContext } from '#/session/workspaceContext/workspaceContext';
+import type { ResolvedToolExecutionHookContext } from "#/agent/toolExecutor/toolHooks";
+import { isWithinWorkspace } from "#/tool/path-access";
+import { IGitService } from "#/app/git/git";
+import type { IGitService as GitService } from "#/app/git/git";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import type { IHostEnvironment as HostEnvironment } from "#/os/interface/hostEnvironment";
+import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
+import type { ISessionWorkspaceContext as WorkspaceContext } from "#/session/workspaceContext/workspaceContext";
 import type {
   PermissionPolicy,
   PermissionPolicyResult,
-} from '#/agent/permissionPolicy/types';
-import { writeFileAccesses } from './path-utils';
+} from "#/agent/permissionPolicy/types";
+import { writeFileAccesses } from "./path-utils";
 
-export class GitCwdWriteApprovePermissionPolicyService implements PermissionPolicy {
-  readonly name = 'git-cwd-write-approve';
+export class GitCwdWriteApprovePermissionPolicyService
+  implements PermissionPolicy
+{
+  readonly name = "git-cwd-write-approve";
 
   constructor(
     @IHostEnvironment private readonly env: HostEnvironment,
@@ -25,8 +27,8 @@ export class GitCwdWriteApprovePermissionPolicyService implements PermissionPoli
     context: ResolvedToolExecutionHookContext,
   ): Promise<PermissionPolicyResult | undefined> {
     const toolName = context.toolCall.name;
-    if (toolName !== 'Write' && toolName !== 'Edit') return undefined;
-    if (this.env.pathClass !== 'posix') return undefined;
+    if (toolName !== "Write" && toolName !== "Edit") return undefined;
+    if (this.env.pathClass !== "posix") return undefined;
 
     const cwd = this.workspace.workDir;
     if (cwd.length === 0) return undefined;
@@ -38,7 +40,7 @@ export class GitCwdWriteApprovePermissionPolicyService implements PermissionPoli
         isWithinWorkspace(
           access.path,
           { workspaceDir: cwd, additionalDirs: this.workspace.additionalDirs },
-          'posix',
+          "posix",
         ),
       )
     ) {
@@ -47,6 +49,6 @@ export class GitCwdWriteApprovePermissionPolicyService implements PermissionPoli
 
     return (await this.git.findWorkTree(cwd)) === null
       ? undefined
-      : { kind: 'approve' };
+      : { kind: "approve" };
   }
 }

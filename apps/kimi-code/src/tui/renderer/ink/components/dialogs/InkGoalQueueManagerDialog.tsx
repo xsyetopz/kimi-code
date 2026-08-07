@@ -21,19 +21,23 @@ export function InkGoalQueueManagerDialog({
       ) : (
         manager.rows.map((row) => (
           <Text key={`${row.index}:${row.label}`}>
-            {currentTheme.fg(row.selected ? "primary" : "textDim", `  ${row.selected ? SELECT_POINTER : " "} `)}
+            {currentTheme.fg(
+              row.selected ? "primary" : "textDim",
+              `  ${row.selected ? SELECT_POINTER : " "} `,
+            )}
             {row.selected
               ? currentTheme.boldFg("primary", row.label)
               : currentTheme.fg("text", row.label)}
-            {row.moving
-              ? currentTheme.fg("success", "  selected")
-              : null}
+            {row.moving ? currentTheme.fg("success", "  selected") : null}
           </Text>
         ))
       )}
       {manager.belowCount > 0 ? (
         <Text>
-          {currentTheme.fg("textMuted", ` ▼ ${String(manager.belowCount)} more`)}
+          {currentTheme.fg(
+            "textMuted",
+            ` ▼ ${String(manager.belowCount)} more`,
+          )}
         </Text>
       ) : null}
     </Box>

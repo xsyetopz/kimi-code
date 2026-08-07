@@ -59,7 +59,7 @@ import {
   rollbackManagedPluginCopy,
   withMcpServerEnabled,
   withPluginMcpRuntime,
-} from './managerHelpers';
+} from "./managerHelpers";
 
 export interface PluginManagerOptions {
   readonly kimiHomeDir: string;

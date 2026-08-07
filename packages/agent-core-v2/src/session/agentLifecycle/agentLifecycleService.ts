@@ -19,51 +19,59 @@
  * (see `AgentMcpService`).
  */
 
-import { IInstantiationService } from '#/_base/di/instantiation';
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { Emitter } from '#/_base/event';
-import { Error2, ErrorCodes } from '#/errors';
-import { join } from 'pathe';
+import { IInstantiationService } from "#/_base/di/instantiation";
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import { Emitter } from "#/_base/event";
+import { Error2, ErrorCodes } from "#/errors";
+import { join } from "pathe";
 import {
   createScopedChildHandle,
   type IAgentScopeHandle,
   LifecycleScope,
   ScopeActivation,
   registerScopedService,
-} from '#/_base/di/scope';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
-import { IEventBus } from '#/app/event/eventBus';
-import { DEFAULT_PERMISSION_MODE_SECTION } from '#/agent/permissionMode/configSection';
-import { PermissionModeConfiguredModel } from '#/agent/permissionMode/permissionModeOps';
-import type { PermissionMode } from '#/agent/permissionPolicy/types';
-import { IAgentTaskService } from '#/agent/task/task';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
-import { IAgentScopeContext, makeAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { IAgentLoopService } from '#/agent/loop/loop';
-import { IAgentProfileService } from '#/agent/profile/profile';
-import { abortError } from '#/_base/utils/abort';
-import { IAgentPermissionModeService } from '#/agent/permissionMode/permissionMode';
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { IAgentFullCompactionService } from '#/agent/fullCompaction/fullCompaction';
-import { IAgentToolActivationService } from '#/agent/toolActivation/toolActivation';
-import { ISessionInteractionService } from '#/session/interaction/interaction';
-import { IWireService } from '#/wire/wire';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
+} from "#/_base/di/scope";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
+import { IEventBus } from "#/app/event/eventBus";
+import { DEFAULT_PERMISSION_MODE_SECTION } from "#/agent/permissionMode/configSection";
+import { PermissionModeConfiguredModel } from "#/agent/permissionMode/permissionModeOps";
+import type { PermissionMode } from "#/agent/permissionPolicy/types";
+import { IAgentTaskService } from "#/agent/task/task";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
+import {
+  IAgentScopeContext,
+  makeAgentScopeContext,
+} from "#/agent/scopeContext/scopeContext";
+import { IAgentLoopService } from "#/agent/loop/loop";
+import { IAgentProfileService } from "#/agent/profile/profile";
+import { abortError } from "#/_base/utils/abort";
+import { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { IAgentFullCompactionService } from "#/agent/fullCompaction/fullCompaction";
+import { IAgentToolActivationService } from "#/agent/toolActivation/toolActivation";
+import { ISessionInteractionService } from "#/session/interaction/interaction";
+import { IWireService } from "#/wire/wire";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   type AgentListFilter,
   type CreateAgentOptions,
   type ForkAgentOptions,
   IAgentLifecycleService,
-} from './agentLifecycle';
+} from "./agentLifecycle";
 
 let nextAgentId = 0;
 
-export class AgentLifecycleService extends Disposable implements IAgentLifecycleService {
+export class AgentLifecycleService
+  extends Disposable
+  implements IAgentLifecycleService
+{
   declare readonly _serviceBrand: undefined;
   private readonly handles = new Map<string, IAgentScopeHandle>();
-  private readonly onDidCreateEmitter = this._register(new Emitter<IAgentScopeHandle>());
+  private readonly onDidCreateEmitter = this._register(
+    new Emitter<IAgentScopeHandle>(),
+  );
   private readonly onDidDisposeEmitter = this._register(new Emitter<string>());
   private readonly interactionBusDisposables = new Map<string, IDisposable>();
   private readonly creating = new Map<string, Promise<IAgentScopeHandle>>();
@@ -76,16 +84,20 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
   }
 
   constructor(
-    @IInstantiationService private readonly instantiation: IInstantiationService,
+    @IInstantiationService
+    private readonly instantiation: IInstantiationService,
     @ISessionContext private readonly ctx: ISessionContext,
     @ISessionMetadata private readonly sessionMetadata: ISessionMetadata,
     @IBootstrapService private readonly bootstrap: IBootstrapService,
     @IConfigService private readonly config: IConfigService,
-    @ISessionInteractionService private readonly interaction: ISessionInteractionService,
+    @ISessionInteractionService
+    private readonly interaction: ISessionInteractionService,
     @ITelemetryService private readonly telemetry: ITelemetryService,
   ) {
     super();
-    this._register(this.onDidCreate((handle) => this.subscribeInteractionBus(handle)));
+    this._register(
+      this.onDidCreate((handle) => this.subscribeInteractionBus(handle)),
+    );
     this._register(
       this.onDidDispose((agentId) => {
         const d = this.interactionBusDisposables.get(agentId);
@@ -107,7 +119,9 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
     if (this.interactionBusDisposables.has(handle.id)) return;
     const d = handle.accessor
       .get(IEventBus)
-      .subscribe('turn.ended', (e) => this.interaction.cancelPendingForTurn(e.turnId));
+      .subscribe("turn.ended", (e) =>
+        this.interaction.cancelPendingForTurn(e.turnId),
+      );
     this.interactionBusDisposables.set(handle.id, d);
   }
 
@@ -142,7 +156,10 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
     return `agent-${String(candidate)}`;
   }
 
-  private async doCreate(agentId: string, opts: CreateAgentOptions): Promise<IAgentScopeHandle> {
+  private async doCreate(
+    agentId: string,
+    opts: CreateAgentOptions,
+  ): Promise<IAgentScopeHandle> {
     const agentScope = this.ctx.scope(`agents/${agentId}`);
     const agentHomedir = join(this.bootstrap.homeDir, agentScope);
     const handle = createScopedChildHandle(
@@ -152,7 +169,10 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
       {
         extra: [
           [IAgentScopeContext, makeAgentScopeContext({ agentId, agentScope })],
-          [ITelemetryService, this.telemetry.withContext({ agent_id: agentId })],
+          [
+            ITelemetryService,
+            this.telemetry.withContext({ agent_id: agentId }),
+          ],
         ],
       },
     ) as IAgentScopeHandle;
@@ -162,8 +182,8 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
       await wire.seal();
       await this.sessionMetadata.registerAgent(agentId, {
         homedir: agentHomedir,
-        type: agentId === 'main' ? 'main' : 'sub',
-        parentAgentId: agentId === 'main' ? undefined : 'main',
+        type: agentId === "main" ? "main" : "sub",
+        parentAgentId: agentId === "main" ? undefined : "main",
         forkedFrom: opts.forkedFrom,
         labels: opts.labels,
       });
@@ -176,7 +196,7 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
       if (this.handles.get(agentId) === handle) this.handles.delete(agentId);
       try {
         handle.dispose();
-      } catch { }
+      } catch {}
       this.onDidDisposeEmitter.fire(agentId);
       throw error;
     }
@@ -190,26 +210,44 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
       await handle.accessor.get(IAgentProfileService).bind(opts.binding);
     }
     const wire = handle.accessor.get(IWireService);
-    const permissionMode = this.config.get<PermissionMode>(DEFAULT_PERMISSION_MODE_SECTION);
-    const hasRestoredPermissionMode = wire.getModel(PermissionModeConfiguredModel);
+    const permissionMode = this.config.get<PermissionMode>(
+      DEFAULT_PERMISSION_MODE_SECTION,
+    );
+    const hasRestoredPermissionMode = wire.getModel(
+      PermissionModeConfiguredModel,
+    );
     if (permissionMode !== undefined && !hasRestoredPermissionMode) {
       handle.accessor.get(IAgentPermissionModeService).setMode(permissionMode);
     }
   }
 
-  async fork(sourceAgentId: string, opts?: ForkAgentOptions): Promise<IAgentScopeHandle> {
+  async fork(
+    sourceAgentId: string,
+    opts?: ForkAgentOptions,
+  ): Promise<IAgentScopeHandle> {
     const source = this.handles.get(sourceAgentId);
     if (source === undefined) {
-      throw new Error2(ErrorCodes.AGENT_NOT_FOUND, `Source agent "${sourceAgentId}" does not exist`, {
-        details: { agentId: sourceAgentId },
-      });
+      throw new Error2(
+        ErrorCodes.AGENT_NOT_FOUND,
+        `Source agent "${sourceAgentId}" does not exist`,
+        {
+          details: { agentId: sourceAgentId },
+        },
+      );
     }
     if (opts?.agentId !== undefined && this.handles.has(opts.agentId)) {
-      throw new Error2(ErrorCodes.AGENT_ALREADY_EXISTS, `Agent "${opts.agentId}" already exists`, {
-        details: { agentId: opts.agentId },
-      });
+      throw new Error2(
+        ErrorCodes.AGENT_ALREADY_EXISTS,
+        `Agent "${opts.agentId}" already exists`,
+        {
+          details: { agentId: opts.agentId },
+        },
+      );
     }
-    const child = await this.create({ agentId: opts?.agentId, forkedFrom: source.id });
+    const child = await this.create({
+      agentId: opts?.agentId,
+      forkedFrom: source.id,
+    });
 
     const sourceData = source.accessor.get(IAgentProfileService).data();
     const childProfile = child.accessor.get(IAgentProfileService);
@@ -222,11 +260,15 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
       });
     } else {
       childProfile.applyBindingSnapshot(sourceData);
-      if (override?.model !== undefined) await childProfile.setModel(override.model);
-      if (override?.thinking !== undefined) childProfile.setThinking(override.thinking);
+      if (override?.model !== undefined)
+        await childProfile.setModel(override.model);
+      if (override?.thinking !== undefined)
+        childProfile.setThinking(override.thinking);
     }
 
-    const sourceMessages = source.accessor.get(IAgentContextMemoryService)?.get();
+    const sourceMessages = source.accessor
+      .get(IAgentContextMemoryService)
+      ?.get();
     if (sourceMessages !== undefined && sourceMessages.length > 0) {
       child.accessor.get(IAgentContextMemoryService)?.append(...sourceMessages);
     }
@@ -254,11 +296,16 @@ export class AgentLifecycleService extends Disposable implements IAgentLifecycle
     const handle = this.handles.get(agentId);
     if (handle === undefined) return;
     this.handles.delete(agentId);
-    await handle.accessor.get(IAgentTaskService).stopAllOnExit('Session closed');
+    await handle.accessor
+      .get(IAgentTaskService)
+      .stopAllOnExit("Session closed");
     const loop = handle.accessor.get(IAgentLoopService);
-    const compaction = handle.accessor.get(IAgentFullCompactionService).compacting;
-    const compactionSettled = compaction?.promise.catch(() => undefined) ?? Promise.resolve();
-    const reason = abortError('Agent removed');
+    const compaction = handle.accessor.get(
+      IAgentFullCompactionService,
+    ).compacting;
+    const compactionSettled =
+      compaction?.promise.catch(() => undefined) ?? Promise.resolve();
+    const reason = abortError("Agent removed");
     for (const turnId of loop.status().pendingTurnIds) {
       loop.cancel(turnId, reason);
     }
@@ -277,5 +324,5 @@ registerScopedService(
   IAgentLifecycleService,
   AgentLifecycleService,
   ScopeActivation.OnScopeCreated,
-  'agentLifecycle',
+  "agentLifecycle",
 );

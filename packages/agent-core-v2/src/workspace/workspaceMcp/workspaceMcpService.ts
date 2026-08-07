@@ -27,31 +27,38 @@
  * name.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
 
-import { McpConnectionManager } from '#/mcpCore/connection-manager';
-import type { McpServerConfig } from '#/mcpCore/config-schema';
-import { McpOAuthService } from '#/mcpCore/oauth/service';
-import { IAgentIdentity } from '#/app/agentIdentity/agentIdentity';
-import { IMcpOAuthStore } from '#/app/mcpConfig/oauthStore';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { MergedMcpConnectionView } from '#/session/mcp/mergedConnectionView';
-import type { ISessionMcpHandle } from '#/session/mcp/sessionMcpHandle';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+import { McpConnectionManager } from "#/mcpCore/connection-manager";
+import type { McpServerConfig } from "#/mcpCore/config-schema";
+import { McpOAuthService } from "#/mcpCore/oauth/service";
+import { IAgentIdentity } from "#/app/agentIdentity/agentIdentity";
+import { IMcpOAuthStore } from "#/app/mcpConfig/oauthStore";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { MergedMcpConnectionView } from "#/session/mcp/mergedConnectionView";
+import type { ISessionMcpHandle } from "#/session/mcp/sessionMcpHandle";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 import {
   IWorkspaceMcpConfigService,
   type McpServersChange,
-} from '#/workspace/workspaceMcpConfig/workspaceMcpConfig';
+} from "#/workspace/workspaceMcpConfig/workspaceMcpConfig";
 
 import {
   IWorkspaceMcpService,
   type ISessionMcpOverlay,
   type SessionMcpOverlayOptions,
-} from './workspaceMcp';
+} from "./workspaceMcp";
 
-export class WorkspaceMcpService extends Disposable implements IWorkspaceMcpService {
+export class WorkspaceMcpService
+  extends Disposable
+  implements IWorkspaceMcpService
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly manager: McpConnectionManager;
@@ -59,11 +66,13 @@ export class WorkspaceMcpService extends Disposable implements IWorkspaceMcpServ
   private readonly stdioCwd: string;
   readonly ready: Promise<void>;
   private mutationTail: Promise<void> = Promise.resolve();
-  private readonly resolveClientName = (): string | undefined => this.identity.current().slug;
+  private readonly resolveClientName = (): string | undefined =>
+    this.identity.current().slug;
 
   constructor(
     @IWorkspaceContext workspace: IWorkspaceContext,
-    @IWorkspaceMcpConfigService private readonly mcpConfig: IWorkspaceMcpConfigService,
+    @IWorkspaceMcpConfigService
+    private readonly mcpConfig: IWorkspaceMcpConfigService,
     @IMcpOAuthStore oauthStore: IMcpOAuthStore,
     @ILogService private readonly log: ILogService,
     @ITelemetryService private readonly telemetry: ITelemetryService,
@@ -89,7 +98,7 @@ export class WorkspaceMcpService extends Disposable implements IWorkspaceMcpServ
       }),
     );
     this.ready = this.initialize().catch((error: unknown) => {
-      this.log.error('mcp initial load failed', { error });
+      this.log.error("mcp initial load failed", { error });
     });
   }
 
@@ -116,10 +125,13 @@ export class WorkspaceMcpService extends Disposable implements IWorkspaceMcpServ
       resolveDefaultTimeouts: () => this.mcpConfig.tunables(),
       resolveClientName: this.resolveClientName,
     });
-    const connect = Promise.all([this.mcpConfig.ready, this.identity.resolved()])
+    const connect = Promise.all([
+      this.mcpConfig.ready,
+      this.identity.resolved(),
+    ])
       .then(() => sessionManager.connectAll({ ...servers }))
       .catch((error: unknown) => {
-        this.log.error('session mcp overlay initial load failed', { error });
+        this.log.error("session mcp overlay initial load failed", { error });
       });
     const view = new MergedMcpConnectionView(
       this.manager,
@@ -169,21 +181,27 @@ export class WorkspaceMcpService extends Disposable implements IWorkspaceMcpServ
   }
 
   private trackMcpInitialLoad(): void {
-    const entries = this.manager.list().filter((entry) => entry.status !== 'disabled');
+    const entries = this.manager
+      .list()
+      .filter((entry) => entry.status !== "disabled");
     const totalCount = entries.length;
     if (totalCount === 0) return;
 
-    const connectedCount = entries.filter((entry) => entry.status === 'connected').length;
+    const connectedCount = entries.filter(
+      (entry) => entry.status === "connected",
+    ).length;
     if (connectedCount > 0) {
-      this.telemetry.track2('mcp_connected', {
+      this.telemetry.track2("mcp_connected", {
         server_count: connectedCount,
         total_count: totalCount,
       });
     }
 
-    const failedCount = entries.filter((entry) => entry.status === 'failed').length;
+    const failedCount = entries.filter(
+      (entry) => entry.status === "failed",
+    ).length;
     if (failedCount > 0) {
-      this.telemetry.track2('mcp_failed', {
+      this.telemetry.track2("mcp_failed", {
         failed_count: failedCount,
         total_count: totalCount,
       });
@@ -196,5 +214,5 @@ registerScopedService(
   IWorkspaceMcpService,
   WorkspaceMcpService,
   ScopeActivation.OnScopeCreated,
-  'workspaceMcp',
+  "workspaceMcp",
 );

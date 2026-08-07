@@ -116,11 +116,7 @@ function dialogBody(
       );
     case "help":
       return (
-        <InkHelpDialog
-          dialog={dialog}
-          width={width}
-          maxVisible={maxVisible}
-        />
+        <InkHelpDialog dialog={dialog} width={width} maxVisible={maxVisible} />
       );
     case "choice-picker":
       if (dialog.choicePicker === null) return null;
@@ -141,32 +137,24 @@ function dialogBody(
       );
     case "plugin-mcp-selector":
       if (dialog.pluginMcpSelector === null) return null;
-      return (
-        <InkPluginMcpSelectorDialog selector={dialog.pluginMcpSelector} />
-      );
+      return <InkPluginMcpSelectorDialog selector={dialog.pluginMcpSelector} />;
     case "plugins-panel":
       if (dialog.pluginsPanel === null) return null;
       return <InkPluginsPanelDialog panel={dialog.pluginsPanel} />;
     case "start-permission-prompt":
       if (dialog.startPermissionPrompt === null) return null;
       return (
-        <InkStartPermissionPromptDialog
-          prompt={dialog.startPermissionPrompt}
-        />
+        <InkStartPermissionPromptDialog prompt={dialog.startPermissionPrompt} />
       );
     case "goal-queue-manager":
       if (dialog.goalQueueManager === null) return null;
-      return (
-        <InkGoalQueueManagerDialog manager={dialog.goalQueueManager} />
-      );
+      return <InkGoalQueueManagerDialog manager={dialog.goalQueueManager} />;
     case "goal-queue-edit":
       if (dialog.goalQueueEdit === null) return null;
       return <InkGoalQueueEditDialog edit={dialog.goalQueueEdit} />;
     case "provider-manager":
       if (dialog.providerManager === null) return null;
-      return (
-        <InkProviderManagerDialog manager={dialog.providerManager} />
-      );
+      return <InkProviderManagerDialog manager={dialog.providerManager} />;
     case "api-key-input":
       if (dialog.apiKeyInput === null) return null;
       return <InkSingleLineInputDialog dialog={dialog.apiKeyInput} />;

@@ -260,7 +260,9 @@ export function agentSwarmFailureTextFromOutput(
   return normalizeFailureText(output);
 }
 
-export function normalizeFailureText(text: string | undefined): string | undefined {
+export function normalizeFailureText(
+  text: string | undefined,
+): string | undefined {
   if (text === undefined) return undefined;
   const nestedFailureText = nestedAgentSwarmFailureText(text);
   const normalized = stripAgentSwarmPrefix(

@@ -1,5 +1,8 @@
 import { renderAgentSwarmProgressView } from "#/tui/components/messages/agent-swarm-progress";
-import type { AgentSwarmProgressViewState, ToolCallBlockData } from "#/tui/types";
+import type {
+  AgentSwarmProgressViewState,
+  ToolCallBlockData,
+} from "#/tui/types";
 
 export interface ProjectAgentSwarmLinesOptions {
   readonly state: AgentSwarmProgressViewState;
@@ -12,7 +15,9 @@ export function hasAgentSwarmProgressView(
 ): toolCall is ToolCallBlockData & {
   agentSwarmProgress: AgentSwarmProgressViewState;
 } {
-  return toolCall.name === "AgentSwarm" && toolCall.agentSwarmProgress !== undefined;
+  return (
+    toolCall.name === "AgentSwarm" && toolCall.agentSwarmProgress !== undefined
+  );
 }
 
 /** Full AgentSwarm card lines (ANSI) for Ink, shared with pi-tui layout. */

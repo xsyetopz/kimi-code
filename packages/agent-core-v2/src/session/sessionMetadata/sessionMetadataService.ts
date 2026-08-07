@@ -16,14 +16,18 @@
  * never reorders session listings. Bound at Session scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Emitter, type Event } from '#/_base/event';
-import { ILogService } from '#/_base/log/log';
-import { defineState } from '#/_base/state/stateRegistry';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { ISessionStateService } from '#/session/state/sessionState';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Emitter, type Event } from "#/_base/event";
+import { ILogService } from "#/_base/log/log";
+import { defineState } from "#/_base/state/stateRegistry";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { ISessionStateService } from "#/session/state/sessionState";
 
 import {
   ISessionMetadata,
@@ -32,12 +36,12 @@ import {
   type SessionMeta,
   type SessionMetadataChangedEvent,
   type SessionMetaPatch,
-} from './sessionMetadata';
+} from "./sessionMetadata";
 
-const META_KEY = 'state.json';
+const META_KEY = "state.json";
 
 export const sessionMetadataDataKey = defineState<SessionMeta | undefined>(
-  'sessionMetadata.data',
+  "sessionMetadata.data",
   () => undefined,
 );
 
@@ -141,7 +145,9 @@ export class SessionMetadata extends Disposable implements ISessionMetadata {
       custom: {},
     };
     await this.store.set(this.scope, META_KEY, this.data);
-    this.log.debug('session metadata created', { sessionId: this.ctx.sessionId });
+    this.log.debug("session metadata created", {
+      sessionId: this.ctx.sessionId,
+    });
   }
 }
 
@@ -156,22 +162,27 @@ function agentMetaEquals(a: AgentMeta, b: AgentMeta): boolean {
   );
 }
 
-function recordEquals(a: AgentMeta['labels'], b: AgentMeta['labels']): boolean {
+function recordEquals(a: AgentMeta["labels"], b: AgentMeta["labels"]): boolean {
   const entriesA = Object.entries(a ?? {});
   const entriesB = Object.entries(b ?? {});
   return (
-    entriesA.length === entriesB.length && entriesA.every(([key, value]) => b?.[key] === value)
+    entriesA.length === entriesB.length &&
+    entriesA.every(([key, value]) => b?.[key] === value)
   );
 }
 
-export function normalizeSessionMeta(raw: SessionMeta, sessionId: string): SessionMeta {
+export function normalizeSessionMeta(
+  raw: SessionMeta,
+  sessionId: string,
+): SessionMeta {
   const legacy = raw as unknown as {
     createdAt?: unknown;
     updatedAt?: unknown;
     workDir?: unknown;
   };
   const cwd =
-    raw.cwd ?? (typeof legacy.workDir === 'string' && legacy.workDir.length > 0
+    raw.cwd ??
+    (typeof legacy.workDir === "string" && legacy.workDir.length > 0
       ? legacy.workDir
       : undefined);
   if (raw.version === SESSION_META_VERSION) {
@@ -188,8 +199,8 @@ export function normalizeSessionMeta(raw: SessionMeta, sessionId: string): Sessi
 }
 
 export function toEpochMs(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
     const parsed = Date.parse(value);
     if (!Number.isNaN(parsed)) return parsed;
   }
@@ -201,5 +212,5 @@ registerScopedService(
   ISessionMetadata,
   SessionMetadata,
   ScopeActivation.OnScopeCreated,
-  'sessionMetadata',
+  "sessionMetadata",
 );

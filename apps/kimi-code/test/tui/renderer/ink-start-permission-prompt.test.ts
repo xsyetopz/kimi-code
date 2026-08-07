@@ -76,9 +76,9 @@ describe("ink start permission prompt", () => {
       }),
     );
     expect(tui.state.activeDialog).toBe("start-permission-prompt");
-    expect(
-      tui.getTerminalViewState().dialog.startPermissionPrompt?.title,
-    ).toBe("Start a goal with approvals on?");
+    expect(tui.getTerminalViewState().dialog.startPermissionPrompt?.title).toBe(
+      "Start a goal with approvals on?",
+    );
 
     tui.restoreEditor();
 
@@ -89,12 +89,14 @@ describe("ink start permission prompt", () => {
       }),
     );
     expect(tui.state.activeDialog).toBe("start-permission-prompt");
-    expect(
-      tui.getTerminalViewState().dialog.startPermissionPrompt?.title,
-    ).toBe("Start a swarm task with approvals on?");
+    expect(tui.getTerminalViewState().dialog.startPermissionPrompt?.title).toBe(
+      "Start a swarm task with approvals on?",
+    );
     expect(
       (
-        tui as unknown as { handleInkSimpleDialogInput: (data: string) => boolean }
+        tui as unknown as {
+          handleInkSimpleDialogInput: (data: string) => boolean;
+        }
       ).handleInkSimpleDialogInput("\u001B"),
     ).toBe(true);
     expect(onCancel).toHaveBeenCalledOnce();

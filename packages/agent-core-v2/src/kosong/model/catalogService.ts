@@ -54,36 +54,37 @@
  * edits one.
  */
 
-import { parseKimiCodeCustomHeaders } from '@moonshot-ai/kimi-code-oauth';
+import { parseKimiCodeCustomHeaders } from "@moonshot-ai/kimi-code-oauth";
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Error2 } from '#/_base/errors/errors';
-import type { ModelCapability } from '#/kosong/contract/capability';
-import type { ProviderRequestAuth } from '#/kosong/contract/provider';
-import type { TokenUsage } from '#/kosong/contract/usage';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Error2 } from "#/_base/errors/errors";
+import type { ModelCapability } from "#/kosong/contract/capability";
+import type { ProviderRequestAuth } from "#/kosong/contract/provider";
+import type { TokenUsage } from "#/kosong/contract/usage";
 import {
   IProtocolAdapterRegistry,
   ProtocolSchema,
   type Protocol,
   type ProtocolProviderOptions,
-} from '#/kosong/protocol/protocol';
+} from "#/kosong/protocol/protocol";
 
-import { CONFIG_INVALID_ERROR_CODE } from '#/kosong/contract/errors';
+import { CONFIG_INVALID_ERROR_CODE } from "#/kosong/contract/errors";
 import {
   LATEST_OPUS_PROFILE,
   matchKnownAnthropicModelProfile,
   matchUnknownClaudeProfile,
-} from '../provider/bases/anthropic/anthropic-profile';
-import {
-  IProviderService,
-  type ProviderConfig,
-} from '../provider/provider';
+} from "../provider/bases/anthropic/anthropic-profile";
+import { IProviderService, type ProviderConfig } from "../provider/provider";
 import {
   explainProviderEndpoint,
   getProviderDefinition,
   resolveProviderEndpoint,
-} from '../provider/providerDefinition';
+} from "../provider/providerDefinition";
 
 import {
   type AuthProvider,
@@ -98,9 +99,9 @@ import {
   toProtocolModel,
   toProtocolModelFallback,
   toProtocolProvider,
-} from './catalog';
-import { ModelCatalogErrors } from './errors';
-import { IHostRequestHeaders } from './hostRequestHeaders';
+} from "./catalog";
+import { ModelCatalogErrors } from "./errors";
+import { IHostRequestHeaders } from "./hostRequestHeaders";
 import {
   assembleModelInspection,
   attributeEffectiveFields,
@@ -108,23 +109,23 @@ import {
   type ModelInspection,
   ResolutionTraceCollector,
   TRACE,
-} from './inspection';
-import { IModelService, type ModelRecord } from './model';
+} from "./inspection";
+import { IModelService, type ModelRecord } from "./model";
 import {
   deriveProviderId,
   effectiveModelConfig,
   nonEmpty,
   resolveModelAuthMaterial,
-} from './modelAuth';
-import { IModelOAuthTokens } from './modelOAuth';
-import type { ResolvedModelAuthMaterial } from './model.types';
-import type { ModelRequester } from './modelRequester';
-import { ModelRequesterImpl } from './modelRequesterImpl';
+} from "./modelAuth";
+import { IModelOAuthTokens } from "./modelOAuth";
+import type { ResolvedModelAuthMaterial } from "./model.types";
+import type { ModelRequester } from "./modelRequester";
+import { ModelRequesterImpl } from "./modelRequesterImpl";
 import {
   catalogWireDialect,
   resolveModelProtocolProfile,
-} from './catalogProfiles';
-import { drivesThinkingThroughTraits } from './thinking';
+} from "./catalogProfiles";
+import { drivesThinkingThroughTraits } from "./thinking";
 
 type MutableProtocolProviderOptions = {
   -readonly [K in keyof ProtocolProviderOptions]: ProtocolProviderOptions[K];
@@ -147,11 +148,16 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     @IModelOAuthTokens private readonly oauth: IModelOAuthTokens,
     @IProtocolAdapterRegistry
     private readonly protocolRegistry: IProtocolAdapterRegistry,
-    @IHostRequestHeaders private readonly hostRequestHeaders: IHostRequestHeaders,
+    @IHostRequestHeaders
+    private readonly hostRequestHeaders: IHostRequestHeaders,
   ) {
     super();
-    this._register(this.models.onDidChangeModels(() => this.notifyConfigChanged()));
-    this._register(this.providers.onDidChangeProviders(() => this.notifyConfigChanged()));
+    this._register(
+      this.models.onDidChangeModels(() => this.notifyConfigChanged()),
+    );
+    this._register(
+      this.providers.onDidChangeProviders(() => this.notifyConfigChanged()),
+    );
   }
 
   notifyConfigChanged(): void {
@@ -169,7 +175,8 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
   findByName(name: string): readonly string[] {
     const out: string[] = [];
     for (const [id, m] of Object.entries(this.models.list())) {
-      const alias = m.name === name || m.model === name || (m.aliases ?? []).includes(name);
+      const alias =
+        m.name === name || m.model === name || (m.aliases ?? []).includes(name);
       if (alias) out.push(id);
     }
     return out;
@@ -198,27 +205,40 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     const { requester } = this.entry(id);
     const startedAt = Date.now();
     try {
-      let text = '';
+      let text = "";
       let usage: TokenUsage | undefined;
       let finishReason: string | undefined;
       for await (const event of requester.request(
         {
-          systemPrompt: 'You are a connectivity probe. Answer with the single word "pong".',
+          systemPrompt:
+            'You are a connectivity probe. Answer with the single word "pong".',
           tools: [],
-          messages: [{ role: 'user', content: [{ type: 'text', text: 'ping' }], toolCalls: [] }],
+          messages: [
+            {
+              role: "user",
+              content: [{ type: "text", text: "ping" }],
+              toolCalls: [],
+            },
+          ],
         },
         undefined,
         { maxCompletionTokens: 512 },
       )) {
-        if (event.type === 'part' && event.part.type === 'text') {
+        if (event.type === "part" && event.part.type === "text") {
           text += event.part.text;
-        } else if (event.type === 'usage') {
+        } else if (event.type === "usage") {
           usage = event.usage;
-        } else if (event.type === 'finish') {
+        } else if (event.type === "finish") {
           finishReason = event.providerFinishReason ?? event.rawFinishReason;
         }
       }
-      return { ok: true, durationMs: Date.now() - startedAt, text: text.trim(), finishReason, usage };
+      return {
+        ok: true,
+        durationMs: Date.now() - startedAt,
+        text: text.trim(),
+        finishReason,
+        usage,
+      };
     } catch (error) {
       return {
         ok: false,
@@ -246,7 +266,14 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     const globalDefaultModel = this.models.getDefaultModel();
     const out: ProviderCatalogItem[] = [];
     for (const [providerId, provider] of Object.entries(providers)) {
-      out.push(await this.toCatalogProvider(providerId, provider, models, globalDefaultModel));
+      out.push(
+        await this.toCatalogProvider(
+          providerId,
+          provider,
+          models,
+          globalDefaultModel,
+        ),
+      );
     }
     return out;
   }
@@ -261,7 +288,12 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     }
     const models = this.models.list();
     const globalDefaultModel = this.models.getDefaultModel();
-    return this.toCatalogProvider(providerId, provider, models, globalDefaultModel);
+    return this.toCatalogProvider(
+      providerId,
+      provider,
+      models,
+      globalDefaultModel,
+    );
   }
 
   async setDefaultModel(modelId: string): Promise<SetDefaultModelResponse> {
@@ -287,7 +319,13 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     globalDefaultModel: string | undefined,
   ): Promise<ProviderCatalogItem> {
     const credential = await this.resolveCredential(providerId, provider);
-    return toProtocolProvider(providerId, provider, models, globalDefaultModel, credential);
+    return toProtocolProvider(
+      providerId,
+      provider,
+      models,
+      globalDefaultModel,
+      credential,
+    );
   }
 
   private async resolveCredential(
@@ -300,15 +338,20 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     };
   }
 
-  private async hasCachedToken(providerId: string, provider: ProviderConfig): Promise<boolean> {
+  private async hasCachedToken(
+    providerId: string,
+    provider: ProviderConfig,
+  ): Promise<boolean> {
     if (provider.oauth === undefined) return false;
     return this.oauth.hasCachedAccessToken(providerId, provider.oauth);
   }
 
   private providerTypeOf(record: ModelRecord): string | undefined {
     const providerId =
-      record.providerId ?? record.provider ?? this.providers.getDefaultProvider();
-    return this.providers.get(providerId ?? '')?.type ?? record.protocol;
+      record.providerId ??
+      record.provider ??
+      this.providers.getDefaultProvider();
+    return this.providers.get(providerId ?? "")?.type ?? record.protocol;
   }
 
   private buildModel(id: string, trace: ResolutionTraceCollector): Model {
@@ -321,23 +364,38 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
       );
     }
     trace.capture(TRACE.configuredModel, configuredModel);
-    trace.record('model.record', { kind: 'config', detail: '[models.*] section' });
+    trace.record("model.record", {
+      kind: "config",
+      detail: "[models.*] section",
+    });
 
     const routingModel = effectiveModelConfig(configuredModel);
-    const { providerConfig, providerName, resolvedBaseUrl: rawBaseUrl } =
-      this.resolveProviderContext(id, routingModel, trace);
+    const {
+      providerConfig,
+      providerName,
+      resolvedBaseUrl: rawBaseUrl,
+    } = this.resolveProviderContext(id, routingModel, trace);
     trace.capture(TRACE.providerConfig, providerConfig);
     trace.capture(TRACE.providerName, providerName);
     trace.capture(TRACE.rawBaseUrl, rawBaseUrl);
 
-    const protocol = this.resolveProtocol(id, routingModel, providerConfig, trace);
+    const protocol = this.resolveProtocol(
+      id,
+      routingModel,
+      providerConfig,
+      trace,
+    );
     const model = effectiveModelConfig(
       configuredModel,
       providerConfig?.type ?? configuredModel.protocol,
     );
     trace.capture(TRACE.effectiveModel, model);
     const wireName = model.name ?? model.model;
-    const profileAttribution = profileForAttribution(configuredModel, providerConfig, wireName);
+    const profileAttribution = profileForAttribution(
+      configuredModel,
+      providerConfig,
+      wireName,
+    );
     attributeEffectiveFields(
       trace,
       configuredModel,
@@ -360,7 +418,7 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
 
     const providerType = providerConfig?.type ?? protocol;
     const resolvedBaseUrl =
-      protocol === 'anthropic' && rawBaseUrl !== undefined
+      protocol === "anthropic" && rawBaseUrl !== undefined
         ? stripTrailingV1(rawBaseUrl)
         : rawBaseUrl;
     if (wireName === undefined) {
@@ -398,10 +456,15 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     if (providerOptions !== undefined) {
       attributeProviderOptions(trace, providerOptions, providerConfig?.env);
     }
-    const declared = new Set((model.capabilities ?? []).map((c) => c.trim().toLowerCase()));
+    const declared = new Set(
+      (model.capabilities ?? []).map((c) => c.trim().toLowerCase()),
+    );
 
     trace.capture(TRACE.hostHeaders, this.hostRequestHeaders.headers);
-    trace.capture(TRACE.thirdPartyHeaders, this.hostRequestHeaders.thirdPartyHeaders);
+    trace.capture(
+      TRACE.thirdPartyHeaders,
+      this.hostRequestHeaders.thirdPartyHeaders,
+    );
     trace.capture(TRACE.identitySlug, this.hostRequestHeaders.identitySlug);
     const wireDialect = catalogWireDialect(
       protocol,
@@ -435,7 +498,7 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
       reasoningKey: model.reasoningKey,
       supportEfforts: model.supportEfforts,
       defaultEffort: model.defaultEffort,
-      alwaysThinking: declared.has('always_thinking'),
+      alwaysThinking: declared.has("always_thinking"),
       providerType,
       providerName,
       authProvider,
@@ -456,8 +519,8 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     const providerId =
       model.providerId ?? model.provider ?? this.providers.getDefaultProvider();
     if (providerId !== undefined) {
-      trace.record('provider', {
-        kind: 'config',
+      trace.record("provider", {
+        kind: "config",
         detail:
           model.providerId !== undefined
             ? `model.providerId '${providerId}'`
@@ -478,11 +541,14 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
       let baseUrl: string | undefined;
       if (fromModel !== undefined) {
         baseUrl = fromModel;
-        trace.record('resolved.baseUrl', { kind: 'config', detail: 'model.baseUrl' });
+        trace.record("resolved.baseUrl", {
+          kind: "config",
+          detail: "model.baseUrl",
+        });
       } else if (fromProvider !== undefined) {
         baseUrl = fromProvider;
-        trace.record('resolved.baseUrl', {
-          kind: 'config',
+        trace.record("resolved.baseUrl", {
+          kind: "config",
           detail: `provider '${providerId}' baseUrl`,
         });
       } else {
@@ -493,18 +559,22 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
             : explainProviderEndpoint(endpointType, providerConfig.env ?? {});
         baseUrl = nonEmpty(endpoint.baseUrl);
         if (endpoint.baseUrlEnvName !== undefined) {
-          trace.record('resolved.baseUrl', {
-            kind: 'env',
+          trace.record("resolved.baseUrl", {
+            kind: "env",
             detail: `${endpoint.baseUrlEnvName} (provider '${providerId}' env bag)`,
           });
         } else if (endpoint.baseUrlIsDefault === true) {
-          trace.record('resolved.baseUrl', {
-            kind: 'builtin',
+          trace.record("resolved.baseUrl", {
+            kind: "builtin",
             detail: `provider definition '${endpointType}' defaultBaseUrl`,
           });
         }
       }
-      return { providerConfig, providerName: providerId, resolvedBaseUrl: baseUrl };
+      return {
+        providerConfig,
+        providerName: providerId,
+        resolvedBaseUrl: baseUrl,
+      };
     }
 
     const modelBaseUrl = nonEmpty(model.baseUrl);
@@ -514,12 +584,15 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
         `Model "${id}" must set either providerId or baseUrl in config.toml.`,
       );
     }
-    trace.record('provider', {
-      kind: 'synthesized',
-      detail: 'flat model — provider synthesized from the baseUrl host',
+    trace.record("provider", {
+      kind: "synthesized",
+      detail: "flat model — provider synthesized from the baseUrl host",
     });
     trace.capture(TRACE.providerSynthesized, true);
-    trace.record('resolved.baseUrl', { kind: 'config', detail: 'model.baseUrl (flat)' });
+    trace.record("resolved.baseUrl", {
+      kind: "config",
+      detail: "model.baseUrl (flat)",
+    });
     const originName = deriveProviderId(modelBaseUrl);
     return {
       providerConfig: undefined,
@@ -535,23 +608,26 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     trace: ResolutionTraceCollector,
   ): Protocol {
     if (model.protocol !== undefined) {
-      trace.record('resolved.protocol', { kind: 'config', detail: 'model.protocol' });
+      trace.record("resolved.protocol", {
+        kind: "config",
+        detail: "model.protocol",
+      });
       return model.protocol;
     }
     const providerType = provider?.type;
     if (providerType !== undefined) {
       const asProtocol = ProtocolSchema.safeParse(providerType);
       if (asProtocol.success) {
-        trace.record('resolved.protocol', {
-          kind: 'config',
+        trace.record("resolved.protocol", {
+          kind: "config",
           detail: `provider type '${providerType}' is itself a wire protocol`,
         });
         return asProtocol.data;
       }
       const definition = getProviderDefinition(providerType);
       if (definition !== undefined) {
-        trace.record('resolved.protocol', {
-          kind: 'builtin',
+        trace.record("resolved.protocol", {
+          kind: "builtin",
           detail: `vendor '${providerType}' declared baseProtocol`,
         });
         return definition.baseProtocol;
@@ -563,13 +639,16 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     );
   }
 
-  private buildAuthProvider(providerName: string, auth: ResolvedModelAuthMaterial): AuthProvider {
+  private buildAuthProvider(
+    providerName: string,
+    auth: ResolvedModelAuthMaterial,
+  ): AuthProvider {
     if (auth.apiKey !== undefined) {
       // OpenCode's Zen Free public credential is a deliberate no-login
       // fallback. Prefer a cached OpenCode account token when one exists so
       // an authenticated account can unlock the paid Zen catalog without
       // changing the provider's public default.
-      if (auth.apiKey === 'public') {
+      if (auth.apiKey === "public") {
         return this.externalTokenAuthProvider(providerName, auth.apiKey);
       }
       return new StaticAuthProvider(auth.apiKey);
@@ -596,7 +675,10 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     return this.externalTokenAuthProvider(providerName);
   }
 
-  private externalTokenAuthProvider(providerName: string, fallbackApiKey?: string): AuthProvider {
+  private externalTokenAuthProvider(
+    providerName: string,
+    fallbackApiKey?: string,
+  ): AuthProvider {
     const tokens = this.oauth;
     const providerType = this.providers.get(providerName)?.type;
     return {
@@ -623,11 +705,11 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
 export function resolveOutboundHeaders(
   providerType: string | undefined,
   customHeaders: Readonly<Record<string, string>> | undefined,
-  host: Pick<IHostRequestHeaders, 'headers' | 'thirdPartyHeaders'>,
+  host: Pick<IHostRequestHeaders, "headers" | "thirdPartyHeaders">,
 ): Readonly<Record<string, string>> {
   const forwardsAll =
     providerType !== undefined &&
-    getProviderDefinition(providerType)?.hostHeaders === 'full';
+    getProviderDefinition(providerType)?.hostHeaders === "full";
   const hostLayer = forwardsAll ? host.headers : host.thirdPartyHeaders;
   return { ...parseKimiCodeCustomHeaders(), ...hostLayer, ...customHeaders };
 }
@@ -638,23 +720,28 @@ function resolveModelCapabilities(
   maxContextSize: number,
   maxInputSize: number | undefined,
 ): ModelCapability {
-  const declared = new Set((declaredCapabilities ?? []).map((c) => c.trim().toLowerCase()));
+  const declared = new Set(
+    (declaredCapabilities ?? []).map((c) => c.trim().toLowerCase()),
+  );
   return {
-    image_in: declared.has('image_in') || detected.image_in,
-    video_in: declared.has('video_in') || detected.video_in,
-    audio_in: declared.has('audio_in') || detected.audio_in,
-    thinking: declared.has('thinking') || declared.has('always_thinking') || detected.thinking,
-    tool_use: declared.has('tool_use') || detected.tool_use,
+    image_in: declared.has("image_in") || detected.image_in,
+    video_in: declared.has("video_in") || detected.video_in,
+    audio_in: declared.has("audio_in") || detected.audio_in,
+    thinking:
+      declared.has("thinking") ||
+      declared.has("always_thinking") ||
+      detected.thinking,
+    tool_use: declared.has("tool_use") || detected.tool_use,
     max_context_tokens: maxContextSize,
     max_input_tokens: maxInputSize,
     dynamically_loaded_tools:
-      declared.has('dynamically_loaded_tools') ||
+      declared.has("dynamically_loaded_tools") ||
       detected.dynamically_loaded_tools === true,
   };
 }
 
 function stripTrailingV1(baseUrl: string): string {
-  return baseUrl.replace(/\/v1\/?$/, '');
+  return baseUrl.replace(/\/v1\/?$/, "");
 }
 
 function buildProtocolProviderOptions(
@@ -666,19 +753,22 @@ function buildProtocolProviderOptions(
   const options: MutableProtocolProviderOptions = {};
 
   switch (protocol) {
-    case 'anthropic':
-      if (model.maxOutputSize !== undefined) options.defaultMaxTokens = model.maxOutputSize;
-      if (model.supportEfforts !== undefined) options.supportEfforts = model.supportEfforts;
-      if (model.adaptiveThinking !== undefined) options.adaptiveThinking = model.adaptiveThinking;
+    case "anthropic":
+      if (model.maxOutputSize !== undefined)
+        options.defaultMaxTokens = model.maxOutputSize;
+      if (model.supportEfforts !== undefined)
+        options.supportEfforts = model.supportEfforts;
+      if (model.adaptiveThinking !== undefined)
+        options.adaptiveThinking = model.adaptiveThinking;
       if (model.betaApi !== undefined) options.betaApi = model.betaApi;
       break;
-    case 'openai': {
+    case "openai": {
       const reasoningKey = nonEmpty(model.reasoningKey);
       if (reasoningKey !== undefined) options.reasoningKey = reasoningKey;
       if (model.offEffort !== undefined) options.offEffort = model.offEffort;
       break;
     }
-    case 'google-genai': {
+    case "google-genai": {
       const project = vertexAIProject(provider);
       const location = vertexAILocation(provider, baseUrl);
       if (project !== undefined && location !== undefined) {
@@ -688,7 +778,7 @@ function buildProtocolProviderOptions(
       }
       break;
     }
-    case 'openai_responses':
+    case "openai_responses":
       if (model.offEffort !== undefined) options.offEffort = model.offEffort;
       break;
     default: {
@@ -706,7 +796,10 @@ function profileForAttribution(
   configuredModel: ModelRecord,
   providerConfig: ProviderConfig | undefined,
   wireName: string | undefined,
-): { readonly profile: typeof LATEST_OPUS_PROFILE | undefined; readonly inferred: boolean } {
+): {
+  readonly profile: typeof LATEST_OPUS_PROFILE | undefined;
+  readonly inferred: boolean;
+} {
   if (wireName === undefined) return { profile: undefined, inferred: false };
   const profileArg = providerConfig?.type ?? configuredModel.protocol;
   const gateProtocol = configuredModel.protocol ?? profileArg;
@@ -714,36 +807,51 @@ function profileForAttribution(
   const infer =
     profileArg !== undefined &&
     !drivesThinkingThroughTraits(profileArg) &&
-    gateProtocol === 'anthropic';
+    gateProtocol === "anthropic";
   if (infer) {
     const fallback = known ?? matchUnknownClaudeProfile(wireName);
-    return { profile: fallback, inferred: known === undefined && fallback !== undefined };
+    return {
+      profile: fallback,
+      inferred: known === undefined && fallback !== undefined,
+    };
   }
   return { profile: known, inferred: false };
 }
 
-function vertexAIProject(provider: ProviderConfig | undefined): string | undefined {
-  return envValue(provider?.env, 'GOOGLE_CLOUD_PROJECT');
+function vertexAIProject(
+  provider: ProviderConfig | undefined,
+): string | undefined {
+  return envValue(provider?.env, "GOOGLE_CLOUD_PROJECT");
 }
 
 function vertexAILocation(
   provider: ProviderConfig | undefined,
   baseUrl: string | undefined,
 ): string | undefined {
-  return envValue(provider?.env, 'GOOGLE_CLOUD_LOCATION') ?? locationFromVertexAIBaseUrl(baseUrl);
+  return (
+    envValue(provider?.env, "GOOGLE_CLOUD_LOCATION") ??
+    locationFromVertexAIBaseUrl(baseUrl)
+  );
 }
 
-function envValue(env: Record<string, string> | undefined, key: string): string | undefined {
+function envValue(
+  env: Record<string, string> | undefined,
+  key: string,
+): string | undefined {
   return nonEmpty(env?.[key]);
 }
 
-function locationFromVertexAIBaseUrl(baseUrl: string | undefined): string | undefined {
+function locationFromVertexAIBaseUrl(
+  baseUrl: string | undefined,
+): string | undefined {
   const url = nonEmpty(baseUrl);
   if (url === undefined) return undefined;
   try {
     const host = new URL(url).hostname;
-    const suffix = '-aiplatform.googleapis.com';
-    return host.endsWith(suffix) ? nonEmpty(host.slice(0, -suffix.length)) : undefined;
+    const suffix = "-aiplatform.googleapis.com";
+    return host.endsWith(suffix)
+      ? nonEmpty(host.slice(0, -suffix.length))
+      : undefined;
   } catch {
     return undefined;
   }
@@ -752,7 +860,10 @@ function locationFromVertexAIBaseUrl(baseUrl: string | undefined): string | unde
 function hasConfiguredApiKey(provider: ProviderConfig): boolean {
   if (nonEmpty(provider.apiKey) !== undefined) return true;
   if (provider.type === undefined) return false;
-  return resolveProviderEndpoint(provider.type, provider.env ?? {}).apiKey !== undefined;
+  return (
+    resolveProviderEndpoint(provider.type, provider.env ?? {}).apiKey !==
+    undefined
+  );
 }
 
 registerScopedService(
@@ -760,5 +871,5 @@ registerScopedService(
   IModelCatalog,
   ModelCatalog,
   ScopeActivation.OnScopeCreated,
-  'modelCatalog',
+  "modelCatalog",
 );

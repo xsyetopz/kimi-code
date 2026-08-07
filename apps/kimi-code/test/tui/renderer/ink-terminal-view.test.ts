@@ -11,7 +11,10 @@ vi.mock("ink", async () => {
 import { renderToString } from "ink";
 import { visibleWidth } from "@moonshot-ai/kimi-tui";
 
-import { InkDialogView, projectInkHelpLines } from "#/tui/renderer/ink/terminal-dialog";
+import {
+  InkDialogView,
+  projectInkHelpLines,
+} from "#/tui/renderer/ink/terminal-dialog";
 import {
   InkTerminalView,
   encodeInkInput,
@@ -214,9 +217,7 @@ describe("InkTerminalView", () => {
       queuedMessages: [{ text: "queued", mode: "prompt" }],
     });
 
-    expect(projectInkTranscript(terminalView)).toEqual(
-      terminalView.transcript,
-    );
+    expect(projectInkTranscript(terminalView)).toEqual(terminalView.transcript);
     expect(projectInkActivity(terminalView.activity)).toBe("Thinking");
     expect(projectInkActivity({ mode: "hidden", tip: "ignored" })).toBe(
       undefined,

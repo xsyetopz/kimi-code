@@ -37,8 +37,11 @@ export const MAX_DECODE_PIXELS = 100_000_000;
 
 export const MAX_IMAGE_DECODE_BYTES = 64 * 1024 * 1024;
 
-export const RECODABLE_MIME = new Set(["image/png", "image/jpeg", "image/webp"]);
-
+export const RECODABLE_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
 
 type JimpImage = Awaited<
   ReturnType<typeof import("jimp")["Jimp"]["fromBuffer"]>

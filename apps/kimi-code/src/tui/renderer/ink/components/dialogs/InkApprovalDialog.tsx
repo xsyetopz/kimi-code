@@ -35,14 +35,9 @@ export function InkApprovalDialog({
         <Text key={line}>{currentTheme.fg("textMuted", `  ${line}`)}</Text>
       ))}
       <Text> </Text>
-      <ChoiceList
-        choices={data.choices}
-        selectedIndex={selectedIndex}
-      />
+      <ChoiceList choices={data.choices} selectedIndex={selectedIndex} />
       {feedbackMode ? (
-        <Text>
-          {currentTheme.fg("accent", `Feedback: ${feedbackText}▌`)}
-        </Text>
+        <Text>{currentTheme.fg("accent", `Feedback: ${feedbackText}▌`)}</Text>
       ) : null}
       <Text>
         {currentTheme.fg(

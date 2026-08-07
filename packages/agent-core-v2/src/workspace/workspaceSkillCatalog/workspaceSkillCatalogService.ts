@@ -14,33 +14,43 @@
  * read/written through it. Bound at Workspace scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { IBuiltinSkillSource } from '#/app/skillCatalog/builtinSkillSource';
-import { InMemorySkillCatalog } from '#/app/skillCatalog/registry';
-import type { ISkillSource, SkillContribution } from '#/app/skillCatalog/skillSource';
-import type { SkillCatalog } from '#/app/skillCatalog/types';
-import { IUserFileSkillSource } from '#/app/skillCatalog/userFileSkillSource';
-import type { ISessionSkillCatalogData } from '#/session/sessionSkillCatalog/skillCatalogData';
-import { IWorkspaceStateService } from '#/workspace/state/workspaceState';
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import { IBuiltinSkillSource } from "#/app/skillCatalog/builtinSkillSource";
+import { InMemorySkillCatalog } from "#/app/skillCatalog/registry";
+import type {
+  ISkillSource,
+  SkillContribution,
+} from "#/app/skillCatalog/skillSource";
+import type { SkillCatalog } from "#/app/skillCatalog/types";
+import { IUserFileSkillSource } from "#/app/skillCatalog/userFileSkillSource";
+import type { ISessionSkillCatalogData } from "#/session/sessionSkillCatalog/skillCatalogData";
+import { IWorkspaceStateService } from "#/workspace/state/workspaceState";
 
-import { IExplicitFileSkillSource } from './explicitFileSkillSource';
-import { IExtraFileSkillSource } from './extraFileSkillSource';
-import { IPluginSkillSource } from './pluginSkillSource';
-import { IWorkspaceRootSkillSource } from './rootFileSkillSource';
-import { IWorkspaceSkillCatalog } from './workspaceSkillCatalog';
+import { IExplicitFileSkillSource } from "./explicitFileSkillSource";
+import { IExtraFileSkillSource } from "./extraFileSkillSource";
+import { IPluginSkillSource } from "./pluginSkillSource";
+import { IWorkspaceRootSkillSource } from "./rootFileSkillSource";
+import { IWorkspaceSkillCatalog } from "./workspaceSkillCatalog";
 
 export const workspaceSkillCatalogContributionsKey = defineState<
   Map<string, { readonly c: SkillContribution; readonly priority: number }>
->('workspaceSkillCatalog.contributions', () => new Map());
+>("workspaceSkillCatalog.contributions", () => new Map());
 export const workspaceSkillCatalogMergedKey = defineState<InMemorySkillCatalog>(
-  'workspaceSkillCatalog.merged',
+  "workspaceSkillCatalog.merged",
   () => new InMemorySkillCatalog(),
 );
 
-export class WorkspaceSkillCatalogService extends Disposable implements IWorkspaceSkillCatalog {
+export class WorkspaceSkillCatalogService
+  extends Disposable
+  implements IWorkspaceSkillCatalog
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly sources: readonly ISkillSource[];
@@ -96,7 +106,7 @@ export class WorkspaceSkillCatalogService extends Disposable implements IWorkspa
 
   async reload(): Promise<void> {
     await this.loadAll();
-    this.onDidChangeEmitter.fire('catalog');
+    this.onDidChangeEmitter.fire("catalog");
   }
 
   async load(): Promise<void> {
@@ -130,14 +140,19 @@ export class WorkspaceSkillCatalogService extends Disposable implements IWorkspa
 
   private loadSource(source: ISkillSource, fireChange = false): Promise<void> {
     const previous = this.sourceLoadTails.get(source) ?? Promise.resolve();
-    const current = previous.catch(() => undefined).then(async () => {
-      const contribution = await source.load();
-      this.contributions.set(source.id, { c: contribution, priority: source.priority });
-      if (fireChange) {
-        this.remerge();
-        this.onDidChangeEmitter.fire(source.id);
-      }
-    });
+    const current = previous
+      .catch(() => undefined)
+      .then(async () => {
+        const contribution = await source.load();
+        this.contributions.set(source.id, {
+          c: contribution,
+          priority: source.priority,
+        });
+        if (fireChange) {
+          this.remerge();
+          this.onDidChangeEmitter.fire(source.id);
+        }
+      });
     this.sourceLoadTails.set(source, current);
     const clear = () => {
       if (this.sourceLoadTails.get(source) === current) {
@@ -150,7 +165,9 @@ export class WorkspaceSkillCatalogService extends Disposable implements IWorkspa
 
   private remerge(): void {
     const m = new InMemorySkillCatalog();
-    const ordered = [...this.contributions.values()].toSorted((a, b) => a.priority - b.priority);
+    const ordered = [...this.contributions.values()].toSorted(
+      (a, b) => a.priority - b.priority,
+    );
     for (const { c } of ordered) {
       for (const skill of c.skills) m.register(skill, { replace: true });
       m.addRoots(c.scannedRoots ?? []);
@@ -165,5 +182,5 @@ registerScopedService(
   IWorkspaceSkillCatalog,
   WorkspaceSkillCatalogService,
   ScopeActivation.OnScopeCreated,
-  'workspaceSkillCatalog',
+  "workspaceSkillCatalog",
 );

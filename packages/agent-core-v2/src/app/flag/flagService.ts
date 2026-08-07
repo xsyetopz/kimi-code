@@ -6,11 +6,15 @@
  * reads/watches config. Bound at App scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { parseBooleanEnv } from '#/_base/utils/env';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { parseBooleanEnv } from "#/_base/utils/env";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
 
 import {
   type ExperimentalFeatureState,
@@ -19,10 +23,14 @@ import {
   type ExperimentalFlagSource,
   EXPERIMENTAL_SECTION,
   IFlagService,
-} from './flag';
-import { type FlagDefinitionInput, type FlagId, IFlagRegistry } from './flagRegistry';
+} from "./flag";
+import {
+  type FlagDefinitionInput,
+  type FlagId,
+  IFlagRegistry,
+} from "./flagRegistry";
 
-export const MASTER_ENV = 'KIMI_CODE_EXPERIMENTAL_FLAG';
+export const MASTER_ENV = "KIMI_CODE_EXPERIMENTAL_FLAG";
 
 export class FlagService extends Disposable implements IFlagService {
   declare readonly _serviceBrand: undefined;
@@ -63,12 +71,14 @@ export class FlagService extends Disposable implements IFlagService {
     if (def === undefined) return undefined;
     const configValue = this.configOverrides[def.id];
     if (parseBooleanEnv(this.bootstrap.getEnv(MASTER_ENV)) === true) {
-      return this.state(def, true, 'master-env', configValue);
+      return this.state(def, true, "master-env", configValue);
     }
     const override = parseBooleanEnv(this.bootstrap.getEnv(def.env));
-    if (override !== undefined) return this.state(def, override, 'env', configValue);
-    if (configValue !== undefined) return this.state(def, configValue, 'config', configValue);
-    return this.state(def, def.default, 'default', undefined);
+    if (override !== undefined)
+      return this.state(def, override, "env", configValue);
+    if (configValue !== undefined)
+      return this.state(def, configValue, "config", configValue);
+    return this.state(def, def.default, "default", undefined);
   }
 
   snapshot(): ExperimentalFlagMap {
@@ -88,7 +98,9 @@ export class FlagService extends Disposable implements IFlagService {
     return this.registry
       .list()
       .map((def) => this.explain(def.id))
-      .filter((state): state is ExperimentalFeatureState => state !== undefined);
+      .filter(
+        (state): state is ExperimentalFeatureState => state !== undefined,
+      );
   }
 
   private state(
@@ -116,5 +128,5 @@ registerScopedService(
   IFlagService,
   FlagService,
   ScopeActivation.OnScopeCreated,
-  'flag',
+  "flag",
 );

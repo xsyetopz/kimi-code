@@ -32,7 +32,9 @@ export interface InkChoicePickerView {
 export function createInkChoicePickerList(
   opts: ChoicePickerOptions,
 ): SearchableList<ChoiceOption> {
-  const currentIdx = opts.options.findIndex((o) => o.value === opts.currentValue);
+  const currentIdx = opts.options.findIndex(
+    (o) => o.value === opts.currentValue,
+  );
   return new SearchableList({
     items: opts.options,
     toSearchText: (option) => `${option.label} ${option.description ?? ""}`,
@@ -105,10 +107,7 @@ export function handleInkChoicePickerInput(
     return true;
   }
   const isSpace = matchesKey(data, Key.space) || printableChar(data) === " ";
-  if (
-    matchesKey(data, Key.enter) ||
-    (isSpace && opts.searchable !== true)
-  ) {
+  if (matchesKey(data, Key.enter) || (isSpace && opts.searchable !== true)) {
     const chosen = list.selected();
     if (chosen !== undefined) callbacks.onSelect(chosen.value);
     return true;

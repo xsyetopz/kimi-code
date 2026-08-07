@@ -48,8 +48,7 @@ export function InkSessionPickerDialog({
         const label = session.title ?? session.lastPrompt ?? session.id;
         const current =
           session.id === currentSessionId ? ` ${CURRENT_MARK}` : "";
-        const pointer =
-          index === dialog.selectedIndex ? SELECT_POINTER : " ";
+        const pointer = index === dialog.selectedIndex ? SELECT_POINTER : " ";
         return (
           <Text key={session.id}>
             {`  ${pointer} ${label}${current} · ${session.workDir}`}

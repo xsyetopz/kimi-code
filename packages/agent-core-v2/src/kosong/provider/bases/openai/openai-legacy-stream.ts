@@ -200,4 +200,3 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
     }
   }
 }
-

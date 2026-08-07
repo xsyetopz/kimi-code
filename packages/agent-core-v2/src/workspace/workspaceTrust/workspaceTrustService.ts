@@ -16,18 +16,22 @@
  * Bound at Workspace scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Emitter } from '#/_base/event';
-import { defineState } from '#/_base/state/stateRegistry';
-import { encodeWorkDirKey } from '#/_base/utils/workdir-slug';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import { IWorkspaceStateService } from '#/workspace/state/workspaceState';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Emitter } from "#/_base/event";
+import { defineState } from "#/_base/state/stateRegistry";
+import { encodeWorkDirKey } from "#/_base/utils/workdir-slug";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import { IWorkspaceStateService } from "#/workspace/state/workspaceState";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 
-import { IWorkspaceTrust, type WorkspaceTrustChange } from './workspaceTrust';
+import { IWorkspaceTrust, type WorkspaceTrustChange } from "./workspaceTrust";
 
-const TRUST_SCOPE = 'workspace-trust';
+const TRUST_SCOPE = "workspace-trust";
 
 interface TrustRecord {
   readonly root: string;
@@ -35,17 +39,22 @@ interface TrustRecord {
 }
 
 export const workspaceTrustTrustedKey = defineState<boolean>(
-  'workspaceTrust.trusted',
+  "workspaceTrust.trusted",
   () => false,
 );
 
-export class WorkspaceTrustService extends Disposable implements IWorkspaceTrust {
+export class WorkspaceTrustService
+  extends Disposable
+  implements IWorkspaceTrust
+{
   declare readonly _serviceBrand: undefined;
 
   readonly ready: Promise<void>;
   private readonly root: string;
   private readonly storeKey: string;
-  private readonly changeEmitter = this._register(new Emitter<WorkspaceTrustChange>());
+  private readonly changeEmitter = this._register(
+    new Emitter<WorkspaceTrustChange>(),
+  );
   readonly onDidChange = this.changeEmitter.event;
 
   constructor(
@@ -96,7 +105,9 @@ export class WorkspaceTrustService extends Disposable implements IWorkspaceTrust
 
   private async initialize(): Promise<void> {
     try {
-      this.trusted = (await this.docs.get<TrustRecord>(TRUST_SCOPE, this.storeKey)) !== undefined;
+      this.trusted =
+        (await this.docs.get<TrustRecord>(TRUST_SCOPE, this.storeKey)) !==
+        undefined;
     } catch {
       this.trusted = false;
     }
@@ -108,5 +119,5 @@ registerScopedService(
   IWorkspaceTrust,
   WorkspaceTrustService,
   ScopeActivation.OnDemand,
-  'workspaceTrust',
+  "workspaceTrust",
 );

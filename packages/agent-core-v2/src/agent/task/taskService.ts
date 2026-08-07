@@ -38,46 +38,51 @@
  * reconciliation contracts. Bound at Agent scope.
  */
 
-import { randomBytes } from 'node:crypto';
-import { join } from 'pathe';
+import { randomBytes } from "node:crypto";
+import { join } from "pathe";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-
-import type { ContentPart } from '#/kosong/contract/message';
-
-import { Disposable } from '#/_base/di/lifecycle';
-import { ILogService } from '#/_base/log/log';
-import { defineState } from '#/_base/state/stateRegistry';
 import {
-  abortable,
-  userCancellationReason,
-} from '#/_base/utils/abort';
-import { escapeXml, escapeXmlAttr } from '#/_base/utils/xml-escape';
-import { IEventBus } from '#/app/event/eventBus';
-import { Error2, ErrorCodes } from '#/errors';
-import { defineCheckpointedModel } from '#/agent/contextMemory/conversationTime';
-import { IAgentConversationUndoParticipantRegistry } from '#/agent/contextMemory/conversationUndoParticipants';
-import type { ContextMessage, TaskOrigin } from '#/agent/contextMemory/types';
-import { IAgentContextInjectorService } from '#/agent/contextInjector/contextInjector';
-import { IAgentLoopService } from '#/agent/loop/loop';
-import { MessageStepRequest } from '#/agent/loop/stepRequest';
-import { IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { ITaskService, type ITaskHandle, TERMINAL_TASK_STATES } from '#/app/task/task';
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+
+import type { ContentPart } from "#/kosong/contract/message";
+
+import { Disposable } from "#/_base/di/lifecycle";
+import { ILogService } from "#/_base/log/log";
+import { defineState } from "#/_base/state/stateRegistry";
+import { abortable, userCancellationReason } from "#/_base/utils/abort";
+import { escapeXml, escapeXmlAttr } from "#/_base/utils/xml-escape";
+import { IEventBus } from "#/app/event/eventBus";
+import { Error2, ErrorCodes } from "#/errors";
+import { defineCheckpointedModel } from "#/agent/contextMemory/conversationTime";
+import { IAgentConversationUndoParticipantRegistry } from "#/agent/contextMemory/conversationUndoParticipants";
+import type { ContextMessage, TaskOrigin } from "#/agent/contextMemory/types";
+import { IAgentContextInjectorService } from "#/agent/contextInjector/contextInjector";
+import { IAgentLoopService } from "#/agent/loop/loop";
+import { MessageStepRequest } from "#/agent/loop/stepRequest";
+import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
+import { IAgentStateService } from "#/agent/state/agentState";
+import {
+  ITaskService,
+  type ITaskHandle,
+  TERMINAL_TASK_STATES,
+} from "#/app/task/task";
 import {
   TERMINAL_STATUSES,
   type AgentTaskInfoBase,
   type AgentTaskSettlement,
-} from './types';
-import { renderNotificationXml } from './notificationXml';
+} from "./types";
+import { renderNotificationXml } from "./notificationXml";
 
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { IConfigService } from '#/app/config/config';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { IWireService } from '#/wire/wire';
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { IConfigService } from "#/app/config/config";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { IWireService } from "#/wire/wire";
 import {
   IAgentTaskService,
   type AgentTaskNotificationContext,
@@ -90,13 +95,13 @@ import {
   type ForegroundTaskReleaseReason,
   type IAgentTaskEntry,
   type RegisterAgentTaskOptions,
-} from './task';
-import { resolveAgentTaskConfig } from './configSection';
-import { AgentTaskPersistence } from './persist';
-import { TaskModel, taskStarted, taskTerminated } from './taskOps';
-import { formatTaskList } from '#/agent/tools/task/task-list/taskListTool';
-import '#/agent/tools/task/task-output/taskOutputTool';
-import '#/agent/tools/task/task-stop/taskStopTool';
+} from "./task";
+import { resolveAgentTaskConfig } from "./configSection";
+import { AgentTaskPersistence } from "./persist";
+import { TaskModel, taskStarted, taskTerminated } from "./taskOps";
+import { formatTaskList } from "#/agent/tools/task/task-list/taskListTool";
+import "#/agent/tools/task/task-output/taskOutputTool";
+import "#/agent/tools/task/task-stop/taskStopTool";
 
 interface ForegroundRelease {
   readonly promise: Promise<ForegroundTaskReleaseReason>;
@@ -105,13 +110,13 @@ interface ForegroundRelease {
 
 type AgentTaskNotification = Record<string, unknown> & {
   readonly id: string;
-  readonly category: 'task';
+  readonly category: "task";
   readonly type: string;
-  readonly source_kind: 'background_task';
+  readonly source_kind: "background_task";
   readonly source_id: string;
   readonly agent_id?: string | undefined;
   readonly title: string;
-  readonly severity: 'info' | 'warning';
+  readonly severity: "info" | "warning";
   readonly body: string;
   readonly children?: readonly string[] | undefined;
 };
@@ -123,7 +128,7 @@ interface AgentTaskNotificationBuildContext {
 }
 
 const TaskNotificationDeliveryModel = defineCheckpointedModel(
-  'task.notificationDelivery',
+  "task.notificationDelivery",
   (): readonly string[] => [],
   {
     onAppendMessage: (current, message) => {
@@ -178,20 +183,20 @@ function outputLimitReason(): string {
   const mib = Math.floor(MAX_TASK_OUTPUT_BYTES / (1024 * 1024));
   return (
     `Output limit exceeded: the command produced more than ${mib} MiB and was ` +
-    'terminated. Redirect large output to a file (e.g. `command > out.txt`) and ' +
-    'inspect it in slices instead.'
+    "terminated. Redirect large output to a file (e.g. `command > out.txt`) and " +
+    "inspect it in slices instead."
   );
 }
 
 const SIGTERM_GRACE_MS = 5_000;
-const TASK_ID_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
-const SESSION_CLOSED_REASON = 'Session closed';
+const TASK_ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
+const SESSION_CLOSED_REASON = "Session closed";
 const NOTIFICATION_FALLBACK_PREVIEW_BYTES = 3_000;
-const ACTIVE_BACKGROUND_TASK_INJECTION_VARIANT = 'background_task_status';
+const ACTIVE_BACKGROUND_TASK_INJECTION_VARIANT = "background_task_status";
 const ACTIVE_BACKGROUND_TASK_GUIDANCE = [
-  'The conversation was compacted, so the earlier messages that started these background tasks are gone — but the tasks are still running from before.',
-  'Do not start duplicates. Use TaskList to list them, TaskOutput for a non-blocking status/output snapshot, and TaskStop to cancel one — completion arrives via automatic notification.',
-].join(' ');
+  "The conversation was compacted, so the earlier messages that started these background tasks are gone — but the tasks are still running from before.",
+  "Do not start duplicates. Use TaskList to list them, TaskOutput for a non-blocking status/output snapshot, and TaskStop to cancel one — completion arrives via automatic notification.",
+].join(" ");
 
 export function isAgentTaskTerminal(status: AgentTaskStatus): boolean {
   return TERMINAL_STATUSES.has(status);
@@ -201,15 +206,15 @@ function coerceTimeoutSettlement(
   entry: ManagedTask,
   settlement: AgentTaskSettlement,
 ): AgentTaskSettlement {
-  if (entry.timedOut && settlement.status === 'killed') {
-    return { ...settlement, status: 'timed_out' };
+  if (entry.timedOut && settlement.status === "killed") {
+    return { ...settlement, status: "timed_out" };
   }
   return settlement;
 }
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'task.notified': AgentTaskNotificationContext;
+    "task.notified": AgentTaskNotificationContext;
   }
 }
 
@@ -219,10 +224,10 @@ export class TaskNotificationStepRequest extends MessageStepRequest {
     private readonly onWillDeliver?: () => void,
   ) {
     super(message, {
-      kind: 'task_notification',
+      kind: "task_notification",
       mergeable: true,
       turnScoped: false,
-      admission: 'activeOrNewTurn',
+      admission: "activeOrNewTurn",
     });
   }
 
@@ -232,32 +237,30 @@ export class TaskNotificationStepRequest extends MessageStepRequest {
 }
 
 export const taskGhostsKey = defineState<Map<string, AgentTaskInfo>>(
-  'task.ghosts',
+  "task.ghosts",
   () => new Map(),
 );
 export const taskScheduledNotificationKeysKey = defineState<Set<string>>(
-  'task.scheduledNotificationKeys',
+  "task.scheduledNotificationKeys",
   () => new Set(),
 );
 export const taskDeliveredNotificationKeysKey = defineState<Set<string>>(
-  'task.deliveredNotificationKeys',
+  "task.deliveredNotificationKeys",
   () => new Set(),
 );
 export const taskActiveTaskReminderPendingKey = defineState<boolean>(
-  'task.activeTaskReminderPending',
+  "task.activeTaskReminderPending",
   () => false,
 );
 
-import { AgentTaskServiceNotifications } from './taskService.notifications';
+import { AgentTaskServiceNotifications } from "./taskService.notifications";
 
-export class AgentTaskService extends AgentTaskServiceNotifications {
-
-}
+export class AgentTaskService extends AgentTaskServiceNotifications {}
 
 registerScopedService(
   LifecycleScope.Agent,
   IAgentTaskService,
   AgentTaskService,
   ScopeActivation.OnScopeCreated,
-  'task',
+  "task",
 );

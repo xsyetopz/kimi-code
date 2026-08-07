@@ -308,7 +308,9 @@ describe("projectAgentGroupLines", () => {
     group.attach("call_agent_1", running);
     group.attach("call_agent_2", waiting);
 
-    const projected = projectAgentGroupLines(group.captureAgentGroupViewState());
+    const projected = projectAgentGroupLines(
+      group.captureAgentGroupViewState(),
+    );
     const live = renderText(group);
     for (const line of projected) {
       expect(live).toContain(strip(line).trimEnd());

@@ -45,9 +45,7 @@ import {
   type AnthropicModelProfile,
   type AnthropicModelVersion,
 } from "./anthropic-profile";
-import {
-  sanitizeToolCallId,
-} from "../tool-call-id";
+import { sanitizeToolCallId } from "../tool-call-id";
 
 export function normalizeAnthropicStopReason(raw: string | null | undefined): {
   finishReason: FinishReason | null;
@@ -239,7 +237,9 @@ export function resolveThinkingProfile(
   };
 }
 
-export function budgetTokensForEffort(effort: ThinkingEffort): number | undefined {
+export function budgetTokensForEffort(
+  effort: ThinkingEffort,
+): number | undefined {
   if (effort === "low") return 1024;
   if (effort === "medium") return 4096;
   if (effort === "on" || effort === "high") return 32_000;
@@ -633,4 +633,3 @@ export function getAnthropicModelCapability(modelName: string) {
   }
   return undefined;
 }
-

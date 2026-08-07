@@ -226,9 +226,7 @@ export class PresentationStateController {
     // components that have no entry in the metadata map.
     const boundaries: number[] = [];
     for (let i = 0; i < children.length; i++) {
-      if (
-        this.host.transcriptCoordinator.isTurnBoundaryComponent(children[i]!)
-      )
+      if (this.host.transcriptCoordinator.isTurnBoundaryComponent(children[i]!))
         boundaries.push(i);
     }
     const expandCutoff =
@@ -241,7 +239,9 @@ export class PresentationStateController {
     for (let i = 0; i < children.length; i++) {
       const child = children[i]!;
       if (!isExpandable(child)) continue;
-      child.setExpanded(this.host.state.toolOutputExpanded && i >= expandCutoff);
+      child.setExpanded(
+        this.host.state.toolOutputExpanded && i >= expandCutoff,
+      );
     }
     // Differential render only — no destructive full redraw on expand/collapse.
     // (When the expanded region reaches above the viewport, the engine's own
@@ -467,7 +467,12 @@ export class PresentationStateController {
     }
 
     if (this.host.state.activitySpinner === null) {
-      const instance = new MoonLoader(this.host.state.ui, style, colorFn, label);
+      const instance = new MoonLoader(
+        this.host.state.ui,
+        style,
+        colorFn,
+        label,
+      );
       this.host.state.activitySpinner = { instance, style };
       return instance;
     }

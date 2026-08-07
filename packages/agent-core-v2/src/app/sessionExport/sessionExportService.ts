@@ -7,46 +7,56 @@
  * files through the local zip writer. Bound at App scope.
  */
 
-import { join, resolve } from 'pathe';
+import { join, resolve } from "pathe";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import type { ISessionScopeHandle } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { resolveGlobalLogPath } from '#/_base/log/logConfig';
-import { IWireService } from '#/wire/wire';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { ISessionIndex, type SessionSummary } from '#/app/sessionIndex/sessionIndex';
-import { IWorkspaceLifecycleService } from '#/app/workspaceLifecycle/workspaceLifecycle';
-import { IWorkspaceService } from '#/app/workspace/workspace';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import type { ISessionScopeHandle } from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { resolveGlobalLogPath } from "#/_base/log/logConfig";
+import { IWireService } from "#/wire/wire";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import {
+  ISessionIndex,
+  type SessionSummary,
+} from "#/app/sessionIndex/sessionIndex";
+import { IWorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycle";
+import { IWorkspaceService } from "#/app/workspace/workspace";
 import {
   sessionDirOf,
   workspacePersistenceScope,
-} from '#/workspace/sessionLifecycle/internal/addressing';
-import { ISessionLifecycleService } from '#/workspace/sessionLifecycle/sessionLifecycle';
-import { ErrorCodes, Error2 } from '#/errors';
-import { IAgentLifecycleService } from '#/session/agentLifecycle/agentLifecycle';
-import { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
+} from "#/workspace/sessionLifecycle/internal/addressing";
+import { ISessionLifecycleService } from "#/workspace/sessionLifecycle/sessionLifecycle";
+import { ErrorCodes, Error2 } from "#/errors";
+import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 
-import { buildExportManifest, type ExportSessionManifestSummary } from './manifest';
+import {
+  buildExportManifest,
+  type ExportSessionManifestSummary,
+} from "./manifest";
 import {
   type ExportSessionPayload,
   type ExportSessionResult,
   type ExportSessionOptions,
   ISessionExportService,
-} from './sessionExport';
-import { scanSessionWire } from './wire-scan';
+} from "./sessionExport";
+import { scanSessionWire } from "./wire-scan";
 import {
   type ExtraZipEntry,
   type SessionZipEntry,
   collectFilesRecursive,
   writeExportZip,
-} from './zip';
-import { openZipSource, type ZipSource } from './file-source';
+} from "./zip";
+import { openZipSource, type ZipSource } from "./file-source";
 
-const SESSION_LOG_REL = 'logs/kimi-code.log';
-const GLOBAL_LOG_REL = 'logs/global/kimi-code.log';
-const WEB_LOG_REL = 'logs/kimi-web.jsonl';
-const DESKTOP_LOG_REL = 'logs/kimi-desktop.log';
+const SESSION_LOG_REL = "logs/kimi-code.log";
+const GLOBAL_LOG_REL = "logs/global/kimi-code.log";
+const WEB_LOG_REL = "logs/kimi-web.jsonl";
+const DESKTOP_LOG_REL = "logs/kimi-desktop.log";
 
 export class SessionExportService implements ISessionExportService {
   declare readonly _serviceBrand: undefined;
@@ -54,7 +64,8 @@ export class SessionExportService implements ISessionExportService {
   constructor(
     @IBootstrapService private readonly bootstrap: IBootstrapService,
     @ISessionIndex private readonly index: ISessionIndex,
-    @IWorkspaceLifecycleService private readonly workspaceLifecycle: IWorkspaceLifecycleService,
+    @IWorkspaceLifecycleService
+    private readonly workspaceLifecycle: IWorkspaceLifecycleService,
     @IWorkspaceService private readonly workspaces: IWorkspaceService,
     @ILogService private readonly log: ILogService,
   ) {}
@@ -67,7 +78,7 @@ export class SessionExportService implements ISessionExportService {
     if (input.version.trim().length === 0) {
       throw new Error2(
         ErrorCodes.SESSION_EXPORT_MISSING_VERSION,
-        'Session export requires a host version.',
+        "Session export requires a host version.",
         { details: { sessionId: input.sessionId } },
       );
     }
@@ -84,9 +95,13 @@ export class SessionExportService implements ISessionExportService {
     const liveSummary = await this.flushLiveSession(summary);
     options.signal?.throwIfAborted();
     if (input.includeGlobalLog === true) {
-      await this.warnIfFails('export global log flush failed', () => this.log.flush(), {
-        retry: true,
-      });
+      await this.warnIfFails(
+        "export global log flush failed",
+        () => this.log.flush(),
+        {
+          retry: true,
+        },
+      );
     }
 
     return exportSessionDirectory({
@@ -95,7 +110,7 @@ export class SessionExportService implements ISessionExportService {
       globalLogPath: resolveGlobalLogPath(this.bootstrap.homeDir),
       desktopLogPath:
         input.includeDesktopLog === true
-          ? join(this.bootstrap.homeDir, 'logs', 'kimi-code-desktop.log')
+          ? join(this.bootstrap.homeDir, "logs", "kimi-code-desktop.log")
           : undefined,
       webLog: options.webLog,
       signal: options.signal,
@@ -103,11 +118,16 @@ export class SessionExportService implements ISessionExportService {
     });
   }
 
-  private async flushLiveSession(summary: SessionSummary): Promise<ExportSessionDirectorySummary> {
+  private async flushLiveSession(
+    summary: SessionSummary,
+  ): Promise<ExportSessionDirectorySummary> {
     const workspace = await this.workspaces.get(summary.workspaceId);
     const sessionDir = sessionDirOf(
       this.bootstrap.homeDir,
-      workspacePersistenceScope(this.bootstrap.scope('sessions'), summary.workspaceId),
+      workspacePersistenceScope(
+        this.bootstrap.scope("sessions"),
+        summary.workspaceId,
+      ),
       summary.id,
     );
     let exportSummary: ExportSessionDirectorySummary = {
@@ -132,15 +152,15 @@ export class SessionExportService implements ISessionExportService {
         sessionDir,
       };
     } catch (error) {
-      this.log.warn('flushMetadata failed before export', { error });
+      this.log.warn("flushMetadata failed before export", { error });
     }
 
-    await this.warnIfFails('export session log flush failed', () =>
+    await this.warnIfFails("export session log flush failed", () =>
       handle.accessor.get(ILogService).flush(),
     );
     const agents = handle.accessor.get(IAgentLifecycleService);
     for (const agent of agents.list()) {
-      await this.warnIfFails('export agent wire flush failed', () =>
+      await this.warnIfFails("export agent wire flush failed", () =>
         agent.accessor.get(IWireService).flush(),
       );
     }
@@ -150,7 +170,9 @@ export class SessionExportService implements ISessionExportService {
 
   private liveSession(sessionId: string): ISessionScopeHandle | undefined {
     for (const handler of this.workspaceLifecycle.handlers.list()) {
-      const handle = handler.accessor.get(ISessionLifecycleService).get(sessionId);
+      const handle = handler.accessor
+        .get(ISessionLifecycleService)
+        .get(sessionId);
       if (handle !== undefined) return handle;
     }
     return undefined;
@@ -174,7 +196,8 @@ export class SessionExportService implements ISessionExportService {
   }
 }
 
-export interface ExportSessionDirectorySummary extends ExportSessionManifestSummary {
+export interface ExportSessionDirectorySummary
+  extends ExportSessionManifestSummary {
   readonly sessionDir: string;
 }
 
@@ -198,12 +221,24 @@ export async function exportSessionDirectory(input: {
   let desktopSourceTransferred = false;
 
   try {
-    sessionLogSource = await openOptionalZipSource(sessionLogPath, input.signal);
-    if (input.request.includeGlobalLog === true && input.globalLogPath !== undefined) {
-      globalSource = await openOptionalZipSource(input.globalLogPath, input.signal);
+    sessionLogSource = await openOptionalZipSource(
+      sessionLogPath,
+      input.signal,
+    );
+    if (
+      input.request.includeGlobalLog === true &&
+      input.globalLogPath !== undefined
+    ) {
+      globalSource = await openOptionalZipSource(
+        input.globalLogPath,
+        input.signal,
+      );
     }
     if (input.desktopLogPath !== undefined) {
-      desktopSource = await openOptionalZipSource(input.desktopLogPath, input.signal);
+      desktopSource = await openOptionalZipSource(
+        input.desktopLogPath,
+        input.signal,
+      );
     }
     const sessionFiles = await collectFilesRecursive(sessionDir);
     if (sessionFiles.length === 0 && sessionLogSource === undefined) {
@@ -220,7 +255,10 @@ export async function exportSessionDirectory(input: {
       (file) => file !== sessionLogPath,
     );
     if (stableSessionLog !== undefined) {
-      selectedSessionFiles.push({ path: sessionLogPath, source: stableSessionLog });
+      selectedSessionFiles.push({
+        path: sessionLogPath,
+        source: stableSessionLog,
+      });
       selectedSessionFiles.sort((left, right) =>
         sessionZipEntryPath(left).localeCompare(sessionZipEntryPath(right)),
       );
@@ -232,7 +270,8 @@ export async function exportSessionDirectory(input: {
       now,
       version: input.request.version,
       sessionScan,
-      sessionLogPath: stableSessionLog === undefined ? undefined : SESSION_LOG_REL,
+      sessionLogPath:
+        stableSessionLog === undefined ? undefined : SESSION_LOG_REL,
       webLogPath: bundledWebLog ? WEB_LOG_REL : undefined,
       desktopVersion: input.request.desktopVersion,
       installSource: input.request.installSource,
@@ -244,7 +283,10 @@ export async function exportSessionDirectory(input: {
         : resolve(defaultExportZipName(input.summary.id, now));
     const extras: ExtraZipEntry[] = [];
     if (input.webLog !== undefined) {
-      extras.push({ data: Buffer.from(input.webLog, 'utf8'), target: WEB_LOG_REL });
+      extras.push({
+        data: Buffer.from(input.webLog, "utf8"),
+        target: WEB_LOG_REL,
+      });
     }
     if (globalSource !== undefined) {
       extras.push({ source: globalSource, target: GLOBAL_LOG_REL });
@@ -293,12 +335,16 @@ export async function exportSessionDirectory(input: {
 
 function defaultExportZipName(sessionId: string, now: Date): string {
   const shortId = sessionId.slice(0, 8);
-  const timestamp = now.toISOString().replaceAll(/[-:]/g, '').replace(/T/, '-').slice(0, 15);
+  const timestamp = now
+    .toISOString()
+    .replaceAll(/[-:]/g, "")
+    .replace(/T/, "-")
+    .slice(0, 15);
   return `kimi-debug-${shortId}-${timestamp}.zip`;
 }
 
 function sessionZipEntryPath(entry: SessionZipEntry): string {
-  return typeof entry === 'string' ? entry : entry.path;
+  return typeof entry === "string" ? entry : entry.path;
 }
 
 async function openOptionalZipSource(
@@ -316,10 +362,10 @@ async function openOptionalZipSource(
 
 function isMissingPath(error: unknown): boolean {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
+    "code" in error &&
+    (error as NodeJS.ErrnoException).code === "ENOENT"
   );
 }
 
@@ -328,5 +374,5 @@ registerScopedService(
   ISessionExportService,
   SessionExportService,
   ScopeActivation.OnScopeCreated,
-  'sessionExport',
+  "sessionExport",
 );

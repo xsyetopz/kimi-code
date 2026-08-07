@@ -101,7 +101,9 @@ describe("ink input dialogs", () => {
 
     tui.restoreEditor();
 
-    tui.mountEditorReplacement(new CustomRegistryImportDialogComponent(vi.fn()));
+    tui.mountEditorReplacement(
+      new CustomRegistryImportDialogComponent(vi.fn()),
+    );
     expect(tui.state.activeDialog).toBe("custom-registry-import");
   });
 });

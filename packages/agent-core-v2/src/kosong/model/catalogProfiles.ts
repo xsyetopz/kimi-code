@@ -13,8 +13,7 @@ import {
 
 export type CatalogWireDialect = Protocol | "kimi" | "vertexai";
 
-const OPENAI_MODEL_RE =
-  /^(?:gpt-|o[134](?:-|$)|chatgpt-|codex)/;
+const OPENAI_MODEL_RE = /^(?:gpt-|o[134](?:-|$)|chatgpt-|codex)/;
 const CLAUDE_MODEL_RE = /\bclaude\b/;
 const GEMINI_MODEL_RE = /\bgemini[-/]/;
 const KIMI_K3_MODEL_RE = /\bk3(?:[-_.]|$)|\bkimi-k3\b/;

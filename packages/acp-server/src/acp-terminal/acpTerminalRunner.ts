@@ -33,7 +33,7 @@
  * de-duplicated.
  */
 
-import { PassThrough, Writable, type Readable } from 'node:stream';
+import { PassThrough, Writable, type Readable } from "node:stream";
 
 import {
   IHostProcessService,
@@ -44,9 +44,9 @@ import {
   type ProcessExecOptions,
   registerScopedService,
   ScopeActivation,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import { IAcpConnection, type IAcpTerminalHandle } from '../acp-fs';
+import { IAcpConnection, type IAcpTerminalHandle } from "../acp-fs";
 
 /** Retained-output ceiling handed to the client on `terminal/create`. */
 const OUTPUT_BYTE_LIMIT = 4 * 1024 * 1024;
@@ -60,12 +60,15 @@ const OUTPUT_POLL_MS = 250;
  * callers (e.g. profile prompt-prefix commands) do not. Only Bash-tool
  * invocations get a client-visible terminal — internal commands stay local.
  */
-function isBashToolInvocation(args: readonly string[], options?: ProcessExecOptions): boolean {
+function isBashToolInvocation(
+  args: readonly string[],
+  options?: ProcessExecOptions,
+): boolean {
   return (
     args.length === 3 &&
-    args[1] === '-c' &&
-    options?.env?.['NO_COLOR'] === '1' &&
-    options?.env?.['TERM'] === 'dumb'
+    args[1] === "-c" &&
+    options?.env?.["NO_COLOR"] === "1" &&
+    options?.env?.["TERM"] === "dumb"
   );
 }
 
@@ -85,14 +88,20 @@ export class AcpProcessRunner implements ISessionProcessRunner {
     @IHostProcessService private readonly hostProcess: IHostProcessService,
   ) {}
 
-  async exec(args: readonly string[], options?: ProcessExecOptions): Promise<IProcess> {
+  async exec(
+    args: readonly string[],
+    options?: ProcessExecOptions,
+  ): Promise<IProcess> {
     const command = args[0];
     if (command === undefined) {
       throw new Error(
-        'AcpProcessRunner.exec(): at least one argument (the command to run) is required.',
+        "AcpProcessRunner.exec(): at least one argument (the command to run) is required.",
       );
     }
-    if (!this.connection.terminalEnabled || !isBashToolInvocation(args, options)) {
+    if (
+      !this.connection.terminalEnabled ||
+      !isBashToolInvocation(args, options)
+    ) {
       return this.execLocal(command, args.slice(1), options);
     }
 
@@ -108,7 +117,7 @@ export class AcpProcessRunner implements ISessionProcessRunner {
     // correlate the terminal with the in-flight Bash tool call.
     this.connection.notifyTerminalCreated({
       sessionId: this.ctx.sessionId,
-      shellCommand: args[2] ?? '',
+      shellCommand: args[2] ?? "",
       terminalId: handle.id,
     });
     return new AcpTerminalProcess(handle);
@@ -241,5 +250,5 @@ registerScopedService(
   ISessionProcessRunner,
   AcpProcessRunner,
   ScopeActivation.OnDemand,
-  'acp',
+  "acp",
 );

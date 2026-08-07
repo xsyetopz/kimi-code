@@ -57,7 +57,7 @@ export function InkPluginsPanelDialog({
             {currentTheme.fg("primary", "╮")}
           </Text>
           <Text>
-            {currentTheme.fg("primary", "│")}  {panel.customInput ?? ""}
+            {currentTheme.fg("primary", "│")} {panel.customInput ?? ""}
             {currentTheme.fg("primary", "│")}
           </Text>
           <Text>

@@ -7,10 +7,7 @@ import {
   type ServiceIdentifier,
 } from "#/_base/di/instantiation";
 
-import type {
-  GlobalSearchPage,
-  GlobalSearchQuery,
-} from "./contract";
+import type { GlobalSearchPage, GlobalSearchQuery } from "./contract";
 
 export type GlobalSearchErrorReason =
   | "invalid_query"

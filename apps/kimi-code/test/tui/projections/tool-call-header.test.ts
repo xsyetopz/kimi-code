@@ -142,7 +142,8 @@ describe("projectToolCallBodyLines", () => {
     currentTheme.setPalette(darkColors);
     vi.useFakeTimers();
     vi.setSystemTime(4000);
-    const streaming = '{"file_path":"foo.ts","old_string":"old","new_string":"new';
+    const streaming =
+      '{"file_path":"foo.ts","old_string":"old","new_string":"new';
     const toolCall = {
       id: "call_edit_stream",
       name: "Edit" as const,

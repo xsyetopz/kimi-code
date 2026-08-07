@@ -10,24 +10,31 @@
  * REAL size from the remaining anchors. Bound at Agent scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IEventBus } from '#/app/event/eventBus';
-import { IAgentTokenCountingService } from '#/agent/tokenCounting/tokenCounting';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IEventBus } from "#/app/event/eventBus";
+import { IAgentTokenCountingService } from "#/agent/tokenCounting/tokenCounting";
 import {
   TokenCountingModel,
   tokenCountingRebased,
   tokenCountingTruncated,
-} from '#/agent/tokenCounting/tokenCountingOps';
-import { IWireService } from '#/wire/wire';
-import type { Op } from '#/wire/op';
+} from "#/agent/tokenCounting/tokenCountingOps";
+import { IWireService } from "#/wire/wire";
+import type { Op } from "#/wire/op";
 
 import {
   IAgentContextMemoryService,
   type ContextCompactionInput,
   type ContextCompactionResult,
-} from './contextMemory';
-import { buildContextCompactionShape, type TokenEstimate } from './compactionHandoff';
+} from "./contextMemory";
+import {
+  buildContextCompactionShape,
+  type TokenEstimate,
+} from "./compactionHandoff";
 import {
   computeUndoCut,
   ContextModel,
@@ -38,13 +45,13 @@ import {
   contextUndo,
   isFullyUndoable,
   type UndoCut,
-} from './contextOps';
-import type { LoopRecordedEvent } from './loopEventFold';
-import type { ContextMessage } from './types';
+} from "./contextOps";
+import type { LoopRecordedEvent } from "./loopEventFold";
+import type { ContextMessage } from "./types";
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'context.spliced': {
+    "context.spliced": {
       start: number;
       deleteCount: number;
       messages: readonly ContextMessage[];
@@ -53,13 +60,17 @@ declare module '#/app/event/eventBus' {
   }
 }
 
-export class AgentContextMemoryService extends Disposable implements IAgentContextMemoryService {
+export class AgentContextMemoryService
+  extends Disposable
+  implements IAgentContextMemoryService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
     @IWireService private readonly wire: IWireService,
     @IEventBus private readonly eventBus: IEventBus,
-    @IAgentTokenCountingService private readonly tokenCounting: IAgentTokenCountingService,
+    @IAgentTokenCountingService
+    private readonly tokenCounting: IAgentTokenCountingService,
   ) {
     super();
   }
@@ -79,7 +90,9 @@ export class AgentContextMemoryService extends Disposable implements IAgentConte
   append(...messages: readonly ContextMessage[]): void {
     if (messages.length === 0) return;
     const start = this.get().length;
-    this.wire.dispatch(...messages.map((message) => contextAppendMessage({ message })));
+    this.wire.dispatch(
+      ...messages.map((message) => contextAppendMessage({ message })),
+    );
     this.publishSplice({ start, deleteCount: 0, messages: [...messages] });
   }
 
@@ -101,7 +114,10 @@ export class AgentContextMemoryService extends Disposable implements IAgentConte
     const history = this.get();
     const cut = computeUndoCut(history, count);
     if (isFullyUndoable(cut, count)) {
-      this.wire.dispatch(contextUndo({ count }), ...this.sizeOpsForCut(cut.cutIndex));
+      this.wire.dispatch(
+        contextUndo({ count }),
+        ...this.sizeOpsForCut(cut.cutIndex),
+      );
       this.publishSplice({
         start: cut.cutIndex,
         deleteCount: history.length - cut.cutIndex,
@@ -113,7 +129,11 @@ export class AgentContextMemoryService extends Disposable implements IAgentConte
 
   applyCompaction(input: ContextCompactionInput): ContextCompactionResult {
     const history = this.get();
-    const result = buildContextCompactionShape(history, input, this.tokenEstimateFns);
+    const result = buildContextCompactionShape(
+      history,
+      input,
+      this.tokenEstimateFns,
+    );
     this.wire.dispatch(
       contextApplyCompaction({
         summary: result.summary,
@@ -149,7 +169,7 @@ export class AgentContextMemoryService extends Disposable implements IAgentConte
     messages: readonly ContextMessage[];
     tokens?: number;
   }): void {
-    this.eventBus.publish({ type: 'context.spliced', ...input });
+    this.eventBus.publish({ type: "context.spliced", ...input });
   }
 
   private sizeOpsForCut(cutIndex: number): Op[] {
@@ -172,5 +192,5 @@ registerScopedService(
   IAgentContextMemoryService,
   AgentContextMemoryService,
   ScopeActivation.OnScopeCreated,
-  'contextMemory',
+  "contextMemory",
 );

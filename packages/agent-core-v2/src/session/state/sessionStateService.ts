@@ -8,15 +8,22 @@
  * injects). Bound at Session scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { StateRegistry } from '#/_base/state/stateRegistry';
-import { IWorkspaceStateService } from '#/workspace/state/workspaceState';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { StateRegistry } from "#/_base/state/stateRegistry";
+import { IWorkspaceStateService } from "#/workspace/state/workspaceState";
 
-import { ISessionStateService } from './sessionState';
+import { ISessionStateService } from "./sessionState";
 
-export class SessionStateService extends StateRegistry implements ISessionStateService {
+export class SessionStateService
+  extends StateRegistry
+  implements ISessionStateService
+{
   declare readonly _serviceBrand: undefined;
-  protected override readonly inspectScope = 'session';
+  protected override readonly inspectScope = "session";
 
   constructor(@IWorkspaceStateService workspaceState?: IWorkspaceStateService) {
     super();
@@ -29,5 +36,5 @@ registerScopedService(
   ISessionStateService,
   SessionStateService,
   ScopeActivation.OnScopeCreated,
-  'state',
+  "state",
 );

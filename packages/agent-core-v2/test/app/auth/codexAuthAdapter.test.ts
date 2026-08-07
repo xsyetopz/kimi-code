@@ -28,7 +28,9 @@ class MemoryTokenStorage implements TokenStorage {
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 function createTestJwt(payload: Record<string, unknown>): string {
-  const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url");
+  const header = Buffer.from(JSON.stringify({ alg: "none" })).toString(
+    "base64url",
+  );
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${header}.${body}.sig`;
 }
@@ -196,7 +198,9 @@ describe("CodexAuthAdapter", () => {
     expect(
       extractAccountIdFromTokens({
         id_token: createTestJwt({ chatgpt_account_id: "from-id-token" }),
-        access_token: createTestJwt({ chatgpt_account_id: "from-access-token" }),
+        access_token: createTestJwt({
+          chatgpt_account_id: "from-access-token",
+        }),
       }),
     ).toBe("from-id-token");
     await expect(

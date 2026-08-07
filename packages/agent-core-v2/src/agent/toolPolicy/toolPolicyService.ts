@@ -11,28 +11,40 @@
  * layers still apply.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IAgentProfileService, ProfileError, ProfileErrors } from '#/agent/profile/profile';
-import { TOOLS_SECTION, type ToolsConfig } from './configSection';
-import { IAgentToolExecutorService } from '#/agent/toolExecutor/toolExecutor';
-import { IConfigService } from '#/app/config/config';
-import { ISessionToolPolicy } from '#/session/sessionToolPolicy/sessionToolPolicy';
-import { ISessionToolPolicyGate } from '#/session/sessionToolPolicyGate/sessionToolPolicyGate';
-import { SELECT_TOOLS_TOOL_NAME } from '#/agent/toolSelect/toolSelect';
-import type { ToolSource } from '#/tool/toolContract';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import {
+  IAgentProfileService,
+  ProfileError,
+  ProfileErrors,
+} from "#/agent/profile/profile";
+import { TOOLS_SECTION, type ToolsConfig } from "./configSection";
+import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
+import { IConfigService } from "#/app/config/config";
+import { ISessionToolPolicy } from "#/session/sessionToolPolicy/sessionToolPolicy";
+import { ISessionToolPolicyGate } from "#/session/sessionToolPolicyGate/sessionToolPolicyGate";
+import { SELECT_TOOLS_TOOL_NAME } from "#/agent/toolSelect/toolSelect";
+import type { ToolSource } from "#/tool/toolContract";
 
-import { isToolActiveComposed, type ToolActivationPolicy } from './evaluate';
-import { IAgentToolPolicyService } from './toolPolicy';
+import { isToolActiveComposed, type ToolActivationPolicy } from "./evaluate";
+import { IAgentToolPolicyService } from "./toolPolicy";
 
-export class AgentToolPolicyService extends Disposable implements IAgentToolPolicyService {
+export class AgentToolPolicyService
+  extends Disposable
+  implements IAgentToolPolicyService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
     @IAgentProfileService private readonly profile: IAgentProfileService,
     @IConfigService private readonly config: IConfigService,
     @ISessionToolPolicy private readonly sessionToolPolicy: ISessionToolPolicy,
-    @ISessionToolPolicyGate private readonly toolPolicyGate: ISessionToolPolicyGate,
+    @ISessionToolPolicyGate
+    private readonly toolPolicyGate: ISessionToolPolicyGate,
     @IAgentToolExecutorService toolExecutor: IAgentToolExecutorService,
   ) {
     super();
@@ -49,7 +61,7 @@ export class AgentToolPolicyService extends Disposable implements IAgentToolPoli
     );
   }
 
-  isToolActive(name: string, source: ToolSource = 'builtin'): boolean {
+  isToolActive(name: string, source: ToolSource = "builtin"): boolean {
     const profile = this.profile.data();
     return this.isToolActiveForProfile(
       {
@@ -61,7 +73,10 @@ export class AgentToolPolicyService extends Disposable implements IAgentToolPoli
     );
   }
 
-  isToolActiveForDisclosure(name: string, source: ToolSource = 'builtin'): boolean {
+  isToolActiveForDisclosure(
+    name: string,
+    source: ToolSource = "builtin",
+  ): boolean {
     const profile = this.profile.data();
     return isToolActiveComposed(
       {
@@ -78,7 +93,7 @@ export class AgentToolPolicyService extends Disposable implements IAgentToolPoli
   isToolActiveForProfile(
     profile: ToolActivationPolicy,
     name: string,
-    source: ToolSource = 'builtin',
+    source: ToolSource = "builtin",
   ): boolean {
     return isToolActiveComposed(
       {
@@ -96,7 +111,7 @@ export class AgentToolPolicyService extends Disposable implements IAgentToolPoli
     if (this.profile.data().profileName === undefined) {
       throw new ProfileError(
         ProfileErrors.codes.PROFILE_NOT_BOUND,
-        'Cannot set session disabled tools: agent profile is not bound',
+        "Cannot set session disabled tools: agent profile is not bound",
       );
     }
     await this.sessionToolPolicy.setDisabledTools(names);
@@ -108,5 +123,5 @@ registerScopedService(
   IAgentToolPolicyService,
   AgentToolPolicyService,
   ScopeActivation.OnScopeCreated,
-  'toolPolicy',
+  "toolPolicy",
 );

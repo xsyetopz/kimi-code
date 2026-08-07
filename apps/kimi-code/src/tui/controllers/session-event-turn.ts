@@ -30,7 +30,10 @@ import type {
   ToolCallBlockData,
   ToolResultBlockData,
 } from "../types";
-import { isPluginMcpToolName, type PluginUpdateNotifier } from "./plugin-update-notifier";
+import {
+  isPluginMcpToolName,
+  type PluginUpdateNotifier,
+} from "./plugin-update-notifier";
 import type { SubAgentEventHandler } from "./subagent-event-handler";
 import type { SessionEventGoalHandler } from "./session-event-goal";
 import type { SessionEventHost } from "./session-event-handler";

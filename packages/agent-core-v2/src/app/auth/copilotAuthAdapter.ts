@@ -117,7 +117,9 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
 
   getFlow(provider: string): OAuthFlowSnapshot | undefined {
     const flow = this.flows.get(provider);
-    return flow === undefined ? undefined : toDeviceOAuthFlowSnapshot(flow, this.now);
+    return flow === undefined
+      ? undefined
+      : toDeviceOAuthFlowSnapshot(flow, this.now);
   }
 
   async cancelLogin(provider: string): Promise<OAuthLoginCancelResponse> {
@@ -170,7 +172,10 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
           false,
           flow.controller.signal,
         );
-        if (typeof result.access_token === "string" && result.access_token !== "") {
+        if (
+          typeof result.access_token === "string" &&
+          result.access_token !== ""
+        ) {
           await this.saveGithubToken(result.access_token);
           completeDeviceOAuthFlow(flow, "authenticated", this.now);
           return;
@@ -178,10 +183,7 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
         if (result.error === "authorization_pending") continue;
         if (result.error === "slow_down") {
           flow.interval += 5;
-          if (
-            typeof result.interval === "number" &&
-            result.interval > 0
-          ) {
+          if (typeof result.interval === "number" && result.interval > 0) {
             flow.interval = result.interval;
           }
           continue;
@@ -253,10 +255,11 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
     };
     const response = await this.fetchImpl(url, request);
     if (requireOk && !response.ok)
-      throw new Error(`GitHub Copilot OAuth request failed: ${response.status}`);
+      throw new Error(
+        `GitHub Copilot OAuth request failed: ${response.status}`,
+      );
     return response.json() as Promise<T>;
   }
-
 }
 
 function isDeviceResponse(value: unknown): value is DeviceResponse {
@@ -270,4 +273,3 @@ function isDeviceResponse(value: unknown): value is DeviceResponse {
     typeof (value as DeviceResponse).interval === "number"
   );
 }
-

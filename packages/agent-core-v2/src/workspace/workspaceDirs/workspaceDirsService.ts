@@ -17,33 +17,37 @@
  * Workspace scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { defineState } from '#/_base/state/stateRegistry';
-import { TimeoutTimer } from '#/_base/utils/timer';
-import { subtreeWatchFilter } from '#/_base/utils/paths';
-import { IProjectLocalConfigService } from '#/app/projectLocalConfig/projectLocalConfig';
-import { IHostFsWatchService } from '#/os/interface/hostFsWatch';
-import type { ISessionWorkspaceInfo } from '#/session/workspaceInfo/workspaceInfo';
-import { IWorkspaceStateService } from '#/workspace/state/workspaceState';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { defineState } from "#/_base/state/stateRegistry";
+import { TimeoutTimer } from "#/_base/utils/timer";
+import { subtreeWatchFilter } from "#/_base/utils/paths";
+import { IProjectLocalConfigService } from "#/app/projectLocalConfig/projectLocalConfig";
+import { IHostFsWatchService } from "#/os/interface/hostFsWatch";
+import type { ISessionWorkspaceInfo } from "#/session/workspaceInfo/workspaceInfo";
+import { IWorkspaceStateService } from "#/workspace/state/workspaceState";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 
 import {
   IWorkspaceDirs,
   type WorkspaceAddDirInput,
   type WorkspaceAdditionalDirsResult,
-} from './workspaceDirs';
+} from "./workspaceDirs";
 
 const WATCH_DEBOUNCE_MS = 200;
 
 export const workspaceDirsFileDirsKey = defineState<readonly string[]>(
-  'workspaceDirs.fileDirs',
+  "workspaceDirs.fileDirs",
   () => [],
 );
 export const workspaceDirsEphemeralDirsKey = defineState<readonly string[]>(
-  'workspaceDirs.ephemeralDirs',
+  "workspaceDirs.ephemeralDirs",
   () => [],
 );
 
@@ -60,7 +64,8 @@ export class WorkspaceDirsService extends Disposable implements IWorkspaceDirs {
 
   constructor(
     @IWorkspaceContext private readonly workspace: IWorkspaceContext,
-    @IProjectLocalConfigService private readonly localConfig: IProjectLocalConfigService,
+    @IProjectLocalConfigService
+    private readonly localConfig: IProjectLocalConfigService,
     @IHostFsWatchService private readonly fsWatch: IHostFsWatchService,
     @ILogService private readonly log: ILogService,
     @IWorkspaceStateService private readonly states: IWorkspaceStateService,
@@ -69,7 +74,7 @@ export class WorkspaceDirsService extends Disposable implements IWorkspaceDirs {
     this.states.register(workspaceDirsFileDirsKey);
     this.states.register(workspaceDirsEphemeralDirsKey);
     this.projectRoot = workspace.cwd;
-    this.configPath = '';
+    this.configPath = "";
     this.ready = this.enqueue(() => this.reloadFromDisk());
     void this.ready.then(() => this.watchLocalToml());
   }
@@ -101,7 +106,10 @@ export class WorkspaceDirsService extends Disposable implements IWorkspaceDirs {
   mergeAdditionalDirs(baseDir: string, dirs: readonly string[]): Promise<void> {
     if (dirs.length === 0) return Promise.resolve();
     return this.enqueue(async () => {
-      const resolved = await this.localConfig.resolveAdditionalDirs(baseDir, dirs);
+      const resolved = await this.localConfig.resolveAdditionalDirs(
+        baseDir,
+        dirs,
+      );
       if (this.unionEphemeral(resolved)) {
         this.onDidChangeEmitter.fire();
       }
@@ -120,7 +128,9 @@ export class WorkspaceDirsService extends Disposable implements IWorkspaceDirs {
     };
   }
 
-  private async applyAddDir(input: WorkspaceAddDirInput): Promise<WorkspaceAdditionalDirsResult> {
+  private async applyAddDir(
+    input: WorkspaceAddDirInput,
+  ): Promise<WorkspaceAdditionalDirsResult> {
     const persist = input.persist ?? true;
 
     if (persist) {
@@ -142,12 +152,15 @@ export class WorkspaceDirsService extends Disposable implements IWorkspaceDirs {
       };
     }
 
-    const onDisk = await this.localConfig.readAdditionalDirs(this.workspace.cwd);
+    const onDisk = await this.localConfig.readAdditionalDirs(
+      this.workspace.cwd,
+    );
     this.projectRoot = onDisk.projectRoot;
     this.configPath = onDisk.configPath;
-    const resolved = await this.localConfig.resolveAdditionalDirs(this.workspace.cwd, [
-      input.path,
-    ]);
+    const resolved = await this.localConfig.resolveAdditionalDirs(
+      this.workspace.cwd,
+      [input.path],
+    );
     const changed = this.unionEphemeral(resolved);
     if (changed) {
       this.onDidChangeEmitter.fire();
@@ -161,7 +174,9 @@ export class WorkspaceDirsService extends Disposable implements IWorkspaceDirs {
   }
 
   private async reloadFromDisk(): Promise<void> {
-    const onDisk = await this.localConfig.readAdditionalDirs(this.workspace.cwd);
+    const onDisk = await this.localConfig.readAdditionalDirs(
+      this.workspace.cwd,
+    );
     this.projectRoot = onDisk.projectRoot;
     this.configPath = onDisk.configPath;
     if (this.setFileDirs(onDisk.additionalDirs)) {
@@ -198,7 +213,9 @@ export class WorkspaceDirsService extends Disposable implements IWorkspaceDirs {
         }),
       );
     } catch (error) {
-      this.log.warn(`cannot watch project-local config ${this.configPath}: ${String(error)}`);
+      this.log.warn(
+        `cannot watch project-local config ${this.configPath}: ${String(error)}`,
+      );
     }
   }
 
@@ -221,5 +238,5 @@ registerScopedService(
   IWorkspaceDirs,
   WorkspaceDirsService,
   ScopeActivation.OnScopeCreated,
-  'workspaceDirs',
+  "workspaceDirs",
 );

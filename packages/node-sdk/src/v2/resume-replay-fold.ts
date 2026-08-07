@@ -188,8 +188,13 @@ export function foldWireRecords(
         const value = (rec as Record<string, unknown>).value;
         if (key !== undefined) {
           toolStore[key] = value;
-        } else if ((rec as { data?: Record<string, unknown> }).data !== undefined) {
-          Object.assign(toolStore, (rec as { data: Record<string, unknown> }).data);
+        } else if (
+          (rec as { data?: Record<string, unknown> }).data !== undefined
+        ) {
+          Object.assign(
+            toolStore,
+            (rec as { data: Record<string, unknown> }).data,
+          );
         }
         break;
       }
@@ -198,7 +203,10 @@ export function foldWireRecords(
       case "context.append_message": {
         if (rec.message !== undefined) {
           push(
-            { type: "message", message: rec.message } as AgentReplayRecordPayload,
+            {
+              type: "message",
+              message: rec.message,
+            } as AgentReplayRecordPayload,
             time,
           );
         }
@@ -209,11 +217,15 @@ export function foldWireRecords(
       case "context.append_loop_event": {
         if (rec.event === undefined) break;
         const ev = rec.event;
-        if (ev.kind === "step.begin" && OPEN_STEP_INITIATOR.has(rec.event.initiator ?? "")) {
+        if (
+          ev.kind === "step.begin" &&
+          OPEN_STEP_INITIATOR.has(rec.event.initiator ?? "")
+        ) {
           flushAssembling(time);
           assembling = { role: ev.initiator ?? "assistant" };
         } else if (ev.kind === "content.part" && assembling !== null) {
-          assembling.content = (assembling.content ?? "") + (ev.text ?? ev.delta?.text ?? "");
+          assembling.content =
+            (assembling.content ?? "") + (ev.text ?? ev.delta?.text ?? "");
         } else if (ev.kind === "tool.call" && assembling !== null) {
           if (ev.toolCall !== undefined) {
             assembling.tool_calls ??= [];
@@ -237,7 +249,10 @@ export function foldWireRecords(
           } else if (ev.result !== undefined) {
             pendingMessages.push({
               role: "tool",
-              content: typeof ev.result === "string" ? ev.result : JSON.stringify(ev.result),
+              content:
+                typeof ev.result === "string"
+                  ? ev.result
+                  : JSON.stringify(ev.result),
               tool_call_id: ev.toolCall?.id ?? assembling.tool_call_id,
               name: ev.toolCall?.name ?? assembling.name,
             });

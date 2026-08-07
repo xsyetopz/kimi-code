@@ -13,22 +13,26 @@
  */
 
 import { Disposable, toDisposable } from "#/_base/di/lifecycle";
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
 
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { IAgentLoopService } from '#/agent/loop/loop';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IAgentSystemReminderService } from '#/agent/systemReminder/systemReminder';
-import { IEventBus } from '#/app/event/eventBus';
-import type { ContextMessage } from '#/agent/contextMemory/types';
-import { IWireService } from '#/wire/wire';
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { IAgentLoopService } from "#/agent/loop/loop";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
+import { IEventBus } from "#/app/event/eventBus";
+import type { ContextMessage } from "#/agent/contextMemory/types";
+import { IWireService } from "#/wire/wire";
 import {
   IAgentContextInjectorService,
   type ContextInjectionContent,
   type ContextInjectionProvider,
   type ContextInjectionResult,
-} from './contextInjector';
+} from "./contextInjector";
 
 interface ContextInjectionEntry {
   readonly provider: ContextInjectionProvider;
@@ -37,18 +41,23 @@ interface ContextInjectionEntry {
 }
 
 export const contextInjectorIsNewTurnKey = defineState<boolean>(
-  'contextInjector.isNewTurn',
+  "contextInjector.isNewTurn",
   () => true,
 );
 
-export class AgentContextInjectorService extends Disposable implements IAgentContextInjectorService {
+export class AgentContextInjectorService
+  extends Disposable
+  implements IAgentContextInjectorService
+{
   declare readonly _serviceBrand: undefined;
   private readonly entries = new Set<ContextInjectionEntry>();
 
   constructor(
-    @IAgentContextMemoryService private readonly context: IAgentContextMemoryService,
+    @IAgentContextMemoryService
+    private readonly context: IAgentContextMemoryService,
     @IAgentLoopService loopService: IAgentLoopService,
-    @IAgentSystemReminderService private readonly reminders: IAgentSystemReminderService,
+    @IAgentSystemReminderService
+    private readonly reminders: IAgentSystemReminderService,
     @IEventBus private readonly eventBus: IEventBus,
     @IWireService wire: IWireService,
     @IAgentStateService private readonly states: IAgentStateService,
@@ -56,26 +65,32 @@ export class AgentContextInjectorService extends Disposable implements IAgentCon
     super();
     this.states.register(contextInjectorIsNewTurnKey);
     this._register(
-      loopService.hooks.onWillBeginStep.register('context-injector', async (_ctx, next) => {
-        await next();
-        await this.inject();
-      }),
+      loopService.hooks.onWillBeginStep.register(
+        "context-injector",
+        async (_ctx, next) => {
+          await next();
+          await this.inject();
+        },
+      ),
     );
     this._register(
-      this.eventBus.subscribe('turn.started', () => {
+      this.eventBus.subscribe("turn.started", () => {
         this.isNewTurn = true;
       }),
     );
     this._register(
-      this.eventBus.subscribe('context.spliced', (e) => {
+      this.eventBus.subscribe("context.spliced", (e) => {
         this.handleSplice(e);
       }),
     );
     this._register(
-      wire.hooks.onDidRestore.register('context-injector', async (_ctx, next) => {
-        this.resyncPositions();
-        await next();
-      }),
+      wire.hooks.onDidRestore.register(
+        "context-injector",
+        async (_ctx, next) => {
+          this.resyncPositions();
+          await next();
+        },
+      ),
     );
   }
 
@@ -87,10 +102,7 @@ export class AgentContextInjectorService extends Disposable implements IAgentCon
     this.states.set(contextInjectorIsNewTurnKey, value);
   }
 
-  register(
-    name: string,
-    provider: ContextInjectionProvider,
-  ) {
+  register(name: string, provider: ContextInjectionProvider) {
     const positions = findInjections(this.context.get(), name);
     const entry: ContextInjectionEntry = {
       provider,
@@ -115,13 +127,14 @@ export class AgentContextInjectorService extends Disposable implements IAgentCon
     for (const entry of this.entries) {
       const injectedPositions: readonly number[] = [...entry.positions];
       const lastInjectedAt = injectedPositions.at(-1) ?? null;
-      const lastInjection = lastInjectedAt === null ? undefined : history[lastInjectedAt];
+      const lastInjection =
+        lastInjectedAt === null ? undefined : history[lastInjectedAt];
       const content = await entry.provider({
         injectedPositions,
         lastInjectedAt,
         lastInjection,
         lastDisclosure:
-          lastInjection?.origin?.kind === 'injection'
+          lastInjection?.origin?.kind === "injection"
             ? lastInjection.origin.disclosure
             : undefined,
         isNewTurn,
@@ -129,22 +142,24 @@ export class AgentContextInjectorService extends Disposable implements IAgentCon
       if (!this.entries.has(entry)) continue;
       if (content === undefined) continue;
       const result: ContextInjectionResult =
-        typeof content === 'object' && content !== null && !Array.isArray(content)
+        typeof content === "object" &&
+        content !== null &&
+        !Array.isArray(content)
           ? (content as ContextInjectionResult)
           : { content: content as ContextInjectionContent };
       const origin = {
-        kind: 'injection' as const,
+        kind: "injection" as const,
         variant: entry.name,
         disclosure: result.disclosure,
       };
-      if (typeof result.content === 'string') {
+      if (typeof result.content === "string") {
         if (result.content.trim().length === 0) continue;
         this.reminders.appendSystemReminder(result.content, origin);
         continue;
       }
       if (result.content.length === 0) continue;
       this.context.append({
-        role: 'user',
+        role: "user",
         content: [...result.content],
         toolCalls: [],
         origin,
@@ -164,7 +179,7 @@ export class AgentContextInjectorService extends Disposable implements IAgentCon
   private handleSplice(splice: ContextSplice): void {
     let insertedInjections: Map<string, number[]> | undefined;
     splice.messages.forEach((message, offset) => {
-      if (message.origin?.kind !== 'injection') return;
+      if (message.origin?.kind !== "injection") return;
       insertedInjections ??= new Map();
       const positions = insertedInjections.get(message.origin.variant);
       if (positions === undefined) {
@@ -205,7 +220,10 @@ function findInjections(
 ): number[] {
   const positions: number[] = [];
   history.forEach((message, index) => {
-    if (message.origin?.kind === 'injection' && message.origin.variant === variant) {
+    if (
+      message.origin?.kind === "injection" &&
+      message.origin.variant === variant
+    ) {
       positions.push(index);
     }
   });
@@ -217,5 +235,5 @@ registerScopedService(
   IAgentContextInjectorService,
   AgentContextInjectorService,
   ScopeActivation.OnScopeCreated,
-  'contextInjector',
+  "contextInjector",
 );

@@ -87,7 +87,9 @@ export interface ProviderManagerAddRow {
   readonly label: string;
 }
 
-export type ProviderManagerRow = ProviderManagerSourceRow | ProviderManagerAddRow;
+export type ProviderManagerRow =
+  | ProviderManagerSourceRow
+  | ProviderManagerAddRow;
 
 interface SourceRow extends ProviderManagerSourceRow {}
 interface AddRow extends ProviderManagerAddRow {}

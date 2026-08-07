@@ -11,25 +11,32 @@
  * per handler and the registration dies with it.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { TimeoutTimer } from '#/_base/utils/timer';
-import { subtreeWatchFilter } from '#/_base/utils/paths';
-import { discoverAgentFiles } from '#/workspace/workspaceAgentProfileLoader/internal/agentFileDiscovery';
-import { AgentProfileLoaderBase } from '#/workspace/workspaceAgentProfileLoader/internal/agentProfileLoader';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { TimeoutTimer } from "#/_base/utils/timer";
+import { subtreeWatchFilter } from "#/_base/utils/paths";
+import { discoverAgentFiles } from "#/workspace/workspaceAgentProfileLoader/internal/agentFileDiscovery";
+import { AgentProfileLoaderBase } from "#/workspace/workspaceAgentProfileLoader/internal/agentProfileLoader";
 import {
   AGENT_PROFILE_SOURCE_PRIORITY,
   type AgentProfileContribution,
-} from '#/app/agentProfileCatalog/agentProfileContribution';
-import { profilesFromDiscovery } from './internal/agentProfileFromFile';
-import { projectAgentRootCandidates, projectAgentRoots } from '#/workspace/workspaceAgentProfileLoader/internal/agentRoots';
-import { IUserAgentProfileLoader } from '#/workspace/workspaceAgentProfileLoader/userAgentProfileLoader';
-import { IAgentProfileRegistry } from '#/app/agentProfileCatalog/agentProfileRegistry';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { IHostFsWatchService } from '#/os/interface/hostFsWatch';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+} from "#/app/agentProfileCatalog/agentProfileContribution";
+import { profilesFromDiscovery } from "./internal/agentProfileFromFile";
+import {
+  projectAgentRootCandidates,
+  projectAgentRoots,
+} from "#/workspace/workspaceAgentProfileLoader/internal/agentRoots";
+import { IUserAgentProfileLoader } from "#/workspace/workspaceAgentProfileLoader/userAgentProfileLoader";
+import { IAgentProfileRegistry } from "#/app/agentProfileCatalog/agentProfileRegistry";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { IHostFsWatchService } from "#/os/interface/hostFsWatch";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 
-import { IWorkspaceAgentProfileLoader } from './workspaceAgentProfileLoader';
+import { IWorkspaceAgentProfileLoader } from "./workspaceAgentProfileLoader";
 
 const WATCH_DEBOUNCE_MS = 200;
 
@@ -39,7 +46,7 @@ export class WorkspaceAgentProfileLoaderService
 {
   declare readonly _serviceBrand: undefined;
 
-  protected readonly sourceId = 'workspace';
+  protected readonly sourceId = "workspace";
   protected readonly priority = AGENT_PROFILE_SOURCE_PRIORITY.workspace;
 
   private readonly watchDebounce = this._register(new TimeoutTimer());
@@ -64,11 +71,17 @@ export class WorkspaceAgentProfileLoaderService
 
   protected async load(): Promise<AgentProfileContribution> {
     await this.watchReady;
-    const roots = await projectAgentRoots(this.fs, this.workspace.cwd, (message, error) => {
-      this.log.warn(message, error);
-    });
+    const roots = await projectAgentRoots(
+      this.fs,
+      this.workspace.cwd,
+      (message, error) => {
+        this.log.warn(message, error);
+      },
+    );
     return profilesFromDiscovery(
-      await discoverAgentFiles(this.fs, roots, (message) => this.log.warn(message)),
+      await discoverAgentFiles(this.fs, roots, (message) =>
+        this.log.warn(message),
+      ),
       (context) => this.user.getDefaultProfile().renderSystemPrompt(context),
     );
   }
@@ -87,7 +100,9 @@ export class WorkspaceAgentProfileLoaderService
       handle.onDidChange(() => {
         this.watchDebounce.cancelAndSet(() => {
           void this.reload().catch((error) => {
-            this.log.warn(`agent profile loader "workspace" reload failed: ${String(error)}`);
+            this.log.warn(
+              `agent profile loader "workspace" reload failed: ${String(error)}`,
+            );
           });
         }, WATCH_DEBOUNCE_MS);
       }),
@@ -100,5 +115,5 @@ registerScopedService(
   IWorkspaceAgentProfileLoader,
   WorkspaceAgentProfileLoaderService,
   ScopeActivation.OnScopeCreated,
-  'workspaceAgentProfileLoader',
+  "workspaceAgentProfileLoader",
 );

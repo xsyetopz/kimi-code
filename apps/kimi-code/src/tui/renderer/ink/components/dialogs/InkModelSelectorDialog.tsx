@@ -29,15 +29,15 @@ export function InkModelSelectorDialog({
       )}
       {selector.tabs.length > 0 ? (
         <Text>
-          {selector.tabs.map((tab, index) => {
-            const prefix = index === 0 ? "" : "  ";
-            if (tab.active) {
-              return (
-                `${prefix}${currentTheme.bg("primary", currentTheme.boldFg("text", ` ${tab.label} `))}`
-              );
-            }
-            return `${prefix}${currentTheme.fg("textDim", tab.label)}`;
-          }).join("")}
+          {selector.tabs
+            .map((tab, index) => {
+              const prefix = index === 0 ? "" : "  ";
+              if (tab.active) {
+                return `${prefix}${currentTheme.bg("primary", currentTheme.boldFg("text", ` ${tab.label} `))}`;
+              }
+              return `${prefix}${currentTheme.fg("textDim", tab.label)}`;
+            })
+            .join("")}
         </Text>
       ) : null}
       {selector.searchable && selector.query.length > 0 ? (
@@ -76,7 +76,10 @@ export function InkModelSelectorDialog({
         </Text>
       ) : selector.belowCount > 0 ? (
         <Text>
-          {currentTheme.fg("textMuted", `▼ ${String(selector.belowCount)} more`)}
+          {currentTheme.fg(
+            "textMuted",
+            `▼ ${String(selector.belowCount)} more`,
+          )}
         </Text>
       ) : null}
       {selector.thinkingHeader === undefined ? null : (
@@ -86,10 +89,7 @@ export function InkModelSelectorDialog({
             {selector.thinkingSegments
               .map((segment) => {
                 if (segment.unavailable) {
-                  return currentTheme.fg(
-                    "textMuted",
-                    `  ${segment.label}  `,
-                  );
+                  return currentTheme.fg("textMuted", `  ${segment.label}  `);
                 }
                 return segment.active
                   ? currentTheme.boldFg("primary", `[ ${segment.label} ]`)

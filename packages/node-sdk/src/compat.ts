@@ -171,9 +171,15 @@ export type {
 
 // ── Types from v2 deep paths ──
 export type { ToolInputDisplay } from "@moonshot-ai/agent-core-v2/tool/toolInputDisplay";
-export type { AgentContextData, ContextMessage } from "@moonshot-ai/agent-core-v2/agent/contextMemory/types";
+export type {
+  AgentContextData,
+  ContextMessage,
+} from "@moonshot-ai/agent-core-v2/agent/contextMemory/types";
 export type { LoopRecordedEvent } from "@moonshot-ai/agent-core-v2/agent/contextMemory/loopEventFold";
-export type { CompactionBeginData, CompactionResult } from "@moonshot-ai/agent-core-v2/agent/fullCompaction/types";
+export type {
+  CompactionBeginData,
+  CompactionResult,
+} from "@moonshot-ai/agent-core-v2/agent/fullCompaction/types";
 export type { PermissionApprovalResultRecord } from "@moonshot-ai/agent-core-v2/agent/permissionRules/permissionRules";
 export type { UsageRecordScope } from "@moonshot-ai/agent-core-v2/agent/usage/usageOps";
 export type { PermissionMode } from "@moonshot-ai/agent-core-v2/agent/permissionPolicy/types";
@@ -201,9 +207,7 @@ export interface ResumeSessionResult {
 }
 
 // ── MCP types ──
-export {
-  McpServerConfigSchema,
-} from "@moonshot-ai/agent-core-v2/mcpCore/config-schema";
+export { McpServerConfigSchema } from "@moonshot-ai/agent-core-v2/mcpCore/config-schema";
 export type {
   McpServerConfig,
   McpRemoteServerConfig,
@@ -234,9 +238,7 @@ export {
   resolveConfigPath,
   resolveKimiHome,
 } from "@moonshot-ai/agent-core-v2";
-export {
-  encodeWorkDirKey,
-} from "@moonshot-ai/agent-core-v2/_base/utils/workdir-slug";
+export { encodeWorkDirKey } from "@moonshot-ai/agent-core-v2/_base/utils/workdir-slug";
 
 // ── Logging ──
 export { resolveGlobalLogPath } from "@moonshot-ai/agent-core-v2/_base/log/logConfig";
@@ -353,15 +355,25 @@ export function loadRuntimeConfigSafe(configPath: string): {
   }
 }
 
-export const KIMI_ERROR_INFO: Record<string, ReturnType<typeof errorInfo>> =
-  new Proxy({}, { get: (_target, code: string) => errorInfo(code) });
-export function fromKimiErrorPayload(p: { message: string; code?: string }): Error {
+export const KIMI_ERROR_INFO: Record<
+  string,
+  ReturnType<typeof errorInfo>
+> = new Proxy({}, { get: (_target, code: string) => errorInfo(code) });
+export function fromKimiErrorPayload(p: {
+  message: string;
+  code?: string;
+}): Error {
   return p.code === undefined
     ? new Error(p.message)
     : new KimiError(p.code, p.message);
 }
-export function isKimiError(e: unknown): e is KimiError { return isError2(e); }
-export function toKimiErrorPayload(e: Error): { code: string; message: string } {
+export function isKimiError(e: unknown): e is KimiError {
+  return isError2(e);
+}
+export function toKimiErrorPayload(e: Error): {
+  code: string;
+  message: string;
+} {
   return { code: e instanceof Error2 ? e.code : "UNKNOWN", message: e.message };
 }
 /** Apply model overrides and provider-derived defaults before presentation. */
@@ -373,9 +385,15 @@ export function effectiveModelAlias(
 }
 
 // ── Stub implementations ──
-export function transformTomlData<T>(data: T): T { return data; }
-export function parseConfigString(_s: string): Record<string, unknown> { return {}; }
-export function createRPC(): Record<string, unknown> { return {}; }
+export function transformTomlData<T>(data: T): T {
+  return data;
+}
+export function parseConfigString(_s: string): Record<string, unknown> {
+  return {};
+}
+export function createRPC(): Record<string, unknown> {
+  return {};
+}
 /** Keep the tail beginning at the latest `maxTurns` real user prompts. */
 export function limitAgentReplayByTurns(
   replay: readonly AgentReplayRecord[],
@@ -395,13 +413,24 @@ export function limitAgentReplayByTurns(
   if (userStarts.length <= maxTurns) return replay;
   return replay.slice(userStarts[userStarts.length - maxTurns]!);
 }
-export function makeErrorPayload(code: unknown, msg: string, extra?: Record<string, unknown>) { return { code, message: msg, ...extra }; }
+export function makeErrorPayload(
+  code: unknown,
+  msg: string,
+  extra?: Record<string, unknown>,
+) {
+  return { code, message: msg, ...extra };
+}
 export function installGlobalProxyDispatcher(): void {}
 export {
   parseAgentFileText,
   resolveAgentPath,
 } from "@moonshot-ai/agent-core-v2";
-export const noopTelemetryClient = { track: () => {}, sendEvent: () => {}, flush: () => Promise.resolve(), close: () => Promise.resolve() } as const;
+export const noopTelemetryClient = {
+  track: () => {},
+  sendEvent: () => {},
+  flush: () => Promise.resolve(),
+  close: () => Promise.resolve(),
+} as const;
 
 /** Host-facing diagnostic logger; engine scopes own their file sinks. */
 export const log: Logger = {
@@ -411,15 +440,20 @@ export const log: Logger = {
   debug: () => {},
   child: () => log,
 };
-export function flushDiagnosticLogs(): Promise<void> { return Promise.resolve(); }
+export function flushDiagnosticLogs(): Promise<void> {
+  return Promise.resolve();
+}
 export function flushDiagnosticLogsSync(): void {}
-export function redact<T>(value: T): T { return value; }
+export function redact<T>(value: T): T {
+  return value;
+}
 
 // ── Constants ──
 export const COMPACTION_ELISION_VARIANT = "standard" as const;
 export const COMPACT_USER_MESSAGE_MAX_TOKENS = 4000;
 export const USER_PROMPT_ORIGIN = "user" as const;
-export const MCP_OAUTH_AUTHORIZATION_URL_TOOL_UPDATE = "mcp_oauth_authorization_url_tool_update";
+export const MCP_OAUTH_AUTHORIZATION_URL_TOOL_UPDATE =
+  "mcp_oauth_authorization_url_tool_update";
 export function resolveLoggingConfig(input?: {
   readonly homeDir: string;
   readonly env: NodeJS.ProcessEnv;
@@ -442,13 +476,22 @@ export class ImageLimits {
     this.edge = options.maxEdgePx ?? resolveMaxImageEdgePx();
     this.budget = options.byteBudget ?? IMAGE_BYTE_BUDGET;
   }
-  maxEdgePx(): number { return this.edge; }
-  byteBudget(): number { return this.budget; }
+  maxEdgePx(): number {
+    return this.edge;
+  }
+  byteBudget(): number {
+    return this.budget;
+  }
 }
 export class Emitter<T> {
   private ls = new Set<(e: T) => void>();
-  fire(e: T): void { for (const l of this.ls) l(e); }
-  event(cb: (e: T) => void): { dispose(): void } { this.ls.add(cb); return { dispose: () => this.ls.delete(cb) }; }
+  fire(e: T): void {
+    for (const l of this.ls) l(e);
+  }
+  event(cb: (e: T) => void): { dispose(): void } {
+    this.ls.add(cb);
+    return { dispose: () => this.ls.delete(cb) };
+  }
 }
 export type ExperimentalFeatureState = { enabled: boolean };
 export type SwarmModeTrigger = "manual" | "task" | "tool";
@@ -461,4 +504,6 @@ export type ToolCallResponse = unknown;
 export type TelemetryClient = typeof noopTelemetryClient;
 export type TelemetryProperties = Record<string, unknown>;
 export type TelemetryContextPatch = Record<string, unknown>;
-export function withTelemetryContext(tc: unknown, _ctx?: unknown) { return (tc as TelemetryClient) ?? noopTelemetryClient; }
+export function withTelemetryContext(tc: unknown, _ctx?: unknown) {
+  return (tc as TelemetryClient) ?? noopTelemetryClient;
+}

@@ -12,7 +12,9 @@ export interface BackgroundAgentStatusProps {
  * Renders a single-line status for backgrounded agents.
  * Phase-colored bullet: started=primary, completed=success, failed=error.
  */
-export function BackgroundAgentStatus({ entry }: BackgroundAgentStatusProps): ReactNode {
+export function BackgroundAgentStatus({
+  entry,
+}: BackgroundAgentStatusProps): ReactNode {
   const status = entry.backgroundAgentStatus;
   if (!status) return null;
 

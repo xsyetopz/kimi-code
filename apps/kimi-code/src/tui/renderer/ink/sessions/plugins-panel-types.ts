@@ -54,7 +54,10 @@ export interface InkPluginsPanelRowView {
 export interface InkPluginsPanelView {
   readonly title: string;
   readonly hint: string;
-  readonly tabs: readonly { readonly label: string; readonly active: boolean }[];
+  readonly tabs: readonly {
+    readonly label: string;
+    readonly active: boolean;
+  }[];
   readonly mode: "installing" | "list" | "custom";
   readonly rows: readonly InkPluginsPanelRowView[];
   readonly footerLines: readonly string[];

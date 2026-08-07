@@ -444,7 +444,9 @@ export class SessionOrchestrationController {
 
   syncAdditionalDirs(session: Session): void {
     const additionalDirs = session.summary?.additionalDirs ?? [];
-    if (sameStringArrays(this.host.state.appState.additionalDirs, additionalDirs))
+    if (
+      sameStringArrays(this.host.state.appState.additionalDirs, additionalDirs)
+    )
       return;
     this.host.setAppState({ additionalDirs: [...additionalDirs] });
   }
@@ -455,7 +457,10 @@ export class SessionOrchestrationController {
     const message = `Current session is in a different working directory.\n  To resume, run: ${command}`;
     try {
       await copyTextToClipboard(command);
-      this.host.showStatus(`${message}\n  Command copied to clipboard`, "warning");
+      this.host.showStatus(
+        `${message}\n  Command copied to clipboard`,
+        "warning",
+      );
     } catch {
       this.host.showStatus(
         `${message}\n  Failed to copy command to clipboard`,
@@ -492,7 +497,9 @@ export class SessionOrchestrationController {
       });
     } catch (error) {
       const msg = formatErrorMessage(error);
-      this.host.showError(`Failed to resume session ${targetSessionId}: ${msg}`);
+      this.host.showError(
+        `Failed to resume session ${targetSessionId}: ${msg}`,
+      );
       return false;
     }
 
@@ -565,7 +572,9 @@ export class SessionOrchestrationController {
 
   async createNewSession(): Promise<void> {
     if (this.host.state.appState.isReplaying) {
-      this.host.showError("Cannot start a new session while history is replaying.");
+      this.host.showError(
+        "Cannot start a new session while history is replaying.",
+      );
       return;
     }
 

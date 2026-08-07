@@ -44,21 +44,21 @@ export class KimiTuiTerminalsController {
 
   /** Snapshot terminal data for renderer implementations without UI objects. */
   getTerminalViewState(): TerminalViewState {
-    const helpCommands: readonly TerminalHelpCommandView[] =
-      this.host.getSlashCommands().map((command) => ({
+    const helpCommands: readonly TerminalHelpCommandView[] = this.host
+      .getSlashCommands()
+      .map((command) => ({
         name: command.name,
         aliases: [...command.aliases],
         description: command.description,
       }));
-    const sessions: readonly TerminalSessionView[] = this.host.state.sessions.map(
-      (session) => ({
+    const sessions: readonly TerminalSessionView[] =
+      this.host.state.sessions.map((session) => ({
         id: session.id,
         title: session.title,
         lastPrompt: session.last_prompt ?? null,
         workDir: session.work_dir,
         updatedAt: session.updated_at,
-      }),
-    );
+      }));
     return createTerminalViewState({
       appState: this.host.state.appState,
       startupState: this.host.state.startupState,
@@ -68,7 +68,8 @@ export class KimiTuiTerminalsController {
       editor: {
         text: this.host.promptEditorState.text,
         cursorLine: promptEditorLineColumn(this.host.promptEditorState).line,
-        cursorColumn: promptEditorLineColumn(this.host.promptEditorState).column,
+        cursorColumn: promptEditorLineColumn(this.host.promptEditorState)
+          .column,
         inputMode: this.host.promptEditorState.inputMode,
         autocomplete: this.host.promptEditorState.completion?.items ?? [],
       },
@@ -81,7 +82,8 @@ export class KimiTuiTerminalsController {
       trustPrompt: this.host.startupPanelsController.getTrustPromptView(),
       toolOutputExpanded: this.host.state.toolOutputExpanded,
       externalEditorRunning: this.host.state.externalEditorRunning,
-      queuedMessageDispatchPending: this.host.state.queuedMessageDispatchPending,
+      queuedMessageDispatchPending:
+        this.host.state.queuedMessageDispatchPending,
       swarmModeEntry: this.host.state.swarmModeEntry,
       deferUserMessages: this.host.deferUserMessages,
       activityTip: this.host.presentationStateController.getActivityTip(),

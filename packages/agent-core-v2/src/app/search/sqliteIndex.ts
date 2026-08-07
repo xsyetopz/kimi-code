@@ -46,7 +46,10 @@ export class SqliteSearchIndex<T> {
     private readonly lockPath: string | null,
   ) {}
 
-  static open<T>(dir: string, opts: { readonly: boolean }): SqliteSearchIndex<T> {
+  static open<T>(
+    dir: string,
+    opts: { readonly: boolean },
+  ): SqliteSearchIndex<T> {
     const path = join(dir, DB_FILENAME);
     if (opts.readonly) {
       const db = new Database(path, { readonly: true });
@@ -96,9 +99,9 @@ export class SqliteSearchIndex<T> {
   }
 
   get(key: string): T | undefined {
-    const row = this.db.query("SELECT value FROM kv WHERE key = ?").get(key) as
-      | { value: string }
-      | null;
+    const row = this.db
+      .query("SELECT value FROM kv WHERE key = ?")
+      .get(key) as { value: string } | null;
     return row === null ? undefined : (JSON.parse(row.value) as T);
   }
 
@@ -112,7 +115,9 @@ export class SqliteSearchIndex<T> {
       "INSERT INTO terms_fts (key, terms) VALUES (?, ?)",
     );
     const delTerms = this.db.prepare("DELETE FROM terms_fts WHERE key = ?");
-    const putTri = this.db.prepare("INSERT INTO tri_fts (key, norm) VALUES (?, ?)");
+    const putTri = this.db.prepare(
+      "INSERT INTO tri_fts (key, norm) VALUES (?, ?)",
+    );
     const delTri = this.db.prepare("DELETE FROM tri_fts WHERE key = ?");
     const putNorm = this.db.prepare(
       "INSERT INTO docs_norm (key, norm) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET norm = excluded.norm",
@@ -157,7 +162,9 @@ export class SqliteSearchIndex<T> {
   ): { key: string; value: T }[] {
     const like = `${prefix.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
     const rows = this.db
-      .query("SELECT key, value FROM kv WHERE key LIKE ? ESCAPE '\\' ORDER BY key")
+      .query(
+        "SELECT key, value FROM kv WHERE key LIKE ? ESCAPE '\\' ORDER BY key",
+      )
       .all(like) as { key: string; value: string }[];
     if (!opts.values) {
       return rows.map((row) => ({ key: row.key, value: undefined as T }));

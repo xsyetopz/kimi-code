@@ -25,33 +25,38 @@
  * history keeps its media.
  */
 
-import { createHash } from 'node:crypto';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { defineState } from '#/_base/state/stateRegistry';
-import { renderToolResultForModel } from '#/agent/contextMemory/toolResultRender';
-import type { ContextMessage } from '#/agent/contextMemory/types';
-import { isVacuousContentPart } from '#/agent/contextMemory/vacuousContent';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { ErrorCodes, Error2 } from '#/errors';
-import type { ContentPart, Message } from '#/kosong/contract/message';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
+import { createHash } from "node:crypto";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { defineState } from "#/_base/state/stateRegistry";
+import { renderToolResultForModel } from "#/agent/contextMemory/toolResultRender";
+import type { ContextMessage } from "#/agent/contextMemory/types";
+import { isVacuousContentPart } from "#/agent/contextMemory/vacuousContent";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { ErrorCodes, Error2 } from "#/errors";
+import type { ContentPart, Message } from "#/kosong/contract/message";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   IAgentContextProjectorService,
   type ContextProjectionOptions,
   type MediaStripSnapshot,
-} from './contextProjector';
+} from "./contextProjector";
 import {
   profileReplayReasoningWithToolCalls,
   profileRequiresAssistantReplay,
-} from '#/kosong/protocol/profile';
+} from "#/kosong/protocol/profile";
 
-export const contextProjectorLastRepairSignatureKey = defineState<string | null>(
-  'contextProjector.lastRepairSignature',
-  () => null,
-);
+export const contextProjectorLastRepairSignatureKey = defineState<
+  string | null
+>("contextProjector.lastRepairSignature", () => null);
 
-export class AgentContextProjectorService implements IAgentContextProjectorService {
+export class AgentContextProjectorService
+  implements IAgentContextProjectorService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
@@ -70,11 +75,17 @@ export class AgentContextProjectorService implements IAgentContextProjectorServi
     this.states.set(contextProjectorLastRepairSignatureKey, value);
   }
 
-  project(messages: readonly ContextMessage[], options?: ContextProjectionOptions): readonly Message[] {
+  project(
+    messages: readonly ContextMessage[],
+    options?: ContextProjectionOptions,
+  ): readonly Message[] {
     return this.projectWithTrace(messages, project, options);
   }
 
-  projectStrict(messages: readonly ContextMessage[], options?: ContextProjectionOptions): readonly Message[] {
+  projectStrict(
+    messages: readonly ContextMessage[],
+    options?: ContextProjectionOptions,
+  ): readonly Message[] {
     return this.projectWithTrace(messages, projectStrict, options);
   }
 
@@ -92,7 +103,9 @@ export class AgentContextProjectorService implements IAgentContextProjectorServi
     messages: readonly ContextMessage[],
     options?: ContextProjectionOptions,
   ): MediaStripSnapshot {
-    return captureMediaStripSnapshot(this.projectWithTrace(messages, project, options));
+    return captureMediaStripSnapshot(
+      this.projectWithTrace(messages, project, options),
+    );
   }
 
   projectMediaStripped(
@@ -122,18 +135,25 @@ export class AgentContextProjectorService implements IAgentContextProjectorServi
     return result;
   }
 
-  private reportProjectionRepairs(anomalies: readonly ProjectionAnomaly[]): void {
+  private reportProjectionRepairs(
+    anomalies: readonly ProjectionAnomaly[],
+  ): void {
     const notable = anomalies.filter(
-      (anomaly) => !(anomaly.kind === 'tool_result_synthesized' && anomaly.trailing),
+      (anomaly) =>
+        !(anomaly.kind === "tool_result_synthesized" && anomaly.trailing),
     );
     if (notable.length === 0) {
       this.lastRepairSignature = null;
       return;
     }
     const signature = notable
-      .map((anomaly) => ('toolCallId' in anomaly ? `${anomaly.kind}:${anomaly.toolCallId}` : anomaly.kind))
+      .map((anomaly) =>
+        "toolCallId" in anomaly
+          ? `${anomaly.kind}:${anomaly.toolCallId}`
+          : anomaly.kind,
+      )
       .toSorted()
-      .join('|');
+      .join("|");
     if (signature === this.lastRepairSignature) return;
     this.lastRepairSignature = signature;
 
@@ -147,22 +167,28 @@ export class AgentContextProjectorService implements IAgentContextProjectorServi
     let whitespaceDropped = 0;
     let vacuousDropped = 0;
     for (const anomaly of notable) {
-      if (anomaly.kind === 'tool_result_reordered') reordered += 1;
-      else if (anomaly.kind === 'tool_result_synthesized') synthesized += 1;
-      else if (anomaly.kind === 'orphan_tool_result_dropped') droppedOrphan += 1;
-      else if (anomaly.kind === 'duplicate_tool_call_dropped') duplicateCallsDropped += 1;
-      else if (anomaly.kind === 'duplicate_tool_result_dropped') duplicateResultsDropped += 1;
-      else if (anomaly.kind === 'leading_non_user_dropped') leadingDropped += 1;
-      else if (anomaly.kind === 'consecutive_assistants_merged') assistantsMerged += 1;
-      else if (anomaly.kind === 'vacuous_message_dropped') vacuousDropped += 1;
+      if (anomaly.kind === "tool_result_reordered") reordered += 1;
+      else if (anomaly.kind === "tool_result_synthesized") synthesized += 1;
+      else if (anomaly.kind === "orphan_tool_result_dropped")
+        droppedOrphan += 1;
+      else if (anomaly.kind === "duplicate_tool_call_dropped")
+        duplicateCallsDropped += 1;
+      else if (anomaly.kind === "duplicate_tool_result_dropped")
+        duplicateResultsDropped += 1;
+      else if (anomaly.kind === "leading_non_user_dropped") leadingDropped += 1;
+      else if (anomaly.kind === "consecutive_assistants_merged")
+        assistantsMerged += 1;
+      else if (anomaly.kind === "vacuous_message_dropped") vacuousDropped += 1;
       else whitespaceDropped += 1;
     }
     const toolCallIds = [
       ...new Set(
-        notable.flatMap((anomaly) => ('toolCallId' in anomaly ? [anomaly.toolCallId] : [])),
+        notable.flatMap((anomaly) =>
+          "toolCallId" in anomaly ? [anomaly.toolCallId] : [],
+        ),
       ),
     ].slice(0, 5);
-    this.log.warn('repaired the request to keep it wire-valid', {
+    this.log.warn("repaired the request to keep it wire-valid", {
       reordered,
       synthesized,
       droppedOrphan,
@@ -174,7 +200,7 @@ export class AgentContextProjectorService implements IAgentContextProjectorServi
       vacuousDropped,
       toolCallIds,
     });
-    this.telemetry.track2('context_projection_repaired', {
+    this.telemetry.track2("context_projection_repaired", {
       reordered,
       synthesized,
       dropped_orphan: droppedOrphan,
@@ -189,15 +215,25 @@ export class AgentContextProjectorService implements IAgentContextProjectorServi
 }
 
 type ProjectionAnomaly =
-  | { readonly kind: 'tool_result_reordered'; readonly toolCallId: string }
-  | { readonly kind: 'tool_result_synthesized'; readonly toolCallId: string; readonly trailing: boolean }
-  | { readonly kind: 'orphan_tool_result_dropped'; readonly toolCallId: string }
-  | { readonly kind: 'duplicate_tool_call_dropped'; readonly toolCallId: string }
-  | { readonly kind: 'duplicate_tool_result_dropped'; readonly toolCallId: string }
-  | { readonly kind: 'leading_non_user_dropped'; readonly role: string }
-  | { readonly kind: 'consecutive_assistants_merged' }
-  | { readonly kind: 'whitespace_text_dropped'; readonly role: string }
-  | { readonly kind: 'vacuous_message_dropped'; readonly role: string };
+  | { readonly kind: "tool_result_reordered"; readonly toolCallId: string }
+  | {
+      readonly kind: "tool_result_synthesized";
+      readonly toolCallId: string;
+      readonly trailing: boolean;
+    }
+  | { readonly kind: "orphan_tool_result_dropped"; readonly toolCallId: string }
+  | {
+      readonly kind: "duplicate_tool_call_dropped";
+      readonly toolCallId: string;
+    }
+  | {
+      readonly kind: "duplicate_tool_result_dropped";
+      readonly toolCallId: string;
+    }
+  | { readonly kind: "leading_non_user_dropped"; readonly role: string }
+  | { readonly kind: "consecutive_assistants_merged" }
+  | { readonly kind: "whitespace_text_dropped"; readonly role: string }
+  | { readonly kind: "vacuous_message_dropped"; readonly role: string };
 
 type OnAnomaly = (anomaly: ProjectionAnomaly) => void;
 
@@ -205,23 +241,25 @@ export const MEDIA_DEGRADE_KEEP_RECENT = 2;
 
 const MEDIA_DEGRADED_PLACEHOLDERS = {
   image_url:
-    '[image omitted: dropped to fit the provider request size limit; re-read the file to view it]',
+    "[image omitted: dropped to fit the provider request size limit; re-read the file to view it]",
   audio_url:
-    '[audio omitted: dropped to fit the provider request size limit; re-read the file to hear it]',
+    "[audio omitted: dropped to fit the provider request size limit; re-read the file to hear it]",
   video_url:
-    '[video omitted: dropped to fit the provider request size limit; re-read the file to view it]',
+    "[video omitted: dropped to fit the provider request size limit; re-read the file to view it]",
 } as const;
 
 export const MEDIA_STRIPPED_PLACEHOLDERS = {
   image_url:
-    '[image omitted for provider compatibility; re-read the file to view it or get conversion guidance]',
+    "[image omitted for provider compatibility; re-read the file to view it or get conversion guidance]",
   audio_url:
-    '[audio omitted for provider compatibility; re-read the file to hear it]',
+    "[audio omitted for provider compatibility; re-read the file to hear it]",
   video_url:
-    '[video omitted for provider compatibility; re-read the file to view it]',
+    "[video omitted for provider compatibility; re-read the file to view it]",
 } as const;
 
-type MediaPlaceholderSet = typeof MEDIA_DEGRADED_PLACEHOLDERS | typeof MEDIA_STRIPPED_PLACEHOLDERS;
+type MediaPlaceholderSet =
+  | typeof MEDIA_DEGRADED_PLACEHOLDERS
+  | typeof MEDIA_STRIPPED_PLACEHOLDERS;
 
 type DegradableMediaPart = Extract<
   ContentPart,
@@ -237,19 +275,22 @@ interface MediaStripSnapshotData {
   readonly keys: ReadonlySet<string>;
 }
 
-type MediaContainerKeyCache = Partial<Record<DegradableMediaPart['type'], string>>;
+type MediaContainerKeyCache = Partial<
+  Record<DegradableMediaPart["type"], string>
+>;
 
-const MEDIA_CONTAINER_KEY_CACHE = new WeakMap<MediaContainer, MediaContainerKeyCache>();
+const MEDIA_CONTAINER_KEY_CACHE = new WeakMap<
+  MediaContainer,
+  MediaContainerKeyCache
+>();
 
-function isDegradableMediaPart(
-  part: ContentPart,
-): part is DegradableMediaPart {
+function isDegradableMediaPart(part: ContentPart): part is DegradableMediaPart {
   return part.type in MEDIA_DEGRADED_PLACEHOLDERS;
 }
 
 function mediaContainer(part: DegradableMediaPart): MediaContainer {
-  if (part.type === 'image_url') return part.imageUrl;
-  if (part.type === 'audio_url') return part.audioUrl;
+  if (part.type === "image_url") return part.imageUrl;
+  if (part.type === "audio_url") return part.audioUrl;
   return part.videoUrl;
 }
 
@@ -259,13 +300,13 @@ function mediaStripKey(part: DegradableMediaPart): string {
   const cached = cache?.[part.type];
   if (cached !== undefined) return cached;
 
-  const key = createHash('sha256')
+  const key = createHash("sha256")
     .update(part.type)
-    .update('\0')
-    .update(container.id ?? '')
-    .update('\0')
+    .update("\0")
+    .update(container.id ?? "")
+    .update("\0")
     .update(container.url)
-    .digest('hex');
+    .digest("hex");
   if (cache === undefined) {
     cache = {};
     MEDIA_CONTAINER_KEY_CACHE.set(container, cache);
@@ -274,7 +315,9 @@ function mediaStripKey(part: DegradableMediaPart): string {
   return key;
 }
 
-function mediaStripSnapshotKeys(snapshot: MediaStripSnapshot): ReadonlySet<string> {
+function mediaStripSnapshotKeys(
+  snapshot: MediaStripSnapshot,
+): ReadonlySet<string> {
   return (snapshot as unknown as MediaStripSnapshotData).keys;
 }
 
@@ -299,10 +342,11 @@ export function stripMediaPartsBySnapshot(
   const result = messages.map((message) => {
     let messageChanged = false;
     const content = message.content.map((part): ContentPart => {
-      if (!isDegradableMediaPart(part) || !keys.has(mediaStripKey(part))) return part;
+      if (!isDegradableMediaPart(part) || !keys.has(mediaStripKey(part)))
+        return part;
       changed = true;
       messageChanged = true;
-      return { type: 'text', text: MEDIA_STRIPPED_PLACEHOLDERS[part.type] };
+      return { type: "text", text: MEDIA_STRIPPED_PLACEHOLDERS[part.type] };
     });
     return messageChanged ? { ...message, content } : message;
   });
@@ -315,18 +359,20 @@ export function degradeOlderMediaParts(
   placeholders: MediaPlaceholderSet = MEDIA_DEGRADED_PLACEHOLDERS,
 ): readonly Message[] {
   const mediaCount = messages.reduce(
-    (count, message) => count + message.content.filter(isDegradableMediaPart).length,
+    (count, message) =>
+      count + message.content.filter(isDegradableMediaPart).length,
     0,
   );
   let toDegrade = Math.max(0, mediaCount - keepRecent);
   if (toDegrade === 0) return messages;
 
   return messages.map((message) => {
-    if (toDegrade === 0 || !message.content.some(isDegradableMediaPart)) return message;
+    if (toDegrade === 0 || !message.content.some(isDegradableMediaPart))
+      return message;
     const content = message.content.map((part): ContentPart => {
       if (toDegrade === 0 || !isDegradableMediaPart(part)) return part;
       toDegrade -= 1;
-      return { type: 'text', text: placeholders[part.type] };
+      return { type: "text", text: placeholders[part.type] };
     });
     return { ...message, content };
   });
@@ -360,17 +406,21 @@ function dedupeDuplicateToolCalls(
   const keptToolResultIndexes = new Map<string, number>();
   const out: Message[] = [];
   for (const message of messages) {
-    if (message.role === 'assistant' && message.toolCalls.length > 0) {
+    if (message.role === "assistant" && message.toolCalls.length > 0) {
       const kept = message.toolCalls.filter((toolCall) => {
         if (seenToolCallIds.has(toolCall.id)) {
-          onAnomaly?.({ kind: 'duplicate_tool_call_dropped', toolCallId: toolCall.id });
+          onAnomaly?.({
+            kind: "duplicate_tool_call_dropped",
+            toolCallId: toolCall.id,
+          });
           return false;
         }
         seenToolCallIds.add(toolCall.id);
         return true;
       });
       const hasReplayableThink =
-        replayWithToolCalls && message.content.some((part) => part.type === 'think');
+        replayWithToolCalls &&
+        message.content.some((part) => part.type === "think");
       if (kept.length === message.toolCalls.length) {
         out.push(message);
       } else if (
@@ -380,17 +430,23 @@ function dedupeDuplicateToolCalls(
       ) {
         out.push({ ...message, toolCalls: kept });
       } else if (message.content.length > 0) {
-        onAnomaly?.({ kind: 'vacuous_message_dropped', role: message.role });
+        onAnomaly?.({ kind: "vacuous_message_dropped", role: message.role });
       }
       continue;
     }
-    if (message.role === 'tool' && message.toolCallId !== undefined) {
+    if (message.role === "tool" && message.toolCallId !== undefined) {
       const previousIndex = keptToolResultIndexes.get(message.toolCallId);
       if (previousIndex !== undefined) {
-        if (isInterruptedToolResult(out[previousIndex]) && !isInterruptedToolResult(message)) {
+        if (
+          isInterruptedToolResult(out[previousIndex]) &&
+          !isInterruptedToolResult(message)
+        ) {
           out[previousIndex] = message;
         } else {
-          onAnomaly?.({ kind: 'duplicate_tool_result_dropped', toolCallId: message.toolCallId });
+          onAnomaly?.({
+            kind: "duplicate_tool_result_dropped",
+            toolCallId: message.toolCallId,
+          });
         }
         continue;
       }
@@ -412,13 +468,17 @@ function mergeConsecutiveAssistantMessages(
   const out: Message[] = [];
   for (const message of messages) {
     const previous = out.at(-1);
-    if (previous !== undefined && previous.role === 'assistant' && message.role === 'assistant') {
+    if (
+      previous !== undefined &&
+      previous.role === "assistant" &&
+      message.role === "assistant"
+    ) {
       out[out.length - 1] = {
         ...previous,
         content: [...previous.content, ...message.content],
         toolCalls: [...previous.toolCalls, ...message.toolCalls],
       };
-      onAnomaly?.({ kind: 'consecutive_assistants_merged' });
+      onAnomaly?.({ kind: "consecutive_assistants_merged" });
       continue;
     }
     out.push(message);
@@ -426,10 +486,16 @@ function mergeConsecutiveAssistantMessages(
   return out;
 }
 
-function dropLeadingNonUserMessages(messages: readonly Message[], onAnomaly?: OnAnomaly): Message[] {
+function dropLeadingNonUserMessages(
+  messages: readonly Message[],
+  onAnomaly?: OnAnomaly,
+): Message[] {
   let start = 0;
-  while (start < messages.length && messages[start]?.role !== 'user') {
-    onAnomaly?.({ kind: 'leading_non_user_dropped', role: messages[start]!.role });
+  while (start < messages.length && messages[start]?.role !== "user") {
+    onAnomaly?.({
+      kind: "leading_non_user_dropped",
+      role: messages[start]!.role,
+    });
     start += 1;
   }
   return start === 0 ? [...messages] : messages.slice(start);
@@ -441,13 +507,14 @@ function project(
   options?: ContextProjectionOptions,
 ): Message[] {
   const hasAssistant = history.some(
-    (message) => message.partial !== true && message.role === 'assistant',
+    (message) => message.partial !== true && message.role === "assistant",
   );
 
   let lastNonToolIndex = history.length - 1;
   while (
     lastNonToolIndex >= 0 &&
-    (history[lastNonToolIndex]?.role === 'tool' || history[lastNonToolIndex]?.partial === true)
+    (history[lastNonToolIndex]?.role === "tool" ||
+      history[lastNonToolIndex]?.partial === true)
   ) {
     lastNonToolIndex -= 1;
   }
@@ -459,11 +526,12 @@ function project(
   const flushMerge = (): void => {
     if (merge === undefined) return;
     if (merge.singleContent === undefined) {
-      const text = merge.texts.join('\n\n');
-      const content: ContentPart[] = text === '' ? [] : [{ type: 'text', text }];
+      const text = merge.texts.join("\n\n");
+      const content: ContentPart[] =
+        text === "" ? [] : [{ type: "text", text }];
       content.push(...merge.parts);
       out[merge.index] = {
-        role: 'user',
+        role: "user",
         name: undefined,
         content,
         toolCalls: [],
@@ -483,7 +551,7 @@ function project(
     if (source.toolCalls.length === 0 && !hasDeclaredTools(source)) {
       if (content.length === 0) return;
       if (content.every(isVacuousContentPart)) {
-        onAnomaly?.({ kind: 'vacuous_message_dropped', role: source.role });
+        onAnomaly?.({ kind: "vacuous_message_dropped", role: source.role });
         return;
       }
     }
@@ -493,7 +561,12 @@ function project(
     if (canMergeUserMessage(source)) {
       if (merge === undefined) {
         out.push(toWireMessage(source, content));
-        merge = { index: out.length - 1, singleContent: content, texts: [], parts: [] };
+        merge = {
+          index: out.length - 1,
+          singleContent: content,
+          texts: [],
+          parts: [],
+        };
       } else {
         if (merge.singleContent !== undefined) {
           appendMergeContent(merge, merge.singleContent);
@@ -509,7 +582,7 @@ function project(
 
   for (const [index, message] of history.entries()) {
     if (message.partial === true) continue;
-    if (message.role === 'tool') {
+    if (message.role === "tool") {
       if (!hasAssistant) {
         emit(message);
         continue;
@@ -518,14 +591,23 @@ function project(
       const slot = openSlots.get(message.toolCallId);
       if (slot === undefined) {
         if (openSlots.size > 0) markForeignBetween();
-        onAnomaly?.({ kind: 'orphan_tool_result_dropped', toolCallId: message.toolCallId });
+        onAnomaly?.({
+          kind: "orphan_tool_result_dropped",
+          toolCallId: message.toolCallId,
+        });
         continue;
       }
       openSlots.delete(message.toolCallId);
       if (slot.foreignBetween) {
-        onAnomaly?.({ kind: 'tool_result_reordered', toolCallId: message.toolCallId });
+        onAnomaly?.({
+          kind: "tool_result_reordered",
+          toolCallId: message.toolCallId,
+        });
       }
-      out[slot.index] = toWireMessage(message, projectedContent(message, onAnomaly));
+      out[slot.index] = toWireMessage(
+        message,
+        projectedContent(message, onAnomaly),
+      );
       continue;
     }
     emit(message);
@@ -534,19 +616,23 @@ function project(
       if (reopened !== undefined) {
         out[reopened.index] = createInterruptedToolResult(call.id);
         onAnomaly?.({
-          kind: 'tool_result_synthesized',
+          kind: "tool_result_synthesized",
           toolCallId: call.id,
           trailing: reopened.ownerIndex >= lastNonToolIndex,
         });
       }
-      openSlots.set(call.id, { index: out.length, ownerIndex: index, foreignBetween: false });
+      openSlots.set(call.id, {
+        index: out.length,
+        ownerIndex: index,
+        foreignBetween: false,
+      });
       out.push(TOOL_RESULT_SLOT);
     }
   }
   for (const [id, slot] of openSlots) {
     out[slot.index] = createInterruptedToolResult(id);
     onAnomaly?.({
-      kind: 'tool_result_synthesized',
+      kind: "tool_result_synthesized",
       toolCallId: id,
       trailing: slot.ownerIndex >= lastNonToolIndex,
     });
@@ -568,18 +654,24 @@ interface MergeGroup {
   parts: ContentPart[];
 }
 
-function appendMergeContent(group: MergeGroup, content: readonly ContentPart[]): void {
-  let text = '';
+function appendMergeContent(
+  group: MergeGroup,
+  content: readonly ContentPart[],
+): void {
+  let text = "";
   for (const part of content) {
-    if (part.type === 'text') text += part.text;
+    if (part.type === "text") text += part.text;
     else group.parts.push(part);
   }
   if (text.length > 0) group.texts.push(text);
 }
 
-function projectedContent(source: ContextMessage, onAnomaly?: OnAnomaly): ContentPart[] {
+function projectedContent(
+  source: ContextMessage,
+  onAnomaly?: OnAnomaly,
+): ContentPart[] {
   const content =
-    source.role === 'tool'
+    source.role === "tool"
       ? renderToolResultForModel({
           output: outputFromToolContent(source.content),
           isError: source.isError,
@@ -600,8 +692,8 @@ function cleanContent(
     const filtered: ContentPart[] = [];
     for (const part of rawContent) {
       if (isBlankText(part)) {
-        if (part.type === 'text' && part.text.length > 0) {
-          onAnomaly?.({ kind: 'whitespace_text_dropped', role: source.role });
+        if (part.type === "text" && part.text.length > 0) {
+          onAnomaly?.({ kind: "whitespace_text_dropped", role: source.role });
         }
       } else {
         filtered.push(part);
@@ -609,31 +701,33 @@ function cleanContent(
     }
     content = filtered;
   }
-  if (source.role === 'tool' && content.length === 0) {
+  if (source.role === "tool" && content.length === 0) {
     throw new Error2(
       ErrorCodes.REQUEST_INVALID,
-      'Tool result message content cannot be empty after removing empty text blocks.',
+      "Tool result message content cannot be empty after removing empty text blocks.",
       { details: { toolCallId: source.toolCallId } },
     );
   }
   return [...content];
 }
 
-function outputFromToolContent(content: readonly ContentPart[]): string | readonly ContentPart[] {
+function outputFromToolContent(
+  content: readonly ContentPart[],
+): string | readonly ContentPart[] {
   const only = content[0];
-  return content.length === 1 && only?.type === 'text' ? only.text : content;
+  return content.length === 1 && only?.type === "text" ? only.text : content;
 }
 
 const TOOL_INTERRUPTED_TEXT =
-  'Tool result is not available in the current context. Do not assume the tool completed successfully.';
+  "Tool result is not available in the current context. Do not assume the tool completed successfully.";
 
-const TOOL_RESULT_SLOT: Message = createInterruptedToolResult('');
+const TOOL_RESULT_SLOT: Message = createInterruptedToolResult("");
 
 function createInterruptedToolResult(toolCallId: string): Message {
   return {
-    role: 'tool',
+    role: "tool",
     name: undefined,
-    content: [{ type: 'text', text: TOOL_INTERRUPTED_TEXT }],
+    content: [{ type: "text", text: TOOL_INTERRUPTED_TEXT }],
     toolCalls: [],
     toolCallId,
     partial: undefined,
@@ -641,24 +735,27 @@ function createInterruptedToolResult(toolCallId: string): Message {
 }
 
 function isInterruptedToolResult(message: Message | undefined): boolean {
-  if (message?.role !== 'tool') return false;
+  if (message?.role !== "tool") return false;
   const [part] = message.content;
-  return part?.type === 'text' && part.text === TOOL_INTERRUPTED_TEXT;
+  return part?.type === "text" && part.text === TOOL_INTERRUPTED_TEXT;
 }
 
 function isBlankText(part: ContentPart): boolean {
-  return part.type === 'text' && part.text.trim().length === 0;
+  return part.type === "text" && part.text.trim().length === 0;
 }
 
 function canMergeUserMessage(message: ContextMessage): boolean {
-  return message.role === 'user' && message.origin?.kind === 'user';
+  return message.role === "user" && message.origin?.kind === "user";
 }
 
 function hasDeclaredTools(message: ContextMessage): boolean {
   return message.tools !== undefined && message.tools.length > 0;
 }
 
-function toWireMessage(message: ContextMessage, content: ContentPart[]): Message {
+function toWireMessage(
+  message: ContextMessage,
+  content: ContentPart[],
+): Message {
   return {
     role: message.role,
     name: message.name,
@@ -676,5 +773,5 @@ registerScopedService(
   IAgentContextProjectorService,
   AgentContextProjectorService,
   ScopeActivation.OnScopeCreated,
-  'contextProjector',
+  "contextProjector",
 );

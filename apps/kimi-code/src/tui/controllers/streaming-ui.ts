@@ -144,7 +144,8 @@ export class StreamingUIController {
       getStreamingToolCallArguments: (id) =>
         this._streamingToolCallArguments.get(id),
       getPendingToolComponent: (id) => this._pendingToolComponents.get(id),
-      finalizeLiveTextBuffers: (nextMode) => this.finalizeLiveTextBuffers(nextMode),
+      finalizeLiveTextBuffers: (nextMode) =>
+        this.finalizeLiveTextBuffers(nextMode),
       onToolCallStart: (toolCall) => this.onToolCallStart(toolCall),
     };
     this.toolGroups = new StreamingUIToolGroups(this.host, groupState);
@@ -358,9 +359,7 @@ export class StreamingUIController {
     this.pendingToolCallFlushIds.add(id);
   }
 
-  getStreamingToolCallPreview(
-    id: string,
-  ):
+  getStreamingToolCallPreview(id: string):
     | {
         name: string;
         args: Record<string, unknown>;

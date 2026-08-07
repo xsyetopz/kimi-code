@@ -13,9 +13,9 @@ describe("inline-skill utils", () => {
   ]);
 
   it("extractInlineSkillPrefix finds /skill: at token boundaries", () => {
-    expect(
-      extractInlineSkillPrefix("writing here /skill:al"),
-    ).toBe("/skill:al");
+    expect(extractInlineSkillPrefix("writing here /skill:al")).toBe(
+      "/skill:al",
+    );
     expect(extractInlineSkillPrefix("/skill:alpha")).toBe("/skill:alpha");
     expect(extractInlineSkillPrefix("email@example.com")).toBeNull();
   });

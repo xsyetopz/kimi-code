@@ -1,49 +1,55 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import { CyclicDependencyError } from '#/_base/di/errors';
+import { SyncDescriptor } from "#/_base/di/descriptors";
+import { CyclicDependencyError } from "#/_base/di/errors";
 import {
   createDecorator,
   IInstantiationService,
   type IInstantiationService as IInstantiationServiceType,
-} from '#/_base/di/instantiation';
-import { InstantiationService } from '#/_base/di/instantiationService';
-import { ServiceCollection } from '#/_base/di/serviceCollection';
+} from "#/_base/di/instantiation";
+import { InstantiationService } from "#/_base/di/instantiationService";
+import { ServiceCollection } from "#/_base/di/serviceCollection";
 
-
-describe('Cyclic dependency detection', () => {
-  it('direct self-cycle A → A throws CyclicDependencyError', () => {
+describe("Cyclic dependency detection", () => {
+  it("direct self-cycle A → A throws CyclicDependencyError", () => {
     interface IA {
-      tag: 'A';
+      tag: "A";
     }
-    const IA = createDecorator<IA>('A');
+    const IA = createDecorator<IA>("A");
     class A implements IA {
-      tag = 'A' as const;
+      tag = "A" as const;
       constructor(@IA _self: IA) {}
     }
-    const ix = new InstantiationService(new ServiceCollection([IA, new SyncDescriptor(A)]));
-    expect(() => ix.invokeFunction((a) => a.get(IA))).toThrowError(CyclicDependencyError);
+    const ix = new InstantiationService(
+      new ServiceCollection([IA, new SyncDescriptor(A)]),
+    );
+    expect(() => ix.invokeFunction((a) => a.get(IA))).toThrowError(
+      CyclicDependencyError,
+    );
   });
 
-  it('indirect cycle A → B → A includes both names in `path` in construction order', () => {
+  it("indirect cycle A → B → A includes both names in `path` in construction order", () => {
     interface IA {
-      tag: 'A';
+      tag: "A";
     }
     interface IB {
-      tag: 'B';
+      tag: "B";
     }
-    const IA = createDecorator<IA>('A');
-    const IB = createDecorator<IB>('B');
+    const IA = createDecorator<IA>("A");
+    const IB = createDecorator<IB>("B");
     class A implements IA {
-      tag = 'A' as const;
+      tag = "A" as const;
       constructor(@IB _b: IB) {}
     }
     class B implements IB {
-      tag = 'B' as const;
+      tag = "B" as const;
       constructor(@IA _a: IA) {}
     }
     const ix = new InstantiationService(
-      new ServiceCollection([IA, new SyncDescriptor(A)], [IB, new SyncDescriptor(B)]),
+      new ServiceCollection(
+        [IA, new SyncDescriptor(A)],
+        [IB, new SyncDescriptor(B)],
+      ),
     );
 
     let captured: CyclicDependencyError | undefined;
@@ -53,26 +59,26 @@ describe('Cyclic dependency detection', () => {
       captured = e as CyclicDependencyError;
     }
     expect(captured).toBeInstanceOf(CyclicDependencyError);
-    expect(captured!.path).toEqual(['A', 'B', 'A']);
+    expect(captured!.path).toEqual(["A", "B", "A"]);
     expect(captured!.message).toMatch(/cyclic dependency between services/i);
   });
 
-  it('no-cycle chain A → B → C constructs cleanly', () => {
+  it("no-cycle chain A → B → C constructs cleanly", () => {
     interface ITagged {
       tag: string;
     }
-    const IA = createDecorator<ITagged>('A');
-    const IB = createDecorator<ITagged>('B');
-    const IC = createDecorator<ITagged>('C');
+    const IA = createDecorator<ITagged>("A");
+    const IB = createDecorator<ITagged>("B");
+    const IC = createDecorator<ITagged>("C");
     class C implements ITagged {
-      tag = 'C';
+      tag = "C";
     }
     class B implements ITagged {
-      tag = 'B';
+      tag = "B";
       constructor(@IC _c: ITagged) {}
     }
     class A implements ITagged {
-      tag = 'A';
+      tag = "A";
       constructor(@IB _b: ITagged) {}
     }
     const ix = new InstantiationService(
@@ -85,29 +91,31 @@ describe('Cyclic dependency detection', () => {
     expect(() => ix.invokeFunction((a) => a.get(IA))).not.toThrow();
   });
 
-  it('cycle across parent/child boundary is detected', () => {
+  it("cycle across parent/child boundary is detected", () => {
     interface IA {
-      tag: 'A';
+      tag: "A";
     }
     interface IB {
-      tag: 'B';
+      tag: "B";
     }
-    const IA = createDecorator<IA>('A');
-    const IB = createDecorator<IB>('B');
+    const IA = createDecorator<IA>("A");
+    const IB = createDecorator<IB>("B");
 
     class A implements IA {
-      tag = 'A' as const;
+      tag = "A" as const;
       constructor(@IB _b: IB) {}
     }
     class B implements IB {
-      tag = 'B' as const;
+      tag = "B" as const;
       constructor(@IA _a: IA) {}
     }
 
     const parent = new InstantiationService(
       new ServiceCollection([IA, new SyncDescriptor(A)]),
     );
-    const child = parent.createChild(new ServiceCollection([IB, new SyncDescriptor(B)]));
+    const child = parent.createChild(
+      new ServiceCollection([IB, new SyncDescriptor(B)]),
+    );
 
     let captured: CyclicDependencyError | undefined;
     try {
@@ -116,62 +124,67 @@ describe('Cyclic dependency detection', () => {
       captured = e as CyclicDependencyError;
     }
     expect(captured).toBeInstanceOf(CyclicDependencyError);
-    expect(captured!.path).toEqual(['A', 'B', 'A']);
+    expect(captured!.path).toEqual(["A", "B", "A"]);
   });
 
-  it('stack is unwound even when construction throws', () => {
+  it("stack is unwound even when construction throws", () => {
     interface ITagged {
       tag: string;
     }
-    const IBoom = createDecorator<ITagged>('Boom');
-    const IFine = createDecorator<ITagged>('Fine');
+    const IBoom = createDecorator<ITagged>("Boom");
+    const IFine = createDecorator<ITagged>("Fine");
 
     class Boom implements ITagged {
-      tag = 'boom';
+      tag = "boom";
       constructor() {
-        throw new Error('intentional');
+        throw new Error("intentional");
       }
     }
     class Fine implements ITagged {
-      tag = 'fine';
+      tag = "fine";
     }
 
     const ix = new InstantiationService(
-      new ServiceCollection([IBoom, new SyncDescriptor(Boom)], [IFine, new SyncDescriptor(Fine)]),
+      new ServiceCollection(
+        [IBoom, new SyncDescriptor(Boom)],
+        [IFine, new SyncDescriptor(Fine)],
+      ),
     );
 
-    expect(() => ix.invokeFunction((a) => a.get(IBoom))).toThrowError(/intentional/);
+    expect(() => ix.invokeFunction((a) => a.get(IBoom))).toThrowError(
+      /intentional/,
+    );
     expect(() => ix.invokeFunction((a) => a.get(IFine))).not.toThrow();
   });
 });
 
-describe('Recursive instantiation regression (#105562)', () => {
-  it('recursive invokeFunction during construction does not double-create a dependency', () => {
+describe("Recursive instantiation regression (#105562)", () => {
+  it("recursive invokeFunction during construction does not double-create a dependency", () => {
     interface IService1 {
-      tag: 's1';
+      tag: "s1";
     }
     interface IService2 {
-      tag: 's2';
+      tag: "s2";
     }
     interface IService21 {
       readonly service1: IService1;
       readonly service2: IService2;
     }
-    const IService1 = createDecorator<IService1>('reentrant-s1');
-    const IService2 = createDecorator<IService2>('reentrant-s2');
-    const IService21 = createDecorator<IService21>('reentrant-s21');
+    const IService1 = createDecorator<IService1>("reentrant-s1");
+    const IService2 = createDecorator<IService2>("reentrant-s2");
+    const IService21 = createDecorator<IService21>("reentrant-s21");
 
     let service2CtorCount = 0;
 
     class Service1Impl implements IService1 {
-      tag = 's1' as const;
+      tag = "s1" as const;
       constructor(@IInstantiationService insta: IInstantiationServiceType) {
         const c = insta.invokeFunction((accessor) => accessor.get(IService2));
         expect(c).toBeTruthy();
       }
     }
     class Service2Impl implements IService2 {
-      tag = 's2' as const;
+      tag = "s2" as const;
       constructor() {
         service2CtorCount += 1;
       }
@@ -199,7 +212,7 @@ describe('Recursive instantiation regression (#105562)', () => {
   });
 });
 
-describe('Sync/Async dependency loop', () => {
+describe("Sync/Async dependency loop", () => {
   interface IA {
     readonly _serviceBrand: undefined;
     doIt(): boolean;
@@ -209,9 +222,9 @@ describe('Sync/Async dependency loop', () => {
     b(): boolean;
   }
 
-  it('sync re-entrant cycle (via createInstance in ctor) explodes with RECURSIVELY', () => {
-    const IA = createDecorator<IA>('loop-sync-A');
-    const IB = createDecorator<IB>('loop-sync-B');
+  it("sync re-entrant cycle (via createInstance in ctor) explodes with RECURSIVELY", () => {
+    const IA = createDecorator<IA>("loop-sync-A");
+    const IB = createDecorator<IB>("loop-sync-B");
 
     class BConsumer {
       constructor(@IB private readonly b: IB) {}
@@ -254,7 +267,6 @@ describe('Sync/Async dependency loop', () => {
       captured = e;
     }
     expect(captured).toBeInstanceOf(Error);
-    expect((captured as Error).message).toContain('RECURSIVELY');
+    expect((captured as Error).message).toContain("RECURSIVELY");
   });
-
 });

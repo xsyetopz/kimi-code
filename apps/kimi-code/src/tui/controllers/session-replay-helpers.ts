@@ -1,6 +1,8 @@
 import type { GoalChange } from "@moonshot-ai/kimi-code-sdk";
 
-export type GoalReplayLifecycleChange = GoalChange & { readonly kind: "lifecycle" };
+export type GoalReplayLifecycleChange = GoalChange & {
+  readonly kind: "lifecycle";
+};
 
 const RESUME_NORMALIZATION_GOAL_PAUSE_REASONS = new Set([
   "Paused after agent resume",

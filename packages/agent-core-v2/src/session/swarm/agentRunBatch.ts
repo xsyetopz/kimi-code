@@ -51,7 +51,8 @@ const RATE_LIMIT_CAPACITY_RECOVERY_INTERVAL_MS = 3 * 60 * 1000;
 const RATE_LIMIT_SUSPENDED_REASON =
   "Provider rate limit; subagent requeued for retry.";
 
-export const AGENT_SWARM_MAX_CONCURRENCY_ENV = "KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY";
+export const AGENT_SWARM_MAX_CONCURRENCY_ENV =
+  "KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY";
 export const DEFAULT_SWARM_MAX_CONCURRENCY = 3;
 
 export type QueuedAgentRunTask<T = unknown> = SessionSwarmTask<T>;
@@ -124,7 +125,9 @@ export class AgentRunBatch<T> {
   private readonly batchSignal: AbortSignal | undefined;
   private readonly batchAbortListener: () => void;
   private readonly maxConcurrency: number | undefined;
-  private readonly onPoolChange: ((snapshot: AgentRunBatchPoolSnapshot) => void) | undefined;
+  private readonly onPoolChange:
+    | ((snapshot: AgentRunBatchPoolSnapshot) => void)
+    | undefined;
   private normalLaunchCount = 0;
   private normalLaunchTimer: ReturnType<typeof setTimeout> | undefined;
   private rateLimitLaunchTimer: ReturnType<typeof setTimeout> | undefined;

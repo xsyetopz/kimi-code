@@ -58,10 +58,7 @@ export function projectToolCallBodyLines(
     return lines;
   }
 
-  if (
-    toolCall.name === "Write" ||
-    toolCall.name === "Edit"
-  ) {
+  if (toolCall.name === "Write" || toolCall.name === "Edit") {
     lines.push(
       ...projectWriteEditPreviewLines({
         toolCall,
@@ -124,10 +121,7 @@ export function projectToolCallBodyLines(
 
   const renderer = pickResultRenderer(toolCall.name);
   lines.push(
-    ...renderComponentsToLines(
-      renderer(toolCall, result, { expanded }),
-      width,
-    ),
+    ...renderComponentsToLines(renderer(toolCall, result, { expanded }), width),
   );
   return lines;
 }

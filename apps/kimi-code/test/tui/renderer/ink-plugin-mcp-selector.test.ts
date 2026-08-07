@@ -141,7 +141,9 @@ describe("ink plugin mcp selector", () => {
     );
     expect(
       (
-        tui as unknown as { handleInkSimpleDialogInput: (data: string) => boolean }
+        tui as unknown as {
+          handleInkSimpleDialogInput: (data: string) => boolean;
+        }
       ).handleInkSimpleDialogInput("\u001B"),
     ).toBe(true);
     expect(onCancel).toHaveBeenCalledOnce();

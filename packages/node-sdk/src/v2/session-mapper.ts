@@ -88,9 +88,7 @@ export function v2MetaToSessionMeta(meta: V2SessionMeta): SessionMeta {
   return {
     ...mapped,
     ...(meta.lastPrompt !== undefined ? { lastPrompt: meta.lastPrompt } : {}),
-    ...(meta.forkedFrom !== undefined
-      ? { forkedFrom: meta.forkedFrom }
-      : {}),
+    ...(meta.forkedFrom !== undefined ? { forkedFrom: meta.forkedFrom } : {}),
     ...(meta.cwd !== undefined ? { workDir: meta.cwd } : {}),
   } satisfies SessionMeta;
 }

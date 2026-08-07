@@ -7,25 +7,40 @@
  * Bound at App scope.
  */
 
-import { FileTokenStorage } from '@moonshot-ai/kimi-code-oauth';
-import { join } from 'pathe';
+import { FileTokenStorage } from "@moonshot-ai/kimi-code-oauth";
+import { join } from "pathe";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { Disposable, toDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { Disposable, toDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
 
-import { OpenCodeAuthAdapter } from './opencodeAuthAdapter';
-import { getProviderAuthAdapter, registerProviderAuthAdapter } from './providerAuth';
+import { OpenCodeAuthAdapter } from "./opencodeAuthAdapter";
+import {
+  getProviderAuthAdapter,
+  registerProviderAuthAdapter,
+} from "./providerAuth";
 
 export interface IOpenCodeAuthAdapterRegistration {
   readonly _serviceBrand: undefined;
 }
 
 export const IOpenCodeAuthAdapterRegistration: ServiceIdentifier<IOpenCodeAuthAdapterRegistration> =
-  createDecorator<IOpenCodeAuthAdapterRegistration>('opencodeAuthAdapterRegistration');
+  createDecorator<IOpenCodeAuthAdapterRegistration>(
+    "opencodeAuthAdapterRegistration",
+  );
 
-export class OpenCodeAuthAdapterRegistration extends Disposable implements IOpenCodeAuthAdapterRegistration {
+export class OpenCodeAuthAdapterRegistration
+  extends Disposable
+  implements IOpenCodeAuthAdapterRegistration
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(@IBootstrapService bootstrap: IBootstrapService) {
@@ -33,9 +48,11 @@ export class OpenCodeAuthAdapterRegistration extends Disposable implements IOpen
     // The registry is process-wide while App scopes may be created more than
     // once by hosts/tests. Reuse the first official adapter rather than
     // failing a second scope during construction.
-    if (getProviderAuthAdapter('opencode') !== undefined) return;
+    if (getProviderAuthAdapter("opencode") !== undefined) return;
     const adapter = new OpenCodeAuthAdapter({
-      storage: new FileTokenStorage(join(bootstrap.homeDir, bootstrap.scope('credentials'))),
+      storage: new FileTokenStorage(
+        join(bootstrap.homeDir, bootstrap.scope("credentials")),
+      ),
     });
     this._register(toDisposable(registerProviderAuthAdapter(adapter)));
   }
@@ -46,5 +63,5 @@ registerScopedService(
   IOpenCodeAuthAdapterRegistration,
   OpenCodeAuthAdapterRegistration,
   ScopeActivation.OnScopeCreated,
-  'auth',
+  "auth",
 );

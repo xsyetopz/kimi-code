@@ -22,29 +22,43 @@
  * `SESSION_INIT_FAILED`) so callers can tell "aborted" from "failed".
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { isAbortError, isUserCancellation, userCancellationReason } from '#/_base/utils/abort';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { IAgentProfileService } from '#/agent/profile/profile';
-import { loadAgentsMdDetailed } from '#/agent/profile/context';
-import { IAgentAgentsMdReminderService } from '#/agent/agentsMdReminder/agentsMdReminder';
-import { IAgentPermissionModeService } from '#/agent/permissionMode/permissionMode';
-import { IAgentSystemReminderService } from '#/agent/systemReminder/systemReminder';
-import { IWireService } from '#/wire/wire';
-import { ErrorCodes, Error2 } from '#/errors';
-import { IAgentLifecycleService, MAIN_AGENT_ID } from '#/session/agentLifecycle/agentLifecycle';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { emitAgentRunSpawned, mirrorAgentRun } from '#/session/subagent/mirrorAgentRun';
-import { ISessionSubagentService } from '#/session/subagent/subagent';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import {
+  isAbortError,
+  isUserCancellation,
+  userCancellationReason,
+} from "#/_base/utils/abort";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { IAgentProfileService } from "#/agent/profile/profile";
+import { loadAgentsMdDetailed } from "#/agent/profile/context";
+import { IAgentAgentsMdReminderService } from "#/agent/agentsMdReminder/agentsMdReminder";
+import { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
+import { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
+import { IWireService } from "#/wire/wire";
+import { ErrorCodes, Error2 } from "#/errors";
+import {
+  IAgentLifecycleService,
+  MAIN_AGENT_ID,
+} from "#/session/agentLifecycle/agentLifecycle";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import {
+  emitAgentRunSpawned,
+  mirrorAgentRun,
+} from "#/session/subagent/mirrorAgentRun";
+import { ISessionSubagentService } from "#/session/subagent/subagent";
 
-import { ISessionInitService } from './sessionInit';
-import { DEFAULT_INIT_PROMPT, initCompletionReminder } from './profile/init';
+import { ISessionInitService } from "./sessionInit";
+import { DEFAULT_INIT_PROMPT, initCompletionReminder } from "./profile/init";
 
-const INIT_PROFILE_NAME = 'coder';
-const INIT_PARENT_TOOL_CALL_ID = 'generate-agents-md';
-const INIT_DESCRIPTION = 'Initialize AGENTS.md';
+const INIT_PROFILE_NAME = "coder";
+const INIT_PARENT_TOOL_CALL_ID = "generate-agents-md";
+const INIT_DESCRIPTION = "Initialize AGENTS.md";
 
 export class SessionInitService implements ISessionInitService {
   declare readonly _serviceBrand: undefined;
@@ -53,7 +67,8 @@ export class SessionInitService implements ISessionInitService {
 
   constructor(
     @IAgentLifecycleService private readonly lifecycle: IAgentLifecycleService,
-    @ISessionSubagentService private readonly subagents: ISessionSubagentService,
+    @ISessionSubagentService
+    private readonly subagents: ISessionSubagentService,
     @IHostFileSystem private readonly fs: IHostFileSystem,
     @IHostEnvironment private readonly env: IHostEnvironment,
     @IBootstrapService private readonly bootstrap: IBootstrapService,
@@ -67,7 +82,7 @@ export class SessionInitService implements ISessionInitService {
   async generateAgentsMd(): Promise<void> {
     const main = this.lifecycle.get(MAIN_AGENT_ID);
     if (main === undefined) {
-      throw new Error2(ErrorCodes.AGENT_NOT_FOUND, 'Main agent was not found');
+      throw new Error2(ErrorCodes.AGENT_NOT_FOUND, "Main agent was not found");
     }
 
     const controller = new AbortController();
@@ -75,9 +90,14 @@ export class SessionInitService implements ISessionInitService {
     try {
       const own = main.accessor.get(IAgentProfileService).data();
       if (own.modelAlias === undefined) {
-        throw new Error2(ErrorCodes.SESSION_INIT_FAILED, 'Main agent has no model bound');
+        throw new Error2(
+          ErrorCodes.SESSION_INIT_FAILED,
+          "Main agent has no model bound",
+        );
       }
-      const permissionMode = main.accessor.get(IAgentPermissionModeService).mode;
+      const permissionMode = main.accessor.get(
+        IAgentPermissionModeService,
+      ).mode;
 
       const child = await this.lifecycle.create({
         binding: {
@@ -97,7 +117,7 @@ export class SessionInitService implements ISessionInitService {
 
       const run = await this.subagents.run(
         child.id,
-        { kind: 'prompt', prompt: DEFAULT_INIT_PROMPT },
+        { kind: "prompt", prompt: DEFAULT_INIT_PROMPT },
         { signal: controller.signal },
       );
       await mirrorAgentRun(main, run, {
@@ -107,31 +127,35 @@ export class SessionInitService implements ISessionInitService {
         cancel: (reason) => controller.abort(reason),
       });
 
-      const { content: agentsMd, paths: agentsMdPaths } = await loadAgentsMdDetailed(
-        { fs: this.fs, homeDir: this.env.homeDir },
-        this.sessionContext.cwd,
-        this.bootstrap.homeDir,
-      );
+      const { content: agentsMd, paths: agentsMdPaths } =
+        await loadAgentsMdDetailed(
+          { fs: this.fs, homeDir: this.env.homeDir },
+          this.sessionContext.cwd,
+          this.bootstrap.homeDir,
+        );
       main.accessor
         .get(IAgentAgentsMdReminderService)
         .seedInjected(agentsMdPaths, this.sessionContext.cwd);
       main.accessor
         .get(IAgentSystemReminderService)
         .appendSystemReminder(initCompletionReminder(agentsMd), {
-          kind: 'injection',
-          variant: 'init',
+          kind: "injection",
+          variant: "init",
         });
       await main.accessor.get(IWireService).flush();
     } catch (error) {
       if (isUserCancellation(error) || isAbortError(error)) {
         throw error;
       }
-      if (error instanceof Error2 && error.code === ErrorCodes.SESSION_INIT_FAILED) {
+      if (
+        error instanceof Error2 &&
+        error.code === ErrorCodes.SESSION_INIT_FAILED
+      ) {
         throw error;
       }
       throw new Error2(
         ErrorCodes.SESSION_INIT_FAILED,
-        error instanceof Error ? error.message : 'Init failed',
+        error instanceof Error ? error.message : "Init failed",
         { cause: error },
       );
     } finally {
@@ -147,5 +171,5 @@ registerScopedService(
   ISessionInitService,
   SessionInitService,
   ScopeActivation.OnScopeCreated,
-  'session-init',
+  "session-init",
 );

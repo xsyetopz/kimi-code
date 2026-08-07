@@ -361,9 +361,7 @@ export function updateAgentSwarmArgs(
       ? ""
       : agentSwarmPartialPromptTemplateFromArguments(streamingArguments);
   const promptTemplate =
-    fullPromptTemplate.length > 0
-      ? fullPromptTemplate
-      : partialPromptTemplate;
+    fullPromptTemplate.length > 0 ? fullPromptTemplate : partialPromptTemplate;
   if (promptTemplate.length > 0 || state.promptTemplateText.length === 0) {
     state.promptTemplateText = promptTemplate;
   }
@@ -415,10 +413,9 @@ export function ensureMemberCount(
   const previousLength = state.members.length;
   state.members = [
     ...state.members,
-    ...createMembers(
-      count,
-      state.inputComplete ? "queued" : "pending",
-    ).slice(state.members.length),
+    ...createMembers(count, state.inputComplete ? "queued" : "pending").slice(
+      state.members.length,
+    ),
   ];
   const nowMs = Date.now();
   for (let index = previousLength; index < state.members.length; index += 1) {

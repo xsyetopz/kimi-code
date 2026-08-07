@@ -174,12 +174,15 @@ export class MessageQueueController {
       void this.host.runShellCommandFromInput(item.text);
       return;
     }
-    this.host.harness.withInteractiveAgent(item.agentId ?? MAIN_AGENT_ID, () => {
-      this.sendMessageInternal(session, item.text, {
-        parts: item.parts,
-        imageAttachmentIds: item.imageAttachmentIds,
-      });
-    });
+    this.host.harness.withInteractiveAgent(
+      item.agentId ?? MAIN_AGENT_ID,
+      () => {
+        this.sendMessageInternal(session, item.text, {
+          parts: item.parts,
+          imageAttachmentIds: item.imageAttachmentIds,
+        });
+      },
+    );
   }
 
   requestQueuedGoalPromotion(): void {

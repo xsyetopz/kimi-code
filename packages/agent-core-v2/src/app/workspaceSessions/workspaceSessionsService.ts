@@ -9,11 +9,18 @@
  * archived sessions too. Bound at App scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ISessionIndex, type SessionSummary } from '#/app/sessionIndex/sessionIndex';
-import { IWorkspaceAliases } from '#/app/workspaceAliases/workspaceAliases';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import {
+  ISessionIndex,
+  type SessionSummary,
+} from "#/app/sessionIndex/sessionIndex";
+import { IWorkspaceAliases } from "#/app/workspaceAliases/workspaceAliases";
 
-import { IWorkspaceSessions, RECENT_SESSIONS_LIMIT } from './workspaceSessions';
+import { IWorkspaceSessions, RECENT_SESSIONS_LIMIT } from "./workspaceSessions";
 
 export class WorkspaceSessionsService implements IWorkspaceSessions {
   declare readonly _serviceBrand: undefined;
@@ -25,7 +32,10 @@ export class WorkspaceSessionsService implements IWorkspaceSessions {
 
   async listRecent(workspaceId: string): Promise<readonly SessionSummary[]> {
     const workspaceIds = await this.aliases.resolveAliasIds(workspaceId);
-    const page = await this.index.listRecent({ workspaceIds, limit: RECENT_SESSIONS_LIMIT });
+    const page = await this.index.listRecent({
+      workspaceIds,
+      limit: RECENT_SESSIONS_LIMIT,
+    });
     return page.items;
   }
 
@@ -43,5 +53,5 @@ registerScopedService(
   IWorkspaceSessions,
   WorkspaceSessionsService,
   ScopeActivation.OnScopeCreated,
-  'workspaceSessions',
+  "workspaceSessions",
 );

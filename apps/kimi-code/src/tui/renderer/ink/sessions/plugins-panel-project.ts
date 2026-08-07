@@ -79,7 +79,10 @@ export function projectPluginsPanelInstalledRow(
 ): InkPluginsPanelRowView {
   const status = pluginStatus(plugin);
   const update = pluginsPanelInstalledUpdateStatus(state.market, plugin);
-  const capability = pluginsPanelCapabilityFor(state.opts.capabilities, plugin.id);
+  const capability = pluginsPanelCapabilityFor(
+    state.opts.capabilities,
+    plugin.id,
+  );
   let rowStatus = status;
   let statusTone = installedStatusTone(status);
   if (update !== undefined) {

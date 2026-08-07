@@ -18,19 +18,23 @@
  * `IAgentSkillService`, `ISessionContext`. Bound at Agent scope.
  */
 
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
 
-import type { SkillActivationOrigin } from '#/agent/contextMemory/types';
-import { IAgentSkillService } from '#/agent/skill/skill';
-import { renderModelToolSkillPrompt } from '#/agent/skill/prompt';
-import type { ExecutableToolResult, ToolDeliveryMessage, ToolExecution } from '#/tool/toolContract';
-import { registerAgentToolService } from '#/agent/toolRegistry/toolContribution';
-import { isInlineSkillType } from '#/app/skillCatalog/types';
-import { ISessionSkillCatalog } from '#/session/sessionSkillCatalog/skillCatalog';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { renderPrompt } from '#/_base/utils/render-prompt';
-import { toInputJsonSchema } from '#/tool/input-schema';
-import { matchesGlobRuleSubject } from '#/tool/rule-match';
+import type { SkillActivationOrigin } from "#/agent/contextMemory/types";
+import { IAgentSkillService } from "#/agent/skill/skill";
+import { renderModelToolSkillPrompt } from "#/agent/skill/prompt";
+import type {
+  ExecutableToolResult,
+  ToolDeliveryMessage,
+  ToolExecution,
+} from "#/tool/toolContract";
+import { registerAgentToolService } from "#/agent/toolRegistry/toolContribution";
+import { isInlineSkillType } from "#/app/skillCatalog/types";
+import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { renderPrompt } from "#/_base/utils/render-prompt";
+import { toInputJsonSchema } from "#/tool/input-schema";
+import { matchesGlobRuleSubject } from "#/tool/rule-match";
 
 import {
   ISkillTool,
@@ -38,16 +42,17 @@ import {
   NestedSkillTooDeepError,
   SkillToolInputSchema,
   type SkillToolInput,
-} from './skill';
-import skillDescriptionTemplate from './skill.md?raw';
+} from "./skill";
+import skillDescriptionTemplate from "./skill.md?raw";
 
 export class SkillTool implements ISkillTool {
   declare readonly _serviceBrand: undefined;
-  readonly name = 'Skill';
+  readonly name = "Skill";
   readonly description: string = renderPrompt(skillDescriptionTemplate, {
     MAX_SKILL_QUERY_DEPTH,
   });
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(SkillToolInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(SkillToolInputSchema);
 
   private queryDepth: number = 0;
 
@@ -60,7 +65,7 @@ export class SkillTool implements ISkillTool {
   resolveExecution(args: SkillToolInput): ToolExecution {
     return {
       description: `Invoke skill ${args.skill}`,
-      display: { kind: 'skill_call', skill_name: args.skill, args: args.args },
+      display: { kind: "skill_call", skill_name: args.skill, args: args.args },
       approvalRule: this.name,
       matchesRule: (ruleArgs) => matchesGlobRuleSubject(ruleArgs, args.skill),
       execute: () => this.execution(args),
@@ -84,7 +89,10 @@ export class SkillTool implements ISkillTool {
   }
 }
 
-registerAgentToolService(ISkillTool, SkillTool, { name: 'Skill', domain: 'skill' });
+registerAgentToolService(ISkillTool, SkillTool, {
+  name: "Skill",
+  domain: "skill",
+});
 
 export async function executeModelSkill(
   catalog: ISessionSkillCatalog,
@@ -101,7 +109,9 @@ export async function executeModelSkill(
   await catalog.ready;
   const skill = catalog.catalog.getSkill(args.skill);
   if (skill === undefined) {
-    return errorResult(`Skill "${args.skill}" not found in the current skill listing.`);
+    return errorResult(
+      `Skill "${args.skill}" not found in the current skill listing.`,
+    );
   }
   if (skill.metadata.disableModelInvocation === true) {
     return errorResult(
@@ -114,10 +124,10 @@ export async function executeModelSkill(
     );
   }
 
-  const skillArgs = args.args ?? '';
-  const trigger = currentDepth > 0 ? 'nested-skill' : 'model-tool';
+  const skillArgs = args.args ?? "";
+  const trigger = currentDepth > 0 ? "nested-skill" : "model-tool";
   const origin: SkillActivationOrigin = {
-    kind: 'skill_activation',
+    kind: "skill_activation",
     activationId: randomUUID(),
     skillName: skill.name,
     skillArgs: skillArgs.length > 0 ? skillArgs : undefined,
@@ -126,12 +136,14 @@ export async function executeModelSkill(
     skillPath: skill.path,
     skillSource: skill.source,
   };
-  const skillContent = catalog.catalog.renderSkillPrompt(skill, skillArgs, { sessionId });
+  const skillContent = catalog.catalog.renderSkillPrompt(skill, skillArgs, {
+    sessionId,
+  });
   const message: ToolDeliveryMessage = {
-    role: 'user',
+    role: "user",
     content: [
       {
-        type: 'text',
+        type: "text",
         text: renderModelToolSkillPrompt({
           skillName: skill.name,
           skillArgs,
@@ -148,7 +160,7 @@ export async function executeModelSkill(
   skillService.recordModelToolActivation(origin);
   return {
     output: `Skill "${skill.name}" loaded inline. Follow its instructions.`,
-    delivery: { kind: 'steer', message },
+    delivery: { kind: "steer", message },
   };
 }
 

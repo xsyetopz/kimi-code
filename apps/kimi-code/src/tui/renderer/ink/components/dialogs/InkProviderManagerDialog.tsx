@@ -17,14 +17,18 @@ export function InkProviderManagerDialog({
       <Text>{currentTheme.boldFg("primary", manager.title)}</Text>
       <Text>{currentTheme.fg("textMuted", manager.hint)}</Text>
       {manager.empty ? (
-        <Text>{currentTheme.fg("textMuted", "  No providers configured.")}</Text>
+        <Text>
+          {currentTheme.fg("textMuted", "  No providers configured.")}
+        </Text>
       ) : (
         manager.rows.map((row) => (
           <ProviderManagerRow key={`${row.kind}:${row.label}`} row={row} />
         ))
       )}
       {manager.confirmPrompt === undefined ? null : (
-        <Text>{currentTheme.boldFg("warning", `  ${manager.confirmPrompt}`)}</Text>
+        <Text>
+          {currentTheme.boldFg("warning", `  ${manager.confirmPrompt}`)}
+        </Text>
       )}
       {manager.pageLabel === undefined ? null : (
         <Text>{currentTheme.fg("textMuted", manager.pageLabel)}</Text>
@@ -47,7 +51,9 @@ function ProviderManagerRow({
         : row.kind === "add"
           ? currentTheme.fg("primary", row.label)
           : currentTheme.fg("text", row.label);
-  const marker = row.hasActive ? currentTheme.fg("success", ` ${CURRENT_MARK}`) : "";
+  const marker = row.hasActive
+    ? currentTheme.fg("success", ` ${CURRENT_MARK}`)
+    : "";
 
   return (
     <Box flexDirection="column">

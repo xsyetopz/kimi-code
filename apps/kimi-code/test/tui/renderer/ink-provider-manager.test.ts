@@ -54,13 +54,15 @@ describe("ink provider manager", () => {
       onClose,
     });
 
-    expect(session.handleInput("d", { onAdd: vi.fn(), onDeleteSource, onClose }))
-      .toBe(true);
+    expect(
+      session.handleInput("d", { onAdd: vi.fn(), onDeleteSource, onClose }),
+    ).toBe(true);
     expect(projectInkProviderManagerView(session).confirmPrompt).toContain(
       "Delete platform",
     );
-    expect(session.handleInput("y", { onAdd: vi.fn(), onDeleteSource, onClose }))
-      .toBe(true);
+    expect(
+      session.handleInput("y", { onAdd: vi.fn(), onDeleteSource, onClose }),
+    ).toBe(true);
     expect(onDeleteSource).toHaveBeenCalledWith(["acme"]);
   });
 
@@ -83,7 +85,9 @@ describe("ink provider manager", () => {
     );
     expect(
       (
-        tui as unknown as { handleInkSimpleDialogInput: (data: string) => boolean }
+        tui as unknown as {
+          handleInkSimpleDialogInput: (data: string) => boolean;
+        }
       ).handleInkSimpleDialogInput("\u001B"),
     ).toBe(true);
     expect(onClose).toHaveBeenCalledOnce();

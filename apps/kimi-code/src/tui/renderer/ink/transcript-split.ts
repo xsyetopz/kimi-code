@@ -33,7 +33,9 @@ function resolveLiveTranscriptStartIndex(
  * once into scrollback; the current turn tail stays in the dynamic frame so
  * streaming updates do not rewrite earlier output.
  */
-export function splitInkTranscript(view: TerminalViewState): InkTranscriptSplit {
+export function splitInkTranscript(
+  view: TerminalViewState,
+): InkTranscriptSplit {
   const transcript = view.transcript;
   if (transcript.length === 0) {
     return { staticEntries: [], liveEntries: [] };

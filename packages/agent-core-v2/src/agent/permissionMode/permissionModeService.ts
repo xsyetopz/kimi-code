@@ -9,25 +9,38 @@
  * at Agent scope.
  */
 
-import type { PermissionMode } from '#/agent/permissionPolicy/types';
-import { IInstantiationService } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Emitter, type Event } from '#/_base/event';
-import { PermissionModeInjection } from '#/agent/permissionMode/injection/permissionModeInjection';
-import { IWireService } from '#/wire/wire';
-import { IAgentPermissionModeService, type PermissionModeChangedContext } from './permissionMode';
+import type { PermissionMode } from "#/agent/permissionPolicy/types";
+import { IInstantiationService } from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Emitter, type Event } from "#/_base/event";
+import { PermissionModeInjection } from "#/agent/permissionMode/injection/permissionModeInjection";
+import { IWireService } from "#/wire/wire";
+import {
+  IAgentPermissionModeService,
+  type PermissionModeChangedContext,
+} from "./permissionMode";
 import {
   PermissionModeConfiguredModel,
   PermissionModeModel,
   setMode,
-} from './permissionModeOps';
+} from "./permissionModeOps";
 
-export class AgentPermissionModeService extends Disposable implements IAgentPermissionModeService {
+export class AgentPermissionModeService
+  extends Disposable
+  implements IAgentPermissionModeService
+{
   declare readonly _serviceBrand: undefined;
 
-  private readonly _onDidChangeMode = this._register(new Emitter<PermissionModeChangedContext>());
-  readonly onDidChangeMode: Event<PermissionModeChangedContext> = this._onDidChangeMode.event;
+  private readonly _onDidChangeMode = this._register(
+    new Emitter<PermissionModeChangedContext>(),
+  );
+  readonly onDidChangeMode: Event<PermissionModeChangedContext> =
+    this._onDidChangeMode.event;
 
   constructor(
     @IWireService private readonly wire: IWireService,
@@ -55,5 +68,5 @@ registerScopedService(
   IAgentPermissionModeService,
   AgentPermissionModeService,
   ScopeActivation.OnScopeCreated,
-  'permissionMode',
+  "permissionMode",
 );

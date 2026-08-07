@@ -1,9 +1,7 @@
 import type { ThinkingEffort } from "@moonshot-ai/kimi-code-sdk";
 import { Key, matchesKey } from "@moonshot-ai/kimi-tui";
 
-import {
-  type EffortSelectorOptions,
-} from "#/tui/components/dialogs/effort-selector";
+import { type EffortSelectorOptions } from "#/tui/components/dialogs/effort-selector";
 import { effortLabel } from "#/tui/components/dialogs/model-selector";
 
 export interface InkEffortSelectorSegmentView {

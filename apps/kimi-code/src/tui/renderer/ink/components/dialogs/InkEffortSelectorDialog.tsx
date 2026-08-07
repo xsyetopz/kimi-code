@@ -19,11 +19,13 @@ export function InkEffortSelectorDialog({
         <Text>{currentTheme.fg("warning", selector.warning)}</Text>
       )}
       <Text>
-        {selector.segments.map((segment) =>
-          segment.active
-            ? currentTheme.boldFg("primary", `[ ${segment.label} ]`)
-            : currentTheme.fg("text", `  ${segment.label}  `),
-        ).join("  ")}
+        {selector.segments
+          .map((segment) =>
+            segment.active
+              ? currentTheme.boldFg("primary", `[ ${segment.label} ]`)
+              : currentTheme.fg("text", `  ${segment.label}  `),
+          )
+          .join("  ")}
       </Text>
     </Box>
   );

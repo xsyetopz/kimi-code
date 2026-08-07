@@ -34,9 +34,9 @@ import {
 } from "./prompts";
 import type { SlashCommandHost } from "./dispatch";
 
-const TERMINAL_OAUTH_FLOW_STATUSES = new Set<
-  EngineOAuthFlowSnapshot["status"]
->(["authenticated", "denied", "expired", "cancelled"]);
+const TERMINAL_OAUTH_FLOW_STATUSES = new Set<EngineOAuthFlowSnapshot["status"]>(
+  ["authenticated", "denied", "expired", "cancelled"],
+);
 
 // ---------------------------------------------------------------------------
 // Auth: login / logout

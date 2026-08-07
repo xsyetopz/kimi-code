@@ -241,7 +241,9 @@ export class ToolCallResultFacet {
     )) {
       const answerText =
         typeof answer === "string" ? answer : JSON.stringify(answer);
-      this.host.addBodyChild(new Text(`  ${currentTheme.dim("Q")}  ${question}`, 0, 0));
+      this.host.addBodyChild(
+        new Text(`  ${currentTheme.dim("Q")}  ${question}`, 0, 0),
+      );
       this.host.addBodyChild(new Text(`  ${accent("→")}  ${answerText}`, 0, 0));
     }
     return true;
@@ -263,7 +265,9 @@ export class ToolCallResultFacet {
 
   private resolvePlanPath(): string | undefined {
     if (this.host.result !== undefined && !this.host.result.is_error) {
-      const fromResult = interpretExitPlanModeOutcome(this.host.result.output).path;
+      const fromResult = interpretExitPlanModeOutcome(
+        this.host.result.output,
+      ).path;
       if (fromResult !== undefined && fromResult.length > 0) return fromResult;
     }
     return this.host.planPath;

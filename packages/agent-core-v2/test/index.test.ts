@@ -27,7 +27,11 @@ import {
   _clearScopedRegistryForTests,
   registerScopedService,
 } from "#/_base/di/scope";
-import { TestInstantiationService, createScopedTestHost, stubPair } from "#/_base/di/test";
+import {
+  TestInstantiationService,
+  createScopedTestHost,
+  stubPair,
+} from "#/_base/di/test";
 import { createHooks } from "#/hooks";
 import { AppendLogStore } from "#/persistence/backends/node-fs/appendLogStore";
 import { FileStorageService } from "#/persistence/backends/node-fs/fileStorageService";
@@ -54,7 +58,10 @@ import {
   type SessionLifecycleHookSlots,
 } from "#/session/sessionLifecycleHooks/sessionLifecycleHooks";
 import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
-import { makeSessionContext, ISessionContext } from "#/session/sessionContext/sessionContext";
+import {
+  makeSessionContext,
+  ISessionContext,
+} from "#/session/sessionContext/sessionContext";
 import { stubBootstrap } from "./app/bootstrap/stubs";
 
 const V1_RECORD_TYPES: ReadonlySet<string> = new Set([
@@ -592,7 +599,10 @@ describe("user memory v1", () => {
     await memory.append({ text: "Prefers TypeScript", source: "test" });
     await memory.appendTopic("coding-style", "Uses 2-space indentation");
 
-    const current = await readFile(join(homeDir, "memory", "CURRENT.md"), "utf8");
+    const current = await readFile(
+      join(homeDir, "memory", "CURRENT.md"),
+      "utf8",
+    );
     expect(current).toContain("Prefers TypeScript");
     expect(current).toContain("source=test");
 
@@ -624,9 +634,10 @@ describe("user memory v1", () => {
       archived: false,
       read: async () => metadata,
     };
-    const hooks = createHooks<SessionLifecycleHookSlots, keyof SessionLifecycleHookSlots>([
-      "onWillCloseSession",
-    ]);
+    const hooks = createHooks<
+      SessionLifecycleHookSlots,
+      keyof SessionLifecycleHookSlots
+    >(["onWillCloseSession"]);
     const host = createScopedTestHost([
       stubPair(IFileSystemStorageService, fileStorage),
       stubPair(IBootstrapService, stubBootstrap(homeDir)),
@@ -653,7 +664,10 @@ describe("user memory v1", () => {
     session.accessor.get(ISessionUserMemoryService);
     await hooks.onWillCloseSession.run({ reason: "exit" });
 
-    const current = await readFile(join(homeDir, "memory", "CURRENT.md"), "utf8");
+    const current = await readFile(
+      join(homeDir, "memory", "CURRENT.md"),
+      "utf8",
+    );
     expect(current).toContain("Memory test session");
     expect(current).toContain("remember my editor preference");
     expect(current).toContain("source=session-close");
@@ -661,7 +675,10 @@ describe("user memory v1", () => {
 
   it("formats bounded recall for session-start injection", async () => {
     const memory = buildMemoryHost();
-    await memory.append({ text: "Long-term fact: deploy on Fridays", source: "test" });
+    await memory.append({
+      text: "Long-term fact: deploy on Fridays",
+      source: "test",
+    });
     await memory.appendTopic("deploy", "Staging must pass before prod");
 
     const reminder = await memory.formatRecallForInjection(800);

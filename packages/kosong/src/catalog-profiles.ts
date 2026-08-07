@@ -16,8 +16,7 @@ import {
   TRANSPORT_PROFILE_BY_WIRE,
 } from "./protocol/presets";
 
-const OPENAI_MODEL_RE =
-  /^(?:gpt-|o[134](?:-|$)|chatgpt-|codex)/;
+const OPENAI_MODEL_RE = /^(?:gpt-|o[134](?:-|$)|chatgpt-|codex)/;
 const CLAUDE_MODEL_RE = /\bclaude\b/;
 const GEMINI_MODEL_RE = /\bgemini[-/]/;
 const KIMI_K3_MODEL_RE = /\bk3(?:[-_.]|$)|\bkimi-k3\b/;

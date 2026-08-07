@@ -17,10 +17,7 @@ import {
   setRgSpawnForTests,
 } from "#/app/search/rgLiteral";
 import { SqliteSearchIndex } from "#/app/search/sqliteIndex";
-import {
-  collectWireFiles,
-  syncWireFile,
-} from "#/app/search/wireIndexer";
+import { collectWireFiles, syncWireFile } from "#/app/search/wireIndexer";
 import type { IFlagService } from "#/app/flag/flag";
 import type { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
 
@@ -51,8 +48,7 @@ function makeFlagService(enabled: boolean): IFlagService {
     enabledIds: () => (enabled ? [BUN_SQLITE_SEARCH_FLAG_ID] : []),
     explain: () => undefined,
     explainAll: () => [],
-    snapshot: () =>
-      enabled ? { [BUN_SQLITE_SEARCH_FLAG_ID]: true } : {},
+    snapshot: () => (enabled ? { [BUN_SQLITE_SEARCH_FLAG_ID]: true } : {}),
     setConfigOverrides: () => {},
   };
 }
@@ -391,36 +387,36 @@ describe("GlobalSearchService", () => {
 describe("rgLiteral integration", () => {
   it("finds literal matches via real ripgrep when available", async () => {
     if (!(await isRipgrepAvailable())) return;
-      const home = makeTmpDir();
-      const sessionDir = join(home, "sessions", "ws1", "s1");
-      await mkdir(sessionDir, { recursive: true });
-      await writeFile(
-        join(sessionDir, "wire.jsonl"),
-        `${JSON.stringify({
-          type: "context.append_message",
-          time: 1_700_000_003,
-          message: {
-            role: "user",
-            content: [{ type: "text", text: "integration rg literal hit" }],
-          },
-        })}\n`,
-        "utf8",
-      );
-      const summary: SessionSummary = {
-        id: "s1",
-        workspaceId: "ws1",
-        title: "integration",
-        createdAt: 1,
-        updatedAt: 2,
-        archived: false,
-      };
-      const result = await searchLiteralRipgrep({
-        sessionsDir: join(home, "sessions"),
-        query: { query: "integration", mode: "literal" },
-        literalQuery: "integration",
-        sessions: [summary],
-      });
-      expect(result.items.length).toBeGreaterThanOrEqual(1);
-      expect(result.items[0]?.snippet.toLowerCase()).toContain("integration");
+    const home = makeTmpDir();
+    const sessionDir = join(home, "sessions", "ws1", "s1");
+    await mkdir(sessionDir, { recursive: true });
+    await writeFile(
+      join(sessionDir, "wire.jsonl"),
+      `${JSON.stringify({
+        type: "context.append_message",
+        time: 1_700_000_003,
+        message: {
+          role: "user",
+          content: [{ type: "text", text: "integration rg literal hit" }],
+        },
+      })}\n`,
+      "utf8",
+    );
+    const summary: SessionSummary = {
+      id: "s1",
+      workspaceId: "ws1",
+      title: "integration",
+      createdAt: 1,
+      updatedAt: 2,
+      archived: false,
+    };
+    const result = await searchLiteralRipgrep({
+      sessionsDir: join(home, "sessions"),
+      query: { query: "integration", mode: "literal" },
+      literalQuery: "integration",
+      sessions: [summary],
+    });
+    expect(result.items.length).toBeGreaterThanOrEqual(1);
+    expect(result.items[0]?.snippet.toLowerCase()).toContain("integration");
   });
 });

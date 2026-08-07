@@ -1,36 +1,36 @@
-import { describe, expect, it, afterEach } from 'vitest';
+import { describe, expect, it, afterEach } from "vitest";
 
 import {
   resetUnexpectedErrorHandler,
   setUnexpectedErrorHandler,
-} from '#/_base/errors/unexpectedError';
-import { SyncDescriptor } from '#/_base/di/descriptors';
+} from "#/_base/errors/unexpectedError";
+import { SyncDescriptor } from "#/_base/di/descriptors";
 import {
   IInstantiationService,
   createDecorator,
   type IInstantiationService as IInstantiationServiceType,
-} from '#/_base/di/instantiation';
-import { InstantiationService } from '#/_base/di/instantiationService';
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { ServiceCollection } from '#/_base/di/serviceCollection';
+} from "#/_base/di/instantiation";
+import { InstantiationService } from "#/_base/di/instantiationService";
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import { ServiceCollection } from "#/_base/di/serviceCollection";
 
 interface ILogger {
   log(msg: string): void;
   name: string;
 }
-const ILogger = createDecorator<ILogger>('logger');
+const ILogger = createDecorator<ILogger>("logger");
 
 class ConsoleLogger implements ILogger {
-  name = 'console';
+  name = "console";
   log(_m: string): void {}
 }
 class ChildLogger implements ILogger {
-  name = 'child';
+  name = "child";
   log(_m: string): void {}
 }
 
-describe('InstantiationService.createChild', () => {
-  it('child inherits parent services', () => {
+describe("InstantiationService.createChild", () => {
+  it("child inherits parent services", () => {
     const parent = new InstantiationService(
       new ServiceCollection([ILogger, new SyncDescriptor(ConsoleLogger)]),
     );
@@ -42,7 +42,7 @@ describe('InstantiationService.createChild', () => {
     expect(fromChild).toBe(fromParent);
   });
 
-  it('child shadowing: child registration overrides parent', () => {
+  it("child shadowing: child registration overrides parent", () => {
     const parent = new InstantiationService(
       new ServiceCollection([ILogger, new SyncDescriptor(ConsoleLogger)]),
     );
@@ -56,22 +56,24 @@ describe('InstantiationService.createChild', () => {
     expect(fromChild).not.toBe(fromParent);
   });
 
-  it('constructs parent-owned descriptors in the parent scope when resolved from a child', () => {
+  it("constructs parent-owned descriptors in the parent scope when resolved from a child", () => {
     interface IDep {
       tag: string;
     }
-    const IDep = createDecorator<IDep>('owner-scope-dep');
+    const IDep = createDecorator<IDep>("owner-scope-dep");
     class ParentDep implements IDep {
-      tag = 'parent';
+      tag = "parent";
     }
     class ChildDep implements IDep {
-      tag = 'child';
+      tag = "child";
     }
     class ParentOwned {
       constructor(@IDep public readonly dep: IDep) {}
     }
 
-    const IParentOwned = createDecorator<ParentOwned>('owner-scope-parent-owned');
+    const IParentOwned = createDecorator<ParentOwned>(
+      "owner-scope-parent-owned",
+    );
 
     const parent = new InstantiationService(
       new ServiceCollection(
@@ -87,14 +89,16 @@ describe('InstantiationService.createChild', () => {
     const fromParent = parent.invokeFunction((a) => a.get(IParentOwned));
     expect(fromChild).toBe(fromParent);
     expect(fromChild.dep).toBeInstanceOf(ParentDep);
-    expect(fromChild.dep.tag).toBe('parent');
+    expect(fromChild.dep.tag).toBe("parent");
   });
 
-  it('injects the parent instantiation service into parent-owned services resolved from a child', () => {
+  it("injects the parent instantiation service into parent-owned services resolved from a child", () => {
     class ParentOwned {
-      constructor(@IInstantiationService public readonly ix: IInstantiationServiceType) {}
+      constructor(
+        @IInstantiationService public readonly ix: IInstantiationServiceType,
+      ) {}
     }
-    const IParentOwned = createDecorator<ParentOwned>('owner-scope-parent-ix');
+    const IParentOwned = createDecorator<ParentOwned>("owner-scope-parent-ix");
 
     const parent = new InstantiationService(
       new ServiceCollection([IParentOwned, new SyncDescriptor(ParentOwned)]),
@@ -106,16 +110,16 @@ describe('InstantiationService.createChild', () => {
     expect(instance.ix).not.toBe(child);
   });
 
-  it('sibling isolation: two children of the same parent do not share scoped services', () => {
+  it("sibling isolation: two children of the same parent do not share scoped services", () => {
     interface IScoped {
       tag: string;
     }
-    const IScoped = createDecorator<IScoped>('scoped');
+    const IScoped = createDecorator<IScoped>("scoped");
     class ScopedA implements IScoped {
-      tag = 'A';
+      tag = "A";
     }
     class ScopedB implements IScoped {
-      tag = 'B';
+      tag = "B";
     }
 
     const parent = new InstantiationService();
@@ -126,36 +130,36 @@ describe('InstantiationService.createChild', () => {
       new ServiceCollection([IScoped, new SyncDescriptor(ScopedB)]),
     );
 
-    expect(childA.invokeFunction((a) => a.get(IScoped).tag)).toBe('A');
-    expect(childB.invokeFunction((a) => a.get(IScoped).tag)).toBe('B');
+    expect(childA.invokeFunction((a) => a.get(IScoped).tag)).toBe("A");
+    expect(childB.invokeFunction((a) => a.get(IScoped).tag)).toBe("B");
 
     expect(parent.invokeFunction((a) => a.get(IScoped))).toBeUndefined();
   });
 
-  it('dispose order: A→B→C construction yields C→B→A teardown', () => {
+  it("dispose order: A→B→C construction yields C→B→A teardown", () => {
     const events: string[] = [];
     interface ITagged {
       tag: string;
     }
-    const IA = createDecorator<ITagged>('A');
-    const IB = createDecorator<ITagged>('B');
-    const IC = createDecorator<ITagged>('C');
+    const IA = createDecorator<ITagged>("A");
+    const IB = createDecorator<ITagged>("B");
+    const IC = createDecorator<ITagged>("C");
     class A implements ITagged, IDisposable {
-      tag = 'A';
+      tag = "A";
       dispose(): void {
-        events.push('disposed A');
+        events.push("disposed A");
       }
     }
     class B implements ITagged, IDisposable {
-      tag = 'B';
+      tag = "B";
       dispose(): void {
-        events.push('disposed B');
+        events.push("disposed B");
       }
     }
     class C implements ITagged, IDisposable {
-      tag = 'C';
+      tag = "C";
       dispose(): void {
-        events.push('disposed C');
+        events.push("disposed C");
       }
     }
     const ix = new InstantiationService(
@@ -171,38 +175,40 @@ describe('InstantiationService.createChild', () => {
       a.get(IC);
     });
     ix.dispose();
-    expect(events).toEqual(['disposed C', 'disposed B', 'disposed A']);
+    expect(events).toEqual(["disposed C", "disposed B", "disposed A"]);
   });
 
-  it('does not dispose pre-built service instances from the ServiceCollection', () => {
+  it("does not dispose pre-built service instances from the ServiceCollection", () => {
     const events: string[] = [];
     interface IFoo {
       tag: string;
     }
-    const IFoo = createDecorator<IFoo>('prebuilt-not-disposed');
+    const IFoo = createDecorator<IFoo>("prebuilt-not-disposed");
     class Foo implements IFoo, IDisposable {
-      tag = 'foo';
+      tag = "foo";
       dispose(): void {
-        events.push('disposed');
+        events.push("disposed");
       }
     }
     const instance = new Foo();
-    const ix = new InstantiationService(new ServiceCollection([IFoo, instance]));
+    const ix = new InstantiationService(
+      new ServiceCollection([IFoo, instance]),
+    );
     expect(ix.invokeFunction((a) => a.get(IFoo))).toBe(instance);
     ix.dispose();
     expect(events).toEqual([]);
   });
 
-  it('idempotent dispose: second call is a no-op', () => {
+  it("idempotent dispose: second call is a no-op", () => {
     const events: string[] = [];
     interface IFoo {
       tag: string;
     }
-    const IFoo = createDecorator<IFoo>('foo');
+    const IFoo = createDecorator<IFoo>("foo");
     class Foo implements IFoo, IDisposable {
-      tag = 'foo';
+      tag = "foo";
       dispose(): void {
-        events.push('disposed');
+        events.push("disposed");
       }
     }
     const ix = new InstantiationService(
@@ -211,10 +217,10 @@ describe('InstantiationService.createChild', () => {
     ix.invokeFunction((a) => a.get(IFoo));
     ix.dispose();
     ix.dispose();
-    expect(events).toEqual(['disposed']);
+    expect(events).toEqual(["disposed"]);
   });
 
-  it('parent dispose propagates to children', () => {
+  it("parent dispose propagates to children", () => {
     const events: string[] = [];
     interface IParentSvc {
       tag: string;
@@ -222,18 +228,18 @@ describe('InstantiationService.createChild', () => {
     interface IChildSvc {
       tag: string;
     }
-    const IParentSvc = createDecorator<IParentSvc>('parentSvc');
-    const IChildSvc = createDecorator<IChildSvc>('childSvc');
+    const IParentSvc = createDecorator<IParentSvc>("parentSvc");
+    const IChildSvc = createDecorator<IChildSvc>("childSvc");
     class ParentSvc implements IParentSvc, IDisposable {
-      tag = 'parent';
+      tag = "parent";
       dispose(): void {
-        events.push('disposed parent svc');
+        events.push("disposed parent svc");
       }
     }
     class ChildSvc implements IChildSvc, IDisposable {
-      tag = 'child';
+      tag = "child";
       dispose(): void {
-        events.push('disposed child svc');
+        events.push("disposed child svc");
       }
     }
 
@@ -249,19 +255,19 @@ describe('InstantiationService.createChild', () => {
 
     parent.dispose();
 
-    expect(events).toEqual(['disposed child svc', 'disposed parent svc']);
+    expect(events).toEqual(["disposed child svc", "disposed parent svc"]);
   });
 
-  it('disposing a child clears it from parent so parent.dispose does not double-dispose', () => {
+  it("disposing a child clears it from parent so parent.dispose does not double-dispose", () => {
     const events: string[] = [];
     interface ISvc {
       tag: string;
     }
-    const ISvc = createDecorator<ISvc>('svc');
+    const ISvc = createDecorator<ISvc>("svc");
     class Svc implements ISvc, IDisposable {
-      tag = 'svc';
+      tag = "svc";
       dispose(): void {
-        events.push('disposed');
+        events.push("disposed");
       }
     }
 
@@ -272,34 +278,36 @@ describe('InstantiationService.createChild', () => {
     child.invokeFunction((a) => a.get(ISvc));
     child.dispose();
     parent.dispose();
-    expect(events).toEqual(['disposed']);
+    expect(events).toEqual(["disposed"]);
   });
 
-  it('use-after-dispose: invokeFunction / createInstance / createChild throw', () => {
+  it("use-after-dispose: invokeFunction / createInstance / createChild throw", () => {
     const ix = new InstantiationService();
     ix.dispose();
     expect(() => {
       ix.invokeFunction((_a) => undefined);
     }).toThrowError(/disposed/);
     expect(() => {
-      ix.createInstance(class A {
-        value = 'a';
-      });
+      ix.createInstance(
+        class A {
+          value = "a";
+        },
+      );
     }).toThrowError(/disposed/);
     expect(() => {
       ix.createChild(new ServiceCollection());
     }).toThrowError(/disposed/);
   });
 
-  it('parent singleton is created once regardless of parent/child resolution order', () => {
+  it("parent singleton is created once regardless of parent/child resolution order", () => {
     interface ISvc {
       tag: string;
     }
-    const ISvc = createDecorator<ISvc>('child-ctor-counter-svc');
+    const ISvc = createDecorator<ISvc>("child-ctor-counter-svc");
 
     let count = 0;
     class CtorCounter1 implements ISvc {
-      tag = 'svc';
+      tag = "svc";
       constructor() {
         count += 1;
       }
@@ -315,7 +323,7 @@ describe('InstantiationService.createChild', () => {
 
     count = 0;
     class CtorCounter2 implements ISvc {
-      tag = 'svc';
+      tag = "svc";
       constructor() {
         count += 1;
       }
@@ -330,16 +338,18 @@ describe('InstantiationService.createChild', () => {
     parent.dispose();
   });
 
-  it('disposing a child leaves the parent usable', () => {
+  it("disposing a child leaves the parent usable", () => {
     interface IB {
       value: number;
     }
-    const IB = createDecorator<IB>('child-dispose-leaves-parent-B');
+    const IB = createDecorator<IB>("child-dispose-leaves-parent-B");
     class BImpl implements IB {
       value = 1;
     }
 
-    const parent = new InstantiationService(new ServiceCollection([IB, new BImpl()]));
+    const parent = new InstantiationService(
+      new ServiceCollection([IB, new BImpl()]),
+    );
     const child = parent.createChild(new ServiceCollection());
 
     expect(parent.invokeFunction((a) => a.get(IB).value)).toBe(1);
@@ -354,8 +364,8 @@ describe('InstantiationService.createChild', () => {
   });
 });
 
-describe('Disposable base class', () => {
-  it('reverse registration order on dispose (ledger teardown)', () => {
+describe("Disposable base class", () => {
+  it("reverse registration order on dispose (ledger teardown)", () => {
     const events: string[] = [];
     class Child implements IDisposable {
       constructor(public readonly label: string) {}
@@ -366,21 +376,25 @@ describe('Disposable base class', () => {
     class Owner extends Disposable {
       constructor() {
         super();
-        this._register(new Child('first'));
-        this._register(new Child('second'));
-        this._register(new Child('third'));
+        this._register(new Child("first"));
+        this._register(new Child("second"));
+        this._register(new Child("third"));
       }
     }
     const o = new Owner();
     o.dispose();
-    expect(events).toEqual(['disposed third', 'disposed second', 'disposed first']);
+    expect(events).toEqual([
+      "disposed third",
+      "disposed second",
+      "disposed first",
+    ]);
   });
 
-  it('idempotent dispose on the base class', () => {
+  it("idempotent dispose on the base class", () => {
     const events: string[] = [];
     class Child implements IDisposable {
       dispose(): void {
-        events.push('disposed');
+        events.push("disposed");
       }
     }
     class Owner extends Disposable {
@@ -392,14 +406,14 @@ describe('Disposable base class', () => {
     const o = new Owner();
     o.dispose();
     o.dispose();
-    expect(events).toEqual(['disposed']);
+    expect(events).toEqual(["disposed"]);
   });
 
-  it('register-after-dispose: child is torn down immediately, not leaked', () => {
+  it("register-after-dispose: child is torn down immediately, not leaked", () => {
     const events: string[] = [];
     class Child implements IDisposable {
       dispose(): void {
-        events.push('disposed');
+        events.push("disposed");
       }
     }
     class Owner extends Disposable {
@@ -410,10 +424,10 @@ describe('Disposable base class', () => {
     const o = new Owner();
     o.dispose();
     o.addLate();
-    expect(events).toEqual(['disposed']);
+    expect(events).toEqual(["disposed"]);
   });
 
-  it('continues teardown and reports if one child throws (rollback is uninterruptible)', () => {
+  it("continues teardown and reports if one child throws (rollback is uninterruptible)", () => {
     const events: string[] = [];
     const reported: unknown[] = [];
     setUnexpectedErrorHandler((err) => {
@@ -424,18 +438,18 @@ describe('Disposable base class', () => {
     });
     class GoodChild implements IDisposable {
       dispose(): void {
-        events.push('good');
+        events.push("good");
       }
     }
     class BadChild implements IDisposable {
       dispose(): void {
-        events.push('bad-attempted');
-        throw new Error('boom');
+        events.push("bad-attempted");
+        throw new Error("boom");
       }
     }
     class TailChild implements IDisposable {
       dispose(): void {
-        events.push('tail');
+        events.push("tail");
       }
     }
     class Owner extends Disposable {
@@ -449,9 +463,11 @@ describe('Disposable base class', () => {
     const o = new Owner();
     // Ledger semantics: teardown is uninterruptible — a failing entry is
     // reported via onUnexpectedError and teardown continues (reverse order).
-    expect(() => { o.dispose(); }).not.toThrow();
-    expect(events).toEqual(['tail', 'bad-attempted', 'good']);
+    expect(() => {
+      o.dispose();
+    }).not.toThrow();
+    expect(events).toEqual(["tail", "bad-attempted", "good"]);
     expect(reported).toHaveLength(1);
-    expect((reported[0] as Error).message).toContain('boom');
+    expect((reported[0] as Error).message).toContain("boom");
   });
 });

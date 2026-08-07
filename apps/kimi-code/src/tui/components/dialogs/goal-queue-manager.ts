@@ -115,7 +115,10 @@ export class GoalQueueManagerComponent extends Container implements Focusable {
     this.invalidate();
   }
 
-  attachInkSession(session: GoalQueueManagerInkSync, onChange: () => void): void {
+  attachInkSession(
+    session: GoalQueueManagerInkSync,
+    onChange: () => void,
+  ): void {
     this.inkSession = session;
     this.inkOnChange = onChange;
     session.importState(this.exportState());

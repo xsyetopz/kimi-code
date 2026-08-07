@@ -9,15 +9,19 @@
  * is byte-compatible.
  */
 
-import { KIMI_CODE_PROVIDER_NAME } from '@moonshot-ai/kimi-code-oauth';
-import type { AuthSummary } from './authLegacy';
+import { KIMI_CODE_PROVIDER_NAME } from "@moonshot-ai/kimi-code-oauth";
+import type { AuthSummary } from "./authLegacy";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IOAuthService } from '#/app/auth/auth';
-import { IModelService } from '#/kosong/model/model';
-import { IProviderService } from '#/kosong/provider/provider';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IOAuthService } from "#/app/auth/auth";
+import { IModelService } from "#/kosong/model/model";
+import { IProviderService } from "#/kosong/provider/provider";
 
-import { IAuthLegacyService } from './authLegacy';
+import { IAuthLegacyService } from "./authLegacy";
 
 const MANAGED_PROVIDER_NAME = KIMI_CODE_PROVIDER_NAME;
 
@@ -37,19 +41,19 @@ export class AuthLegacyService implements IAuthLegacyService {
     const providers_count = Object.keys(providers).length;
     const default_model = nonEmpty(this.modelService.getDefaultModel());
 
-    let managed_provider: AuthSummary['managed_provider'] = null;
+    let managed_provider: AuthSummary["managed_provider"] = null;
     if (providers[MANAGED_PROVIDER_NAME] !== undefined) {
       const loggedIn = await this.managedLoggedIn();
       managed_provider = {
         name: MANAGED_PROVIDER_NAME,
-        status: loggedIn ? 'authenticated' : 'unauthenticated',
+        status: loggedIn ? "authenticated" : "unauthenticated",
       };
     }
 
     const ready =
       providers_count >= 1 &&
       default_model !== null &&
-      (managed_provider === null || managed_provider.status !== 'revoked');
+      (managed_provider === null || managed_provider.status !== "revoked");
 
     return { ready, providers_count, default_model, managed_provider };
   }
@@ -74,5 +78,5 @@ registerScopedService(
   IAuthLegacyService,
   AuthLegacyService,
   ScopeActivation.OnScopeCreated,
-  'authLegacy',
+  "authLegacy",
 );

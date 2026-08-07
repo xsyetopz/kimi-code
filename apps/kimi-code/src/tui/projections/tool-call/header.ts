@@ -87,7 +87,9 @@ export function projectToolCallHeader(
     const label = isFinished ? "Ran a command" : "Running a command";
     const tone = isError ? "error" : "primary";
     const chipStr =
-      isFinished && result !== undefined ? buildHeaderChip(toolCall, result) : "";
+      isFinished && result !== undefined
+        ? buildHeaderChip(toolCall, result)
+        : "";
     return `${bullet}${currentTheme.boldFg(tone, label)}${chipStr}`;
   }
 
@@ -96,7 +98,9 @@ export function projectToolCallHeader(
     result,
     bullet,
     chip:
-      isFinished && result !== undefined ? buildHeaderChip(toolCall, result) : "",
+      isFinished && result !== undefined
+        ? buildHeaderChip(toolCall, result)
+        : "",
   });
   if (goalHeader !== undefined) return goalHeader;
 

@@ -52,22 +52,33 @@
  * next `list()`.
  */
 
-import { basename, isAbsolute } from 'pathe';
+import { basename, isAbsolute } from "pathe";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { encodeWorkDirKey, workspaceRootKey } from '#/_base/utils/workdir-slug';
-import { ErrorCodes, Error2, unwrapErrorCause } from '#/errors';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { encodeWorkDirKey, workspaceRootKey } from "#/_base/utils/workdir-slug";
+import { ErrorCodes, Error2, unwrapErrorCause } from "#/errors";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
 
-import { IWorkspaceService, type Workspace, type WorkspaceUpdate } from './workspace';
+import {
+  IWorkspaceService,
+  type Workspace,
+  type WorkspaceUpdate,
+} from "./workspace";
 import {
   collectAliasIds,
   dedupeByRoot,
   readSessionIndexEntries,
   readSessionIndexWorkDirs,
-} from './workspaceAlias';
-import { IWorkspacePersistence, type WorkspaceCatalog } from './workspacePersistence';
+} from "./workspaceAlias";
+import {
+  IWorkspacePersistence,
+  type WorkspaceCatalog,
+} from "./workspacePersistence";
 
 export class WorkspaceService implements IWorkspaceService {
   declare readonly _serviceBrand: undefined;
@@ -77,7 +88,8 @@ export class WorkspaceService implements IWorkspaceService {
 
   constructor(
     @IWorkspacePersistence private readonly store: IWorkspacePersistence,
-    @IFileSystemStorageService private readonly storage: IFileSystemStorageService,
+    @IFileSystemStorageService
+    private readonly storage: IFileSystemStorageService,
     @IHostFileSystem private readonly hostFs: IHostFileSystem,
   ) {}
 
@@ -104,20 +116,27 @@ export class WorkspaceService implements IWorkspaceService {
       try {
         stat = await this.hostFs.stat(root);
       } catch (error) {
-        const code = (unwrapErrorCause(error) as NodeJS.ErrnoException | undefined)?.code;
-        if (code === 'ENOENT' || code === 'ENOTDIR') {
-          throw new Error2(ErrorCodes.FS_PATH_NOT_FOUND, `workspace root ${root} does not exist`);
+        const code = (
+          unwrapErrorCause(error) as NodeJS.ErrnoException | undefined
+        )?.code;
+        if (code === "ENOENT" || code === "ENOTDIR") {
+          throw new Error2(
+            ErrorCodes.FS_PATH_NOT_FOUND,
+            `workspace root ${root} does not exist`,
+          );
         }
         throw error;
       }
       if (!stat.isDirectory) {
         try {
           stat = await this.hostFs.stat(await this.hostFs.realpath(root));
-        } catch {
-        }
+        } catch {}
       }
       if (!stat.isDirectory) {
-        throw new Error2(ErrorCodes.FS_PATH_NOT_FOUND, `workspace root ${root} is not a directory`);
+        throw new Error2(
+          ErrorCodes.FS_PATH_NOT_FOUND,
+          `workspace root ${root} is not a directory`,
+        );
       }
       await this.ensureMerged();
       const catalog = await this.loadCatalog();
@@ -147,7 +166,10 @@ export class WorkspaceService implements IWorkspaceService {
             };
       byId.set(ws.id, ws);
       deletedIds.delete(ws.id);
-      await this.store.save({ workspaces: [...byId.values()], deletedIds: [...deletedIds] });
+      await this.store.save({
+        workspaces: [...byId.values()],
+        deletedIds: [...deletedIds],
+      });
       return ws;
     });
   }
@@ -163,7 +185,9 @@ export class WorkspaceService implements IWorkspaceService {
         ...(patch.name !== undefined ? { name: patch.name } : {}),
       };
       await this.store.save({
-        workspaces: catalog.workspaces.map((ws) => (ws.id === id ? updated : ws)),
+        workspaces: catalog.workspaces.map((ws) =>
+          ws.id === id ? updated : ws,
+        ),
         deletedIds: catalog.deletedIds,
       });
       return updated;
@@ -194,7 +218,9 @@ export class WorkspaceService implements IWorkspaceService {
         root,
       );
       await this.store.save({
-        workspaces: catalog.workspaces.filter((ws) => workspaceRootKey(ws.root) !== rootKey),
+        workspaces: catalog.workspaces.filter(
+          (ws) => workspaceRootKey(ws.root) !== rootKey,
+        ),
         deletedIds: [...new Set([...catalog.deletedIds, ...aliasIds])],
       });
     });
@@ -205,14 +231,20 @@ export class WorkspaceService implements IWorkspaceService {
     const loaded = await this.store.load();
     if (loaded === undefined) {
       const rebuilt = await this.rebuildFromSessionIndex();
-      await this.store.save({ workspaces: [...rebuilt.values()], deletedIds: [] });
+      await this.store.save({
+        workspaces: [...rebuilt.values()],
+        deletedIds: [],
+      });
       this.merged = true;
       return;
     }
     const byId = new Map(loaded.workspaces.map((ws) => [ws.id, ws]));
     const deletedIds = new Set(loaded.deletedIds);
     if (await this.mergeFromSessionIndex(byId, deletedIds)) {
-      await this.store.save({ workspaces: [...byId.values()], deletedIds: [...deletedIds] });
+      await this.store.save({
+        workspaces: [...byId.values()],
+        deletedIds: [...deletedIds],
+      });
     }
     this.merged = true;
   }
@@ -278,5 +310,5 @@ registerScopedService(
   IWorkspaceService,
   WorkspaceService,
   ScopeActivation.OnScopeCreated,
-  'workspace',
+  "workspace",
 );

@@ -11,16 +11,19 @@ function coerceIntegerField(value: unknown): unknown {
   return value;
 }
 
-const TODO_STATUS_ALIASES: Record<string, "pending" | "in_progress" | "done"> = {
-  completed: "done",
-  complete: "done",
-  cancelled: "done",
-  canceled: "done",
-  wip: "in_progress",
-  "in progress": "in_progress",
-};
+const TODO_STATUS_ALIASES: Record<string, "pending" | "in_progress" | "done"> =
+  {
+    completed: "done",
+    complete: "done",
+    cancelled: "done",
+    canceled: "done",
+    wip: "in_progress",
+    "in progress": "in_progress",
+  };
 
-function normalizeReadArgs(args: Record<string, unknown>): Record<string, unknown> {
+function normalizeReadArgs(
+  args: Record<string, unknown>,
+): Record<string, unknown> {
   if (!("line_offset" in args)) return args;
   return {
     ...args,

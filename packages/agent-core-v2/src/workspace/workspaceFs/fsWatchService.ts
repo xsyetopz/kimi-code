@@ -13,48 +13,55 @@
  * the rest of `workspaceFs`. Bound at Workspace scope.
  */
 
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
-import ignore, { type Ignore } from 'ignore';
+import ignore, { type Ignore } from "ignore";
 
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ErrorCodes, Error2 } from '#/errors';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ErrorCodes, Error2 } from "#/errors";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import {
   type HostFsChange,
   type IHostFsWatchHandle,
   IHostFsWatchService,
-} from '#/os/interface/hostFsWatch';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
-import { IWorkspaceDirs } from '#/workspace/workspaceDirs/workspaceDirs';
+} from "#/os/interface/hostFsWatch";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
+import { IWorkspaceDirs } from "#/workspace/workspaceDirs/workspaceDirs";
 
 import {
   type FsChangeEntry,
   type FsChangeEvent,
   IWorkspaceFsWatchService,
   type IWorkspaceFsWatchSubscription,
-} from './fsWatch';
+} from "./fsWatch";
 
 const DEFAULT_DEBOUNCE_MS = 200;
 const DEFAULT_MAX_CHANGES_PER_WINDOW = 500;
 
 function readPositiveIntEnv(name: string, fallback: number): number {
   const raw = process.env[name];
-  if (raw === undefined || raw === '') return fallback;
+  if (raw === undefined || raw === "") return fallback;
   const n = Number.parseInt(raw, 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-export class WorkspaceFsWatchService extends Disposable implements IWorkspaceFsWatchService {
+export class WorkspaceFsWatchService
+  extends Disposable
+  implements IWorkspaceFsWatchService
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly subscriptions = new Set<WorkspaceFsWatchSubscription>();
   private handle: IHostFsWatchHandle | undefined;
   private handleSub: IDisposable | undefined;
   private gitignoreLoaded = false;
-  private readonly matcher: Ignore = ignore().add('.git/');
+  private readonly matcher: Ignore = ignore().add(".git/");
   private readonly workDir: string;
 
   constructor(
@@ -115,7 +122,7 @@ export class WorkspaceFsWatchService extends Disposable implements IWorkspaceFsW
   private loadGitignore(): void {
     if (this.gitignoreLoaded) return;
     this.gitignoreLoaded = true;
-    void this.hostFs.readText(join(this.workDir, '.gitignore')).then(
+    void this.hostFs.readText(join(this.workDir, ".gitignore")).then(
       (content) => {
         this.matcher.add(content);
       },
@@ -125,8 +132,8 @@ export class WorkspaceFsWatchService extends Disposable implements IWorkspaceFsW
 
   private onRaw(e: HostFsChange): void {
     const rel = this.toRel(e.path);
-    if (rel === '.') return;
-    const probe = e.kind === 'directory' ? `${rel}/` : rel;
+    if (rel === ".") return;
+    const probe = e.kind === "directory" ? `${rel}/` : rel;
     if (this.matcher.ignores(probe)) return;
     for (const sub of this.subscriptions) {
       sub.onRawChange(rel, e);
@@ -143,29 +150,43 @@ export class WorkspaceFsWatchService extends Disposable implements IWorkspaceFsW
   }
 
   private resolveWithin(inputPath: string): string {
-    if (inputPath === '' || inputPath === '/') {
-      throw new Error2(ErrorCodes.FS_PATH_ESCAPES, `path "${inputPath}" rejected (empty)`, {
-        details: { path: inputPath, reason: 'empty' },
-      });
+    if (inputPath === "" || inputPath === "/") {
+      throw new Error2(
+        ErrorCodes.FS_PATH_ESCAPES,
+        `path "${inputPath}" rejected (empty)`,
+        {
+          details: { path: inputPath, reason: "empty" },
+        },
+      );
     }
     if (isAbsolute(inputPath)) {
-      throw new Error2(ErrorCodes.FS_PATH_ESCAPES, `path "${inputPath}" rejected (absolute)`, {
-        details: { path: inputPath, reason: 'absolute' },
-      });
+      throw new Error2(
+        ErrorCodes.FS_PATH_ESCAPES,
+        `path "${inputPath}" rejected (absolute)`,
+        {
+          details: { path: inputPath, reason: "absolute" },
+        },
+      );
     }
     const segments = inputPath.split(/[/\\]+/);
-    if (segments.some((s) => s === '..')) {
+    if (segments.some((s) => s === "..")) {
       throw new Error2(
         ErrorCodes.FS_PATH_ESCAPES,
         `path "${inputPath}" rejected (dotdot segment)`,
-        { details: { path: inputPath, reason: 'dotdot_segment' } },
+        { details: { path: inputPath, reason: "dotdot_segment" } },
       );
     }
-    const abs = isAbsolute(inputPath) ? resolve(inputPath) : resolve(this.workDir, inputPath);
+    const abs = isAbsolute(inputPath)
+      ? resolve(inputPath)
+      : resolve(this.workDir, inputPath);
     if (!this.isWithinWorkspace(abs)) {
-      throw new Error2(ErrorCodes.FS_PATH_ESCAPES, `path "${inputPath}" escapes workspace`, {
-        details: { path: inputPath, reason: 'resolved_outside' },
-      });
+      throw new Error2(
+        ErrorCodes.FS_PATH_ESCAPES,
+        `path "${inputPath}" escapes workspace`,
+        {
+          details: { path: inputPath, reason: "resolved_outside" },
+        },
+      );
     }
     return abs;
   }
@@ -174,19 +195,19 @@ export class WorkspaceFsWatchService extends Disposable implements IWorkspaceFsW
     const target = resolve(absPath);
     if (target === this.workDir) return true;
     const rel = relative(this.workDir, target);
-    if (rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)) return true;
+    if (rel !== "" && !rel.startsWith("..") && !isAbsolute(rel)) return true;
     return this.workspaceDirs.additionalDirs.some((dir) => {
       const r = relative(resolve(dir), target);
-      return r === '' || (!r.startsWith('..') && !isAbsolute(r));
+      return r === "" || (!r.startsWith("..") && !isAbsolute(r));
     });
   }
 
   private toRel(abs: string): string {
     const cwd = this.workDir;
-    if (abs === cwd) return '.';
+    if (abs === cwd) return ".";
     const rel = relative(cwd, abs);
-    if (rel === '') return '.';
-    return rel.split(sep).join('/');
+    if (rel === "") return ".";
+    return rel.split(sep).join("/");
   }
 }
 
@@ -202,11 +223,11 @@ class WorkspaceFsWatchSubscription implements IWorkspaceFsWatchSubscription {
   private disposed = false;
 
   private readonly debounceMs = readPositiveIntEnv(
-    'KIMI_CODE_FS_WATCH_DEBOUNCE_MS',
+    "KIMI_CODE_FS_WATCH_DEBOUNCE_MS",
     DEFAULT_DEBOUNCE_MS,
   );
   private readonly maxChangesPerWindow = readPositiveIntEnv(
-    'KIMI_CODE_FS_WATCH_MAX_CHANGES_PER_WINDOW',
+    "KIMI_CODE_FS_WATCH_MAX_CHANGES_PER_WINDOW",
     DEFAULT_MAX_CHANGES_PER_WINDOW,
   );
 
@@ -283,7 +304,7 @@ class WorkspaceFsWatchSubscription implements IWorkspaceFsWatchSubscription {
 
 function isUnderAny(rel: string, parents: ReadonlySet<string>): boolean {
   for (const parent of parents) {
-    if (parent === '.' || parent === '') return true;
+    if (parent === "." || parent === "") return true;
     if (rel === parent) return true;
     if (rel.startsWith(`${parent}/`)) return true;
   }
@@ -295,5 +316,5 @@ registerScopedService(
   IWorkspaceFsWatchService,
   WorkspaceFsWatchService,
   ScopeActivation.OnScopeCreated,
-  'workspaceFs',
+  "workspaceFs",
 );

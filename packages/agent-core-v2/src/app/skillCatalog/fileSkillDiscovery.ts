@@ -6,15 +6,19 @@
  * stateless standalone function.
  */
 
-import { promises as fs } from 'node:fs';
-import path from 'pathe';
+import { promises as fs } from "node:fs";
+import path from "pathe";
 
-import { ILogService, type LogPayload } from '#/_base/log/log';
+import { ILogService, type LogPayload } from "#/_base/log/log";
 
-import { SkillParseError, UnsupportedSkillTypeError, parseSkillText } from './parser';
-import type { SkillDiscoveryResult, ISkillDiscovery } from './skillDiscovery';
-import type { SkillDefinition, SkillRoot, SkippedSkill } from './types';
-import { normalizeSkillName } from './types';
+import {
+  SkillParseError,
+  UnsupportedSkillTypeError,
+  parseSkillText,
+} from "./parser";
+import type { SkillDiscoveryResult, ISkillDiscovery } from "./skillDiscovery";
+import type { SkillDefinition, SkillRoot, SkippedSkill } from "./types";
+import { normalizeSkillName } from "./types";
 
 const MAX_SKILL_SCAN_DEPTH = 8;
 
@@ -57,10 +61,10 @@ export async function discoverFileSkills(
     const subdirs: string[] = [];
     for (const entry of entries) {
       const entryPath = path.join(dirPath, entry);
-      if (await isFile(path.join(entryPath, 'SKILL.md'))) {
+      if (await isFile(path.join(entryPath, "SKILL.md"))) {
         directorySkills.add(entry);
       }
-      if (entry === 'node_modules' || entry.startsWith('.')) continue;
+      if (entry === "node_modules" || entry.startsWith(".")) continue;
       if (await isDir(entryPath)) subdirs.push(entry);
     }
 
@@ -70,7 +74,7 @@ export async function discoverFileSkills(
         byDiscoveryKey,
         skipped,
         warn,
-        skillMdPath: path.join(dirPath, entry, 'SKILL.md'),
+        skillMdPath: path.join(dirPath, entry, "SKILL.md"),
         skillDirName: entry,
         root,
         subSkillParentName,
@@ -82,7 +86,7 @@ export async function discoverFileSkills(
 
     if (isTopLevel) {
       if (root.plugin !== undefined) {
-        const rootSkillMd = path.join(dirPath, 'SKILL.md');
+        const rootSkillMd = path.join(dirPath, "SKILL.md");
         if (await isFile(rootSkillMd)) {
           await parseAndRegister({
             byDiscoveryKey,
@@ -96,9 +100,9 @@ export async function discoverFileSkills(
       }
 
       for (const entry of entries) {
-        if (!entry.endsWith('.md')) continue;
-        if (entry === 'SKILL.md') continue;
-        const skillName = entry.slice(0, -'.md'.length);
+        if (!entry.endsWith(".md")) continue;
+        if (entry === "SKILL.md") continue;
+        const skillName = entry.slice(0, -".md".length);
         if (directorySkills.has(skillName)) continue;
         const skillMdPath = path.join(dirPath, entry);
         if (!(await isFile(skillMdPath))) continue;
@@ -114,7 +118,8 @@ export async function discoverFileSkills(
     }
 
     for (const entry of subdirs) {
-      if (directorySkills.has(entry) && !allowedSubSkillBundles.has(entry)) continue;
+      if (directorySkills.has(entry) && !allowedSubSkillBundles.has(entry))
+        continue;
       const allowedSubSkillParentName = allowedSubSkillBundles.get(entry);
       await walkSkillDir(
         path.join(dirPath, entry),
@@ -147,7 +152,7 @@ async function parseAndRegister(input: {
   readonly subSkillParentName?: string;
 }): Promise<SkillDefinition | undefined> {
   try {
-    const text = await fs.readFile(input.skillMdPath, 'utf8');
+    const text = await fs.readFile(input.skillMdPath, "utf8");
     const parsed = parseSkillText({
       skillMdPath: input.skillMdPath,
       skillDirName: input.skillDirName,
@@ -167,7 +172,9 @@ async function parseAndRegister(input: {
           }
         : parsed;
     const discovered =
-      input.root.plugin === undefined ? skill : { ...skill, plugin: input.root.plugin };
+      input.root.plugin === undefined
+        ? skill
+        : { ...skill, plugin: input.root.plugin };
     const key = skillDiscoveryKey(input.root, discovered.name);
     if (!input.byDiscoveryKey.has(key)) {
       input.byDiscoveryKey.set(key, discovered);
@@ -181,9 +188,15 @@ async function parseAndRegister(input: {
         reason: `unsupported skill type "${error.skillType}"`,
       });
     } else if (error instanceof SkillParseError) {
-      input.warn?.(`Skipping invalid skill at ${input.skillMdPath}: ${error.message}`, error);
+      input.warn?.(
+        `Skipping invalid skill at ${input.skillMdPath}: ${error.message}`,
+        error,
+      );
     } else {
-      input.warn?.(`Skipping skill at ${input.skillMdPath} due to unexpected error`, error);
+      input.warn?.(
+        `Skipping skill at ${input.skillMdPath} due to unexpected error`,
+        error,
+      );
     }
     return undefined;
   }
@@ -191,28 +204,33 @@ async function parseAndRegister(input: {
 
 function skillDiscoveryKey(root: SkillRoot, name: string): string {
   const normalizedName = normalizeSkillName(name);
-  return root.plugin === undefined ? normalizedName : `${root.plugin.id}\0${normalizedName}`;
+  return root.plugin === undefined
+    ? normalizedName
+    : `${root.plugin.id}\0${normalizedName}`;
 }
 
-function sortSkills(skills: readonly SkillDefinition[]): readonly SkillDefinition[] {
+function sortSkills(
+  skills: readonly SkillDefinition[],
+): readonly SkillDefinition[] {
   return [...skills].toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
 function qualifySubSkillName(parentName: string, skillName: string): string {
-  if (skillName === parentName || skillName.startsWith(`${parentName}.`)) return skillName;
+  if (skillName === parentName || skillName.startsWith(`${parentName}.`))
+    return skillName;
   return `${parentName}.${skillName}`;
 }
 
 function hasSubSkillEnabled(skill: SkillDefinition): boolean {
-  const nested = skill.metadata['metadata'];
+  const nested = skill.metadata["metadata"];
   const nestedFlag =
-    typeof nested === 'object' && nested !== null
-      ? (nested as Record<string, unknown>)['has-sub-skill'] === true ||
-        (nested as Record<string, unknown>)['hasSubSkill'] === true
+    typeof nested === "object" && nested !== null
+      ? (nested as Record<string, unknown>)["has-sub-skill"] === true ||
+        (nested as Record<string, unknown>)["hasSubSkill"] === true
       : false;
   return (
-    skill.metadata['has-sub-skill'] === true ||
-    skill.metadata['hasSubSkill'] === true ||
+    skill.metadata["has-sub-skill"] === true ||
+    skill.metadata["hasSubSkill"] === true ||
     nestedFlag
   );
 }

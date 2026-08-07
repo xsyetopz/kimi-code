@@ -542,7 +542,9 @@ describe("agentsMdReminder toolDedupe interplay", () => {
     const subAgentsMd = await writeAgentsMd(
       join(workDir, "packages", "agent-core-v2"),
     );
-    const args = { path: join(workDir, "packages", "agent-core-v2", "index.ts") };
+    const args = {
+      path: join(workDir, "packages", "agent-core-v2", "index.ts"),
+    };
 
     await h.events.fireBeforeExecute(willCtx("call-1", "Read", args));
     const did1 = didCtx("Read", args, { id: "call-1" });
@@ -583,7 +585,9 @@ describe("agentsMdReminder toolDedupe interplay", () => {
     }
     h.ix.get(IAgentToolRegistryService).register(new ReadTool());
 
-    const args = { path: join(workDir, "packages", "agent-core-v2", "index.ts") };
+    const args = {
+      path: join(workDir, "packages", "agent-core-v2", "index.ts"),
+    };
     const calls: ToolCall[] = [
       {
         type: "function",
@@ -721,7 +725,9 @@ describe("agentsMdReminder Bash operand hygiene", () => {
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: "find -L packages/agent-core-v2 -name '*.ts'" }),
+      didCtx("Bash", {
+        command: "find -L packages/agent-core-v2 -name '*.ts'",
+      }),
     );
 
     expect(outputText(result)).toContain(subAgentsMd);

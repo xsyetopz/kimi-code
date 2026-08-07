@@ -36,18 +36,24 @@ describe("ink question wizard", () => {
     const wizard = createInkQuestionWizardState(2);
     const respond = vi.fn();
 
-    expect(handleInkQuestionWizardInput(request, wizard, "2", respond)).toBe(true);
+    expect(handleInkQuestionWizardInput(request, wizard, "2", respond)).toBe(
+      true,
+    );
     expect(respond).not.toHaveBeenCalled();
     expect(wizard.tab).toBe(1);
 
-    expect(handleInkQuestionWizardInput(request, wizard, "2", respond)).toBe(true);
+    expect(handleInkQuestionWizardInput(request, wizard, "2", respond)).toBe(
+      true,
+    );
     expect(wizard.tab).toBe(2);
     expect(projectInkQuestionWizardView(request, wizard).answers).toEqual([
       "B1",
       "B2",
     ]);
 
-    expect(handleInkQuestionWizardInput(request, wizard, "1", respond)).toBe(true);
+    expect(handleInkQuestionWizardInput(request, wizard, "1", respond)).toBe(
+      true,
+    );
     expect(respond).toHaveBeenCalledWith({
       answers: ["B1", "B2"],
       method: "number_key",
@@ -66,16 +72,24 @@ describe("ink question wizard", () => {
     const wizard = createInkQuestionWizardState(1);
     const respond = vi.fn();
 
-    expect(handleInkQuestionWizardInput(request, wizard, "\u001b[B", respond)).toBe(
+    expect(
+      handleInkQuestionWizardInput(request, wizard, "\u001b[B", respond),
+    ).toBe(true);
+    expect(handleInkQuestionWizardInput(request, wizard, "\r", respond)).toBe(
       true,
     );
-    expect(handleInkQuestionWizardInput(request, wizard, "\r", respond)).toBe(true);
     expect(wizard.otherMode).toBe(true);
     for (const ch of "mine") {
-      expect(handleInkQuestionWizardInput(request, wizard, ch, respond)).toBe(true);
+      expect(handleInkQuestionWizardInput(request, wizard, ch, respond)).toBe(
+        true,
+      );
     }
-    expect(handleInkQuestionWizardInput(request, wizard, "\r", respond)).toBe(true);
-    expect(handleInkQuestionWizardInput(request, wizard, "\r", respond)).toBe(true);
+    expect(handleInkQuestionWizardInput(request, wizard, "\r", respond)).toBe(
+      true,
+    );
+    expect(handleInkQuestionWizardInput(request, wizard, "\r", respond)).toBe(
+      true,
+    );
     expect(respond).toHaveBeenCalledWith({
       answers: ["mine"],
       method: "enter",

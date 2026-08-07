@@ -101,9 +101,7 @@ export interface ProjectWriteEditPreviewOptions {
   readonly nowMs?: number;
 }
 
-function projectWriteStreamingPreviewLines(
-  streamText: string,
-): string[] {
+function projectWriteStreamingPreviewLines(streamText: string): string[] {
   const previewText = streamText.slice(0, STREAMING_ARGS_PREVIEW_MAX_CHARS);
   const content = extractPartialStringField(previewText, "content");
   if (content === undefined || content.length === 0) return [];
@@ -136,15 +134,11 @@ function projectWriteFinalizedPreviewLines(
 ): string[] {
   const content = str(toolCall.args["content"]);
   if (content.length === 0) return [];
-  const filePath = str(
-    toolCall.args["file_path"] ?? toolCall.args["path"],
-  );
+  const filePath = str(toolCall.args["file_path"] ?? toolCall.args["path"]);
   const lang = langFromPath(filePath);
   const allLines = highlightLines(content, lang);
   const shouldCap = !expanded;
-  const shown = shouldCap
-    ? allLines.slice(0, COMMAND_PREVIEW_LINES)
-    : allLines;
+  const shown = shouldCap ? allLines.slice(0, COMMAND_PREVIEW_LINES) : allLines;
   const remaining = allLines.length - shown.length;
   const lines: string[] = [];
   for (const [i, line] of shown.entries()) {
@@ -190,9 +184,7 @@ function projectEditFinalizedPreviewLines(
   const oldStr = str(toolCall.args["old_string"]);
   const newStr = str(toolCall.args["new_string"]);
   if (oldStr.length === 0 && newStr.length === 0) return [];
-  const filePath = str(
-    toolCall.args["file_path"] ?? toolCall.args["path"],
-  );
+  const filePath = str(toolCall.args["file_path"] ?? toolCall.args["path"]);
   const shouldCap = !expanded;
   return renderDiffLinesClustered(oldStr, newStr, filePath, {
     contextLines: 3,
@@ -204,19 +196,11 @@ function projectEditFinalizedPreviewLines(
 export function projectWriteEditPreviewLines(
   options: ProjectWriteEditPreviewOptions,
 ): string[] {
-  const {
-    toolCall,
-    result,
-    expanded = false,
-    nowMs = Date.now(),
-  } = options;
+  const { toolCall, result, expanded = false, nowMs = Date.now() } = options;
   const name = toolCall.name;
   if (name !== "Write" && name !== "Edit") return [];
 
-  if (
-    result === undefined &&
-    toolCall.streamingArguments !== undefined
-  ) {
+  if (result === undefined && toolCall.streamingArguments !== undefined) {
     if (name === "Write") {
       return projectWriteStreamingPreviewLines(toolCall.streamingArguments);
     }

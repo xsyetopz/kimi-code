@@ -11,22 +11,26 @@
  * pattern used by every agent tool. Bound at Agent scope.
  */
 
-import { toInputJsonSchema } from '#/tool/input-schema';
-import { matchesGlobRuleSubject } from '#/tool/rule-match';
-import { type ToolExecution } from '#/tool/toolContract';
-import { registerAgentToolService } from '#/agent/toolRegistry/toolContribution';
+import { toInputJsonSchema } from "#/tool/input-schema";
+import { matchesGlobRuleSubject } from "#/tool/rule-match";
+import { type ToolExecution } from "#/tool/toolContract";
+import { registerAgentToolService } from "#/agent/toolRegistry/toolContribution";
 
-import { IAgentTaskService } from '#/agent/task/task';
-import { TERMINAL_STATUSES } from '#/agent/task/types';
-import { ITaskStopTool, TaskStopInputSchema, type TaskStopInput } from './task-stop';
-import TASK_STOP_DESCRIPTION from './task-stop.md?raw';
-
+import { IAgentTaskService } from "#/agent/task/task";
+import { TERMINAL_STATUSES } from "#/agent/task/types";
+import {
+  ITaskStopTool,
+  TaskStopInputSchema,
+  type TaskStopInput,
+} from "./task-stop";
+import TASK_STOP_DESCRIPTION from "./task-stop.md?raw";
 
 export class TaskStopTool implements ITaskStopTool {
   declare readonly _serviceBrand: undefined;
-  readonly name = 'TaskStop' as const;
+  readonly name = "TaskStop" as const;
   readonly description = TASK_STOP_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(TaskStopInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(TaskStopInputSchema);
 
   constructor(@IAgentTaskService private readonly tasks: IAgentTaskService) {}
 
@@ -44,7 +48,7 @@ export class TaskStopTool implements ITaskStopTool {
         const trimmedReason = args.reason?.trim();
         const reason =
           trimmedReason === undefined || trimmedReason.length === 0
-            ? 'Stopped by TaskStop'
+            ? "Stopped by TaskStop"
             : trimmedReason;
 
         if (TERMINAL_STATUSES.has(info.status)) {
@@ -60,7 +64,10 @@ export class TaskStopTool implements ITaskStopTool {
         await this.tasks.suppressTerminalNotification(args.task_id);
         const result = await this.tasks.stop(args.task_id, reason);
         if (!result) {
-          return { isError: true, output: `Failed to stop task: ${args.task_id}` };
+          return {
+            isError: true,
+            output: `Failed to stop task: ${args.task_id}`,
+          };
         }
 
         return {
@@ -75,9 +82,14 @@ export class TaskStopTool implements ITaskStopTool {
   }
 }
 
-registerAgentToolService(ITaskStopTool, TaskStopTool, { name: 'TaskStop', domain: 'agentTask' });
+registerAgentToolService(ITaskStopTool, TaskStopTool, {
+  name: "TaskStop",
+  domain: "agentTask",
+});
 
 function terminalStopReason(reason: string | undefined): string {
   const trimmed = reason?.trim();
-  return trimmed === undefined || trimmed.length === 0 ? 'Task already in terminal state' : trimmed;
+  return trimmed === undefined || trimmed.length === 0
+    ? "Task already in terminal state"
+    : trimmed;
 }

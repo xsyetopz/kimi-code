@@ -65,12 +65,10 @@ function abortError(): Error {
 describe("FetchURLTool abort signal", () => {
   it("forwards ctx.signal to the fetcher", async () => {
     const controller = new AbortController();
-    const fetch = vi
-      .fn<UrlFetcher["fetch"]>()
-      .mockResolvedValue({
-        content: "hello",
-        kind: "passthrough",
-      } satisfies UrlFetchResult);
+    const fetch = vi.fn<UrlFetcher["fetch"]>().mockResolvedValue({
+      content: "hello",
+      kind: "passthrough",
+    } satisfies UrlFetchResult);
     const tool = new FetchURLTool({
       _serviceBrand: undefined,
       getUrlFetcher: () => ({ fetch }),
@@ -167,12 +165,10 @@ describe("FetchURLTool backend resolution", () => {
   // call re-reads config and login state, and a construction-time read would
   // race the identity freeze during a fast bootstrap.
   it("resolves the fetcher per invocation, never at construction", async () => {
-    const fetch = vi
-      .fn<UrlFetcher["fetch"]>()
-      .mockResolvedValue({
-        content: "hello",
-        kind: "passthrough",
-      } satisfies UrlFetchResult);
+    const fetch = vi.fn<UrlFetcher["fetch"]>().mockResolvedValue({
+      content: "hello",
+      kind: "passthrough",
+    } satisfies UrlFetchResult);
     const getUrlFetcher = vi.fn(() => ({ fetch }));
     const tool = new FetchURLTool({ _serviceBrand: undefined, getUrlFetcher });
 

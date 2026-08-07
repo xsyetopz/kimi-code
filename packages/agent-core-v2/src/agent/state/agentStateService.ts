@@ -8,15 +8,22 @@
  * injects). Bound at Agent scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { StateRegistry } from '#/_base/state/stateRegistry';
-import { ISessionStateService } from '#/session/state/sessionState';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { StateRegistry } from "#/_base/state/stateRegistry";
+import { ISessionStateService } from "#/session/state/sessionState";
 
-import { IAgentStateService } from './agentState';
+import { IAgentStateService } from "./agentState";
 
-export class AgentStateService extends StateRegistry implements IAgentStateService {
+export class AgentStateService
+  extends StateRegistry
+  implements IAgentStateService
+{
   declare readonly _serviceBrand: undefined;
-  protected override readonly inspectScope = 'agent';
+  protected override readonly inspectScope = "agent";
 
   constructor(@ISessionStateService sessionState?: ISessionStateService) {
     super();
@@ -29,5 +36,5 @@ registerScopedService(
   IAgentStateService,
   AgentStateService,
   ScopeActivation.OnScopeCreated,
-  'state',
+  "state",
 );

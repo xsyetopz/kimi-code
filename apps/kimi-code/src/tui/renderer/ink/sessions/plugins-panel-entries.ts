@@ -9,10 +9,11 @@ import {
   type PluginMarketplaceEntry,
 } from "#/utils/plugin-marketplace";
 
+import { capabilityMarketplaceEntry } from "./plugins-panel-format";
 import {
-  capabilityMarketplaceEntry,
-} from "./plugins-panel-format";
-import { WEB_BRIDGE_ENTRY, type PluginsPanelMarketState } from "./plugins-panel-types";
+  WEB_BRIDGE_ENTRY,
+  type PluginsPanelMarketState,
+} from "./plugins-panel-types";
 
 export function pluginsPanelCapabilityFor(
   capabilities: readonly CapabilityStatus[] | undefined,
@@ -33,9 +34,7 @@ export function pluginsPanelCapabilityForEntry(
 export function pluginsPanelInstalledVersions(
   installed: readonly PluginSummary[],
 ): ReadonlyMap<string, string | undefined> {
-  return new Map(
-    installed.map((plugin) => [plugin.id, plugin.version]),
-  );
+  return new Map(installed.map((plugin) => [plugin.id, plugin.version]));
 }
 
 export function pluginsPanelMarketplaceEntries(
@@ -63,7 +62,9 @@ export function pluginsPanelOfficialCatalogEntries(
 ): readonly PluginMarketplaceEntry[] {
   return marketplaceEntries.filter((entry) => {
     if (entry.tier !== "official") return false;
-    return pluginsPanelCapabilityForEntry(capabilities, entry)?.supported !== false;
+    return (
+      pluginsPanelCapabilityForEntry(capabilities, entry)?.supported !== false
+    );
   });
 }
 

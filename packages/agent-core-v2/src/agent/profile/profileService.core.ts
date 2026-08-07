@@ -75,15 +75,25 @@
  * guard. Bound at Agent scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { UNKNOWN_CAPABILITY, type ModelCapability } from '#/kosong/contract/capability';
-import { type SamplingOptions, type ThinkingEffort } from '#/kosong/contract/provider';
-import { IModelCatalog, type Model } from '#/kosong/model/catalog';
-import { type ModelOverrides } from '#/kosong/model/model.types';
-import { type ModelRequestParams } from '#/kosong/model/modelRequester';
-import { IProtocolAdapterRegistry } from '#/kosong/protocol/protocol';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import {
+  UNKNOWN_CAPABILITY,
+  type ModelCapability,
+} from "#/kosong/contract/capability";
+import {
+  type SamplingOptions,
+  type ThinkingEffort,
+} from "#/kosong/contract/provider";
+import { IModelCatalog, type Model } from "#/kosong/model/catalog";
+import { type ModelOverrides } from "#/kosong/model/model.types";
+import { type ModelRequestParams } from "#/kosong/model/modelRequester";
+import { IProtocolAdapterRegistry } from "#/kosong/protocol/protocol";
 import {
   drivesThinkingThroughTraits,
   modelSupportsThinkingEffort,
@@ -93,45 +103,48 @@ import {
   resolveThinkingKeep,
   requiresStrictThinkingValidation,
   type ThinkingConfig,
-} from '#/kosong/model/thinking';
-import { THINKING_SECTION } from '#/app/kosongConfig/configSection';
-import { DEFAULT_AGENT_PROFILE_NAME } from '#/app/agentProfileCatalog/agentProfileCatalog';
-import { IBuiltinAgentProfileLoader } from '#/app/agentProfileCatalog/builtinAgentProfileLoader';
+} from "#/kosong/model/thinking";
+import { THINKING_SECTION } from "#/app/kosongConfig/configSection";
+import { DEFAULT_AGENT_PROFILE_NAME } from "#/app/agentProfileCatalog/agentProfileCatalog";
+import { IBuiltinAgentProfileLoader } from "#/app/agentProfileCatalog/builtinAgentProfileLoader";
 import { ErrorCodes, Error2 } from "#/errors";
-import { IAgentIdentity } from '#/app/agentIdentity/agentIdentity';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
-import type { LoopControl } from '#/agent/loop/configSection';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostClock } from '#/os/interface/hostClock';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import type { ToolSource } from '#/tool/toolContract';
-import { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
-import { ISessionInstructionsProvider } from '#/session/sessionInstructions/instructionsProvider';
-import { ISessionSkillCatalog } from '#/session/sessionSkillCatalog/skillCatalog';
+import { IAgentIdentity } from "#/app/agentIdentity/agentIdentity";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
+import type { LoopControl } from "#/agent/loop/configSection";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostClock } from "#/os/interface/hostClock";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import type { ToolSource } from "#/tool/toolContract";
+import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
+import { ISessionInstructionsProvider } from "#/session/sessionInstructions/instructionsProvider";
+import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
 import {
   BUILTIN_SKILL_SOURCE_ID,
   PLUGIN_SKILL_SOURCE_ID,
-} from '#/app/skillCatalog/skillSource';
-import { ISessionAgentProfileCatalog } from '#/session/sessionAgentProfileCatalog/sessionAgentProfileCatalog';
-import { ISessionToolPolicy } from '#/session/sessionToolPolicy/sessionToolPolicy';
-import { ISessionToolPolicyGate } from '#/session/sessionToolPolicyGate/sessionToolPolicyGate';
-import { IPluginService } from '#/app/plugin/plugin';
-import type { ResolvedAgentProfile, SystemPromptContext } from '#/agent/profile/profile';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IAgentAgentsMdReminderService } from '#/agent/agentsMdReminder/agentsMdReminder';
+} from "#/app/skillCatalog/skillSource";
+import { ISessionAgentProfileCatalog } from "#/session/sessionAgentProfileCatalog/sessionAgentProfileCatalog";
+import { ISessionToolPolicy } from "#/session/sessionToolPolicy/sessionToolPolicy";
+import { ISessionToolPolicyGate } from "#/session/sessionToolPolicyGate/sessionToolPolicyGate";
+import { IPluginService } from "#/app/plugin/plugin";
+import type {
+  ResolvedAgentProfile,
+  SystemPromptContext,
+} from "#/agent/profile/profile";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IAgentAgentsMdReminderService } from "#/agent/agentsMdReminder/agentsMdReminder";
 
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { IAgentTelemetryContextService } from '#/app/telemetry/agentTelemetryContext';
-import { IWireService } from '#/wire/wire';
-import type { PayloadOf } from '#/wire/types';
-import { IEventBus } from '#/app/event/eventBus';
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
+import { IWireService } from "#/wire/wire";
+import type { PayloadOf } from "#/wire/types";
+import { IEventBus } from "#/app/event/eventBus";
 import {
   extractAgentsMdPathsFromSystemPrompt,
   prepareSystemPromptContext,
   type LoadedAgentsMd,
-} from './context';
+} from "./context";
 import type {
   ApplyProfileOptions,
   BindAgentInput,
@@ -141,12 +154,20 @@ import type {
   ProfileServiceOptions,
   ProfileSetModelResult,
   ProfileUpdateData,
-} from './profile';
-import { IAgentProfileService, ProfileError, ProfileErrors } from './profile';
-import { TOOLS_SECTION, type ToolsConfig } from '#/agent/toolPolicy/configSection';
-import { isToolActiveComposed, findInactiveToolPatterns, literalToolNames, type InactiveToolPattern } from '#/agent/toolPolicy/evaluate';
-import { IAgentToolRegistryService } from '#/agent/toolRegistry/toolRegistry';
-import { getAgentToolContributions } from '#/agent/toolRegistry/toolContribution';
+} from "./profile";
+import { IAgentProfileService, ProfileError, ProfileErrors } from "./profile";
+import {
+  TOOLS_SECTION,
+  type ToolsConfig,
+} from "#/agent/toolPolicy/configSection";
+import {
+  isToolActiveComposed,
+  findInactiveToolPatterns,
+  literalToolNames,
+  type InactiveToolPattern,
+} from "#/agent/toolPolicy/evaluate";
+import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
+import { getAgentToolContributions } from "#/agent/toolRegistry/toolContribution";
 import {
   ActiveToolsModel,
   configUpdate,
@@ -156,32 +177,37 @@ import {
   resetActiveTools,
   type ActiveToolsState,
   type ProfileModelState,
-} from './profileOps';
+} from "./profileOps";
 
-import * as ps from './profileService.shared';
+import * as ps from "./profileService.shared";
 
-export const profileActiveToolNamesOverlayKey = defineState<readonly string[] | undefined>(
-  'profile.activeToolNamesOverlay',
+export const profileActiveToolNamesOverlayKey = defineState<
+  readonly string[] | undefined
+>(
+  "profile.activeToolNamesOverlay",
   () => undefined as readonly string[] | undefined,
 );
 export const profileAgentsMdWarningKey = defineState<string | undefined>(
-  'profile.agentsMdWarning',
+  "profile.agentsMdWarning",
   () => undefined as string | undefined,
 );
 export const profileEmittedThinkingEffortWarningsKey = defineState<Set<string>>(
-  'profile.emittedThinkingEffortWarnings',
+  "profile.emittedThinkingEffortWarnings",
   () => new Set(),
 );
 export const profileEmittedToolPatternWarningsKey = defineState<Set<string>>(
-  'profile.emittedToolPatternWarnings',
+  "profile.emittedToolPatternWarnings",
   () => new Set(),
 );
 export const profileEmittedPluginBudgetWarningsKey = defineState<Set<string>>(
-  'profile.emittedPluginBudgetWarnings',
+  "profile.emittedPluginBudgetWarnings",
   () => new Set(),
 );
 
-export class AgentProfileServiceCore extends Disposable implements IAgentProfileService {
+export class AgentProfileServiceCore
+  extends Disposable
+  implements IAgentProfileService
+{
   declare readonly _serviceBrand: undefined;
 
   private optionsValue: ProfileServiceOptions = {};
@@ -199,27 +225,36 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
     @IWireService private readonly wire: IWireService,
     @IEventBus private readonly eventBus: IEventBus,
     @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentTelemetryContextService private readonly telemetryContext: IAgentTelemetryContextService,
+    @IAgentTelemetryContextService
+    private readonly telemetryContext: IAgentTelemetryContextService,
     @IConfigService private readonly config: IConfigService,
     @IModelCatalog private readonly modelCatalog: IModelCatalog,
-    @IProtocolAdapterRegistry private readonly protocolAdapters: IProtocolAdapterRegistry,
+    @IProtocolAdapterRegistry
+    private readonly protocolAdapters: IProtocolAdapterRegistry,
     @IHostEnvironment private readonly env: IHostEnvironment,
     @IHostClock private readonly clock: IHostClock,
     @IHostFileSystem private readonly fs: IHostFileSystem,
     @ISessionContext private readonly sessionContext: ISessionContext,
     @IBootstrapService private readonly bootstrap: IBootstrapService,
-    @ISessionWorkspaceContext private readonly workspace: ISessionWorkspaceContext,
-    @ISessionAgentProfileCatalog private readonly catalog: ISessionAgentProfileCatalog,
+    @ISessionWorkspaceContext
+    private readonly workspace: ISessionWorkspaceContext,
+    @ISessionAgentProfileCatalog
+    private readonly catalog: ISessionAgentProfileCatalog,
     @ISessionSkillCatalog private readonly skillCatalog: ISessionSkillCatalog,
-    @ISessionInstructionsProvider private readonly instructions: ISessionInstructionsProvider,
+    @ISessionInstructionsProvider
+    private readonly instructions: ISessionInstructionsProvider,
     @ISessionToolPolicy private readonly sessionToolPolicy: ISessionToolPolicy,
-    @ISessionToolPolicyGate private readonly toolPolicyGate: ISessionToolPolicyGate,
-    @IAgentToolRegistryService private readonly toolRegistry: IAgentToolRegistryService,
-    @IBuiltinAgentProfileLoader private readonly builtinProfiles: IBuiltinAgentProfileLoader,
+    @ISessionToolPolicyGate
+    private readonly toolPolicyGate: ISessionToolPolicyGate,
+    @IAgentToolRegistryService
+    private readonly toolRegistry: IAgentToolRegistryService,
+    @IBuiltinAgentProfileLoader
+    private readonly builtinProfiles: IBuiltinAgentProfileLoader,
     @IAgentStateService private readonly states: IAgentStateService,
     @IPluginService private readonly plugins: IPluginService,
     @IAgentIdentity private readonly identity: IAgentIdentity,
-    @IAgentAgentsMdReminderService private readonly agentsMdReminder: IAgentAgentsMdReminderService,
+    @IAgentAgentsMdReminderService
+    private readonly agentsMdReminder: IAgentAgentsMdReminderService,
   ) {
     super();
     this.states.register(profileActiveToolNamesOverlayKey);
@@ -248,7 +283,10 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
     );
     this._register(
       this.skillCatalog.onDidChange((sourceId) => {
-        if (sourceId === PLUGIN_SKILL_SOURCE_ID || sourceId === BUILTIN_SKILL_SOURCE_ID) {
+        if (
+          sourceId === PLUGIN_SKILL_SOURCE_ID ||
+          sourceId === BUILTIN_SKILL_SOURCE_ID
+        ) {
           void this.refreshSystemPrompt();
         }
       }),
@@ -285,7 +323,8 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
 
   configure(options: ProfileServiceOptions): void {
     this.optionsValue = {
-      emitStatusUpdated: options.emitStatusUpdated ?? this.optionsValue.emitStatusUpdated,
+      emitStatusUpdated:
+        options.emitStatusUpdated ?? this.optionsValue.emitStatusUpdated,
     };
   }
 
@@ -298,7 +337,9 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
       this.activeProfile = undefined;
     }
     if (Object.keys(configChanged).length > 0) {
-      this.wire.dispatch(configUpdate(this.resolveConfigPayload(configChanged)));
+      this.wire.dispatch(
+        configUpdate(this.resolveConfigPayload(configChanged)),
+      );
       this.afterConfigDispatch(configChanged);
     }
     if (activeToolNames !== undefined) {
@@ -310,7 +351,8 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
     this.activeProfile = undefined;
     this.activeToolNamesOverlay = undefined;
     const agentsMdPaths =
-      snapshot.agentsMdPaths ?? extractAgentsMdPathsFromSystemPrompt(snapshot.systemPrompt);
+      snapshot.agentsMdPaths ??
+      extractAgentsMdPathsFromSystemPrompt(snapshot.systemPrompt);
     this.wire.dispatch(
       profileBind({
         modelAlias: snapshot.modelAlias,
@@ -346,15 +388,15 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
       const available = this.catalog
         .list()
         .map((p) => p.name)
-        .join(', ');
+        .join(", ");
       throw new ProfileError(
         ProfileErrors.codes.PROFILE_UNKNOWN,
         `Unknown agent profile: "${input.profile}". Available profiles: ${available}`,
         { profile: input.profile, available },
       );
     }
-    const alias = input.model ?? this.config.get<string>('defaultModel');
-    if (alias === undefined || alias === '') {
+    const alias = input.model ?? this.config.get<string>("defaultModel");
+    if (alias === undefined || alias === "") {
       throw new ProfileError(
         ProfileErrors.codes.MODEL_NOT_CONFIGURED,
         `model is required to bind profile "${input.profile}" (no default model configured)`,
@@ -375,22 +417,25 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
     this.cacheAgentsMdWarning(context);
 
     const thinkingLevel = this.resolveThinkingEffort(
-      input.thinking ?? (currentProfileName !== undefined ? this.thinkingLevel : undefined),
+      input.thinking ??
+        (currentProfileName !== undefined ? this.thinkingLevel : undefined),
       model,
     );
 
     this.activeToolNamesOverlay = undefined;
-    this.wire.dispatch(profileBind({
-      modelAlias: alias,
-      profileName: profile.name,
-      thinkingEffort: thinkingLevel,
-      systemPrompt: rendered.text,
-      environmentDisclosure: rendered.environment,
-      agentsMdPaths: context.agentsMdPaths ?? [],
-      activeToolNames: profile.tools,
-      disallowedTools: profile.disallowedTools ?? [],
-      subagents: profile.subagents,
-    }));
+    this.wire.dispatch(
+      profileBind({
+        modelAlias: alias,
+        profileName: profile.name,
+        thinkingEffort: thinkingLevel,
+        systemPrompt: rendered.text,
+        environmentDisclosure: rendered.environment,
+        agentsMdPaths: context.agentsMdPaths ?? [],
+        activeToolNames: profile.tools,
+        disallowedTools: profile.disallowedTools ?? [],
+        subagents: profile.subagents,
+      }),
+    );
     this.afterConfigDispatch({
       modelAlias: alias,
       profileName: profile.name,
@@ -408,10 +453,10 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
     const model = this.modelCatalog.get(alias);
     if (this.profileName === undefined) {
       await this.bind({ profile: DEFAULT_AGENT_PROFILE_NAME, model: alias });
-      this.telemetry.track2('model_switch', { model: alias });
+      this.telemetry.track2("model_switch", { model: alias });
     } else if (this.modelAlias !== alias) {
       this.update({ modelAlias: alias });
-      this.telemetry.track2('model_switch', { model: alias });
+      this.telemetry.track2("model_switch", { model: alias });
     }
     return {
       model: alias,
@@ -421,13 +466,17 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
 
   setThinking(level: string): void {
     const previousEffort = this.thinkingLevel;
-    this.assertThinkingEffortSupported(level, this.tryResolveRawModel(), this.modelAlias ?? '');
+    this.assertThinkingEffortSupported(
+      level,
+      this.tryResolveRawModel(),
+      this.modelAlias ?? "",
+    );
     const normalized = normalizeRequestedThinkingEffort(level);
     this.update({ thinkingLevel: normalized ?? level });
     const effort = this.thinkingLevel;
     if (effort !== previousEffort) {
-      this.telemetry.track2('thinking_toggle', {
-        enabled: effort !== 'off',
+      this.telemetry.track2("thinking_toggle", {
+        enabled: effort !== "off",
         effort,
         from: previousEffort,
       });
@@ -440,9 +489,14 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
     modelAlias: string,
   ): void {
     const normalized = normalizeRequestedThinkingEffort(requested);
-    if (normalized === undefined || this.supportsThinkingEffort(normalized, model)) return;
+    if (
+      normalized === undefined ||
+      this.supportsThinkingEffort(normalized, model)
+    )
+      return;
     const efforts = model?.supportEfforts ?? [];
-    const supported = efforts.length === 0 ? 'off' : ['off', ...efforts].join(', ');
+    const supported =
+      efforts.length === 0 ? "off" : ["off", ...efforts].join(", ");
     throw new ProfileError(
       ProfileErrors.codes.MODEL_CONFIG_INVALID,
       `Thinking effort "${requested}" is not supported by model "${modelAlias}". Supported efforts: ${supported}.`,
@@ -450,10 +504,13 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
   }
 
   getModel(): string {
-    return this.modelAlias ?? '';
+    return this.modelAlias ?? "";
   }
 
-  useProfile(profile: ResolvedAgentProfile, context: SystemPromptContext): void {
+  useProfile(
+    profile: ResolvedAgentProfile,
+    context: SystemPromptContext,
+  ): void {
     this.activeProfile = profile;
     const rendered = profile.renderSystemPrompt(context);
     this.update({
@@ -466,7 +523,10 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
     this.setActiveTools(profile.tools);
   }
 
-  async applyProfile(profile: ResolvedAgentProfile, options?: ApplyProfileOptions): Promise<void> {
+  async applyProfile(
+    profile: ResolvedAgentProfile,
+    options?: ApplyProfileOptions,
+  ): Promise<void> {
     const context = await this.buildSystemPromptContext(profile, options);
     this.useProfile(profile, context);
     this.seedAgentsMdReminder(context);
@@ -484,9 +544,9 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
       context = await this.buildSystemPromptContext(profile);
     } catch (error) {
       this.eventBus.publish({
-        type: 'warning',
+        type: "warning",
         message: `System prompt refresh skipped: ${error instanceof Error ? error.message : String(error)}`,
-        code: 'system-prompt-refresh-failed',
+        code: "system-prompt-refresh-failed",
       });
       return;
     }
@@ -502,5 +562,4 @@ export class AgentProfileServiceCore extends Disposable implements IAgentProfile
     this.cacheAgentsMdWarning(context);
     this.publishAgentsMdWarning();
   }
-
 }

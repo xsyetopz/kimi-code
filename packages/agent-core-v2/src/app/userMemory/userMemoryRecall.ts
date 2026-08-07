@@ -41,7 +41,10 @@ export function formatMemoryRecallBlock(
     const perTopicBudget = Math.max(1, Math.floor(budget / topics.length));
     for (const topic of topics) {
       if (budget <= 0) break;
-      const excerpt = truncateToTokenBudget(topic.text, Math.min(budget, perTopicBudget));
+      const excerpt = truncateToTokenBudget(
+        topic.text,
+        Math.min(budget, perTopicBudget),
+      );
       if (excerpt.length === 0) continue;
       sections.push(`### ${topic.name}`, excerpt);
       budget = Math.max(0, budget - estimateTokens(excerpt));

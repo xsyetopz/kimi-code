@@ -1,4 +1,9 @@
-import type { BackgroundTaskInfo, KimiHarness, PromptPart, Session } from "@moonshot-ai/kimi-code-sdk";
+import type {
+  BackgroundTaskInfo,
+  KimiHarness,
+  PromptPart,
+  Session,
+} from "@moonshot-ai/kimi-code-sdk";
 import { detectFdPath } from "#/utils/process/fd-detect";
 import type { KimiSlashCommand } from "./commands/index.ts";
 import type { SessionRow } from "./components/dialogs/session-picker.ts";
@@ -25,9 +30,7 @@ import {
   createInitialAppState,
   type KimiTUIStartupInput,
 } from "./kimi-tui-startup.ts";
-import {
-  KimiTuiTerminalsController,
-} from "./kimi-tui-terminals.ts";
+import { KimiTuiTerminalsController } from "./kimi-tui-terminals.ts";
 import type { InkTerminalRenderer } from "./renderer/ink/terminal-renderer.ts";
 import type { InkTerminalRendererOptions } from "./renderer/ink/terminal-renderer.ts";
 import type { PromptEditorState } from "./renderer/prompt-editor-state.ts";
@@ -56,12 +59,8 @@ export type {
   TUIStartupState,
 } from "./types.ts";
 export type { KimiTUIStartupInput } from "./kimi-tui-startup.ts";
-export type {
-  KimiTUIDialogDelegates,
-} from "./kimi-tui-dialog-delegates.ts";
-export type {
-  KimiTUITranscriptDelegates,
-} from "./kimi-tui-transcript-delegates.ts";
+export type { KimiTUIDialogDelegates } from "./kimi-tui-dialog-delegates.ts";
+export type { KimiTUITranscriptDelegates } from "./kimi-tui-transcript-delegates.ts";
 
 export class KimiTUI {
   readonly harness: KimiHarness;
@@ -286,16 +285,16 @@ export class KimiTUI {
   }
 
   /** @internal Legacy test hook — forwards to {@link StartupPanelsController}. */
-  set trustPromptChoiceResolver(
-    resolver: ((choice: TrustPromptChoice) => void) | undefined,
-  ) {
+  set trustPromptChoiceResolver(resolver:
+    | ((choice: TrustPromptChoice) => void)
+    | undefined,) {
     this.startupPanelsController.setTrustPromptChoiceResolver(resolver);
   }
 
   /** @internal Legacy test hook — forwards to {@link StartupPanelsController}. */
-  set inkSessionPickerSelect(
-    select: ((session: SessionRow) => void) | undefined,
-  ) {
+  set inkSessionPickerSelect(select:
+    | ((session: SessionRow) => void)
+    | undefined,) {
     this.startupPanelsController.setInkSessionPickerSelect(select);
   }
 
@@ -346,7 +345,9 @@ export class KimiTUI {
   }
 
   supportsCurrentModelCapability(capability: string): boolean {
-    return this.promptInputController.supportsCurrentModelCapability(capability);
+    return this.promptInputController.supportsCurrentModelCapability(
+      capability,
+    );
   }
 
   // =========================================================================

@@ -16,7 +16,9 @@ export function InkSingleLineInputDialog({
       <Text>{currentTheme.boldFg("textStrong", dialog.title)}</Text>
       <Text> </Text>
       {dialog.subtitleLines.map((line, index) => (
-        <Text key={`subtitle-${index}`}>{currentTheme.fg("textDim", line)}</Text>
+        <Text key={`subtitle-${index}`}>
+          {currentTheme.fg("textDim", line)}
+        </Text>
       ))}
       <Text> </Text>
       <Text>{dialog.inputLine}</Text>

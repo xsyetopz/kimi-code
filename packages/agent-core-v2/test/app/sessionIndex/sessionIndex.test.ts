@@ -13,9 +13,7 @@ import {
 import { createScopedTestHost, stubPair } from "#/_base/di/test";
 import { encodeWorkDirKey } from "#/_base/utils/workdir-slug";
 import { IBootstrapService } from "#/app/bootstrap/bootstrap";
-import {
-  ISessionIndex,
-} from "#/app/sessionIndex/sessionIndex";
+import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
 import { FileSessionIndex } from "#/app/sessionIndex/sessionIndexService";
 import { JsonAtomicDocumentStore } from "#/persistence/backends/node-fs/atomicDocumentStore";
 import { FileStorageService } from "#/persistence/backends/node-fs/fileStorageService";

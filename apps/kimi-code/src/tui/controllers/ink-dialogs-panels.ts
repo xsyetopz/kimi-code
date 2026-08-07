@@ -209,7 +209,9 @@ export class InkDialogsPanels {
       return true;
     }
     if (panel instanceof StartPermissionPromptComponent) {
-      this.openInkStartPermissionPrompt(panel.getStartPermissionPromptOptions());
+      this.openInkStartPermissionPrompt(
+        panel.getStartPermissionPromptOptions(),
+      );
       return true;
     }
     if (panel instanceof GoalQueueManagerComponent) {

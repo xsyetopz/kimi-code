@@ -9,31 +9,35 @@
  * continuations back into authorize results. Bound at Agent scope.
  */
 
-import { IInstantiationService } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { abortable, isUserCancellation } from '#/_base/utils/abort';
-import { IAgentPermissionModeService } from '#/agent/permissionMode/permissionMode';
+import { IInstantiationService } from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { abortable, isUserCancellation } from "#/_base/utils/abort";
+import { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
 import type {
   ApprovalRequest,
   ApprovalResponse,
   PermissionPolicyResolution,
   PermissionPolicyResult,
-} from '#/agent/permissionPolicy/types';
-import { IAgentPermissionRulesService } from '#/agent/permissionRules/permissionRules';
-import { IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { denyToolExecution } from '#/agent/toolExecutor/beforeToolExecuteEvent';
+} from "#/agent/permissionPolicy/types";
+import { IAgentPermissionRulesService } from "#/agent/permissionRules/permissionRules";
+import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
+import { denyToolExecution } from "#/agent/toolExecutor/beforeToolExecuteEvent";
 import type {
   BeforeExecuteDecision,
   ResolvedToolExecutionHookContext,
-} from '#/agent/toolExecutor/toolHooks';
-import { IEventBus } from '#/app/event/eventBus';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { ISessionApprovalService } from '#/session/approval/approval';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import type { ToolInputDisplay } from '#/tool/toolInputDisplay';
+} from "#/agent/toolExecutor/toolHooks";
+import { IEventBus } from "#/app/event/eventBus";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { ISessionApprovalService } from "#/session/approval/approval";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
 
-import { IAgentToolApprovalService } from './toolApproval';
+import { IAgentToolApprovalService } from "./toolApproval";
 
 export type PermissionApprovalRequestContext = ApprovalRequest & {
   readonly sessionId?: string;
@@ -46,27 +50,33 @@ export type PermissionApprovalResultContext = PermissionApprovalRequestContext &
   (
     | ApprovalResponse
     | {
-        readonly decision: 'error';
+        readonly decision: "error";
         readonly error: string;
       }
   );
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'permission.approval.requested': PermissionApprovalRequestContext;
-    'permission.approval.resolved': PermissionApprovalResultContext;
+    "permission.approval.requested": PermissionApprovalRequestContext;
+    "permission.approval.resolved": PermissionApprovalResultContext;
   }
 }
 
-export class AgentToolApprovalService extends Disposable implements IAgentToolApprovalService {
+export class AgentToolApprovalService
+  extends Disposable
+  implements IAgentToolApprovalService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
     @IAgentScopeContext private readonly scopeContext: IAgentScopeContext,
-    @IAgentPermissionModeService private readonly modeService: IAgentPermissionModeService,
-    @IAgentPermissionRulesService private readonly rulesService: IAgentPermissionRulesService,
+    @IAgentPermissionModeService
+    private readonly modeService: IAgentPermissionModeService,
+    @IAgentPermissionRulesService
+    private readonly rulesService: IAgentPermissionRulesService,
     @ISessionContext private readonly session: ISessionContext,
-    @IInstantiationService private readonly instantiation: IInstantiationService,
+    @IInstantiationService
+    private readonly instantiation: IInstantiationService,
     @ITelemetryService private readonly telemetry: ITelemetryService,
     @IEventBus private readonly eventBus: IEventBus,
   ) {
@@ -79,28 +89,29 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
     origin: string,
   ): Promise<BeforeExecuteDecision | undefined> {
     switch (result.kind) {
-      case 'approve':
+      case "approve":
         return result.executionMetadata === undefined
           ? undefined
           : { executionMetadata: result.executionMetadata };
-      case 'deny':
+      case "deny":
         return {
           veto: denyToolExecution(
             this.formatDenyMessage(
-              result.message ?? `Tool "${context.toolCall.name}" was denied by permission policy.`,
+              result.message ??
+                `Tool "${context.toolCall.name}" was denied by permission policy.`,
             ),
           ),
         };
-      case 'ask':
+      case "ask":
         return this.requestToolApproval(context, result, origin);
-      case 'result':
+      case "result":
         return { veto: result.result };
     }
   }
 
   async requestToolApproval(
     context: ResolvedToolExecutionHookContext,
-    result: Extract<PermissionPolicyResult, { kind: 'ask' }>,
+    result: Extract<PermissionPolicyResult, { kind: "ask" }>,
     origin: string,
   ): Promise<BeforeExecuteDecision | undefined> {
     const name = context.toolCall.name;
@@ -108,7 +119,7 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
     const display =
       context.execution.display ??
       ({
-        kind: 'generic',
+        kind: "generic",
         summary: action,
         detail: context.args,
       } as ToolInputDisplay);
@@ -130,9 +141,12 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
     let response: ApprovalResponse;
     const approvalService = this.tryApprovalService();
     if (approvalService === undefined) {
-      response = { decision: 'approved' };
+      response = { decision: "approved" };
     } else {
-      this.eventBus.publish({ type: 'permission.approval.requested', ...approvalContext });
+      this.eventBus.publish({
+        type: "permission.approval.requested",
+        ...approvalContext,
+      });
       try {
         response = await abortable(
           approvalService.request(approvalRequest),
@@ -141,13 +155,13 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
         context.signal.throwIfAborted();
       } catch (error) {
         if (isUserCancellation(error)) throw error;
-        this.telemetry.track2('permission_approval_result', {
+        this.telemetry.track2("permission_approval_result", {
           turn_id: context.turnId,
           tool_call_id: context.toolCall.id,
           policy_name: origin,
           tool_name: name,
           permission_mode: this.modeService.mode,
-          result: 'error',
+          result: "error",
           approval_surface: display.kind,
           duration_ms: Date.now() - startedAt,
           session_cache_written: false,
@@ -155,9 +169,9 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
           trace_id: context.trace?.traceId,
         });
         this.eventBus.publish({
-          type: 'permission.approval.resolved',
+          type: "permission.approval.resolved",
           ...approvalContext,
-          decision: 'error',
+          decision: "error",
           error: error instanceof Error ? error.message : String(error),
         });
         const resolved = result.resolveError?.(error);
@@ -169,12 +183,12 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
     }
 
     const sessionApprovalRule =
-      response.decision === 'approved' && response.scope === 'session'
+      response.decision === "approved" && response.scope === "session"
         ? context.execution.approvalRule
         : undefined;
     if (approvalService !== undefined) {
       this.eventBus.publish({
-        type: 'permission.approval.resolved',
+        type: "permission.approval.resolved",
         ...approvalContext,
         ...response,
       });
@@ -187,20 +201,21 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
       sessionApprovalRule,
       result: response,
     });
-    this.telemetry.track2('permission_approval_result', {
+    this.telemetry.track2("permission_approval_result", {
       turn_id: context.turnId,
       tool_call_id: context.toolCall.id,
       policy_name: origin,
       tool_name: name,
       permission_mode: this.modeService.mode,
       result:
-        response.decision === 'approved' && response.scope === 'session'
-          ? 'approved_for_session'
+        response.decision === "approved" && response.scope === "session"
+          ? "approved_for_session"
           : response.decision,
       approval_surface: display.kind,
       duration_ms: Date.now() - startedAt,
       session_cache_written: sessionApprovalRule !== undefined,
-      has_feedback: response.feedback !== undefined && response.feedback.length > 0,
+      has_feedback:
+        response.feedback !== undefined && response.feedback.length > 0,
       trace_id: context.trace?.traceId,
     });
 
@@ -209,22 +224,24 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
       return this.resolvePermissionResolution(resolved, context, origin);
     }
 
-    if (response.decision === 'approved') return undefined;
+    if (response.decision === "approved") return undefined;
     return {
-      veto: denyToolExecution(this.formatApprovalRejectionMessage(name, response)),
+      veto: denyToolExecution(
+        this.formatApprovalRejectionMessage(name, response),
+      ),
     };
   }
 
   formatApprovalRejectionMessage(
     toolName: string,
-    result: Pick<ApprovalResponse, 'decision' | 'feedback'>,
+    result: Pick<ApprovalResponse, "decision" | "feedback">,
   ): string {
     const suffix =
       result.feedback !== undefined && result.feedback.length > 0
         ? ` Reason: ${result.feedback}`
-        : '';
+        : "";
     const prefix =
-      result.decision === 'cancelled'
+      result.decision === "cancelled"
         ? `Tool "${toolName}" was not run because the approval request was cancelled.`
         : `Tool "${toolName}" was not run because the user rejected the approval request.`;
     if (this.usesWorkerRejectionGuidance()) {
@@ -243,7 +260,10 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
   private tryApprovalService(): ISessionApprovalService | undefined {
     try {
       return this.instantiation.invokeFunction(
-        (accessor) => accessor.get(ISessionApprovalService) as ISessionApprovalService | undefined,
+        (accessor) =>
+          accessor.get(ISessionApprovalService) as
+            | ISessionApprovalService
+            | undefined,
       );
     } catch {
       return undefined;
@@ -251,7 +271,7 @@ export class AgentToolApprovalService extends Disposable implements IAgentToolAp
   }
 
   private usesWorkerRejectionGuidance(): boolean {
-    return this.scopeContext.agentId !== 'main';
+    return this.scopeContext.agentId !== "main";
   }
 }
 
@@ -260,5 +280,5 @@ registerScopedService(
   IAgentToolApprovalService,
   AgentToolApprovalService,
   ScopeActivation.OnScopeCreated,
-  'toolApproval',
+  "toolApproval",
 );

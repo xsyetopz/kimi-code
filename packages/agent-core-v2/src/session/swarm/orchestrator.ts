@@ -20,10 +20,7 @@ import {
   type SwarmConfig,
 } from "./configSection";
 
-export {
-  DEFAULT_ORCHESTRATOR_PROFILE_NAME,
-  DEFAULT_PLAN_LANE_RESERVED_SLOTS,
-};
+export { DEFAULT_ORCHESTRATOR_PROFILE_NAME, DEFAULT_PLAN_LANE_RESERVED_SLOTS };
 
 export function resolveOrchestratorProfileName(config: IConfigService): string {
   const section = config.get<SwarmConfig | undefined>(SWARM_SECTION);
@@ -57,7 +54,9 @@ export async function resolveOrchestratorLaneReservationForHandle(
   handle: IAgentScopeHandle,
   config: IConfigService,
 ): Promise<number> {
-  const profileName = handle.accessor.get(IAgentProfileService)?.data().profileName;
+  const profileName = handle.accessor
+    .get(IAgentProfileService)
+    ?.data().profileName;
   if (!isOrchestratorProfileName(profileName, config)) return 0;
 
   const planService = handle.accessor.get(IAgentPlanService);

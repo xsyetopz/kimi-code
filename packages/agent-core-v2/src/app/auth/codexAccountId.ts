@@ -19,13 +19,17 @@ export function parseJwtClaims(token: string): CodexIdTokenClaims | undefined {
   const parts = token.split(".");
   if (parts.length !== 3) return undefined;
   try {
-    return JSON.parse(Buffer.from(parts[1], "base64url").toString()) as CodexIdTokenClaims;
+    return JSON.parse(
+      Buffer.from(parts[1], "base64url").toString(),
+    ) as CodexIdTokenClaims;
   } catch {
     return undefined;
   }
 }
 
-export function extractAccountIdFromClaims(claims: CodexIdTokenClaims): string | undefined {
+export function extractAccountIdFromClaims(
+  claims: CodexIdTokenClaims,
+): string | undefined {
   return (
     claims.chatgpt_account_id ??
     claims["https://api.openai.com/auth"]?.chatgpt_account_id ??
@@ -33,10 +37,13 @@ export function extractAccountIdFromClaims(claims: CodexIdTokenClaims): string |
   );
 }
 
-export function extractAccountIdFromTokens(tokens: CodexTokenResponse): string | undefined {
+export function extractAccountIdFromTokens(
+  tokens: CodexTokenResponse,
+): string | undefined {
   if (tokens.id_token !== undefined) {
     const claims = parseJwtClaims(tokens.id_token);
-    const accountId = claims === undefined ? undefined : extractAccountIdFromClaims(claims);
+    const accountId =
+      claims === undefined ? undefined : extractAccountIdFromClaims(claims);
     if (accountId !== undefined) return accountId;
   }
   if (tokens.access_token === undefined) return undefined;

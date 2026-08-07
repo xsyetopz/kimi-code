@@ -14,9 +14,7 @@ import {
 } from "#/_base/di/scope";
 import { BugIndicatingError } from "#/errors";
 
-import {
-  IHarnessInterceptorRegistry,
-} from "./harnessInterceptorRegistry";
+import { IHarnessInterceptorRegistry } from "./harnessInterceptorRegistry";
 import type { HarnessInterceptorDefinition } from "./types";
 
 function compareInterceptors(

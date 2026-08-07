@@ -12,29 +12,39 @@
  * Workspace scope so every session of the handler shares one scan.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { TimeoutTimer } from '#/_base/utils/timer';
-import { subtreeWatchFilter } from '#/_base/utils/paths';
-import { IConfigService } from '#/app/config/config';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { TimeoutTimer } from "#/_base/utils/timer";
+import { subtreeWatchFilter } from "#/_base/utils/paths";
+import { IConfigService } from "#/app/config/config";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
 import {
   MERGE_ALL_AVAILABLE_SKILLS_SECTION,
   type MergeAllAvailableSkillsConfig,
-} from '#/app/skillCatalog/configSection';
-import { ISkillDiscovery } from '#/app/skillCatalog/skillDiscovery';
-import { projectRoots, projectSkillRootCandidates } from '#/app/skillCatalog/skillRoots';
+} from "#/app/skillCatalog/configSection";
+import { ISkillDiscovery } from "#/app/skillCatalog/skillDiscovery";
+import {
+  projectRoots,
+  projectSkillRootCandidates,
+} from "#/app/skillCatalog/skillRoots";
 import {
   SKILL_SOURCE_PRIORITY,
   type ISkillSource,
   type SkillContribution,
-} from '#/app/skillCatalog/skillSource';
-import { IHostFsWatchService } from '#/os/interface/hostFsWatch';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+} from "#/app/skillCatalog/skillSource";
+import { IHostFsWatchService } from "#/os/interface/hostFsWatch";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 
-export const WORKSPACE_ROOT_SKILL_SOURCE_ID = 'workspace';
+export const WORKSPACE_ROOT_SKILL_SOURCE_ID = "workspace";
 
 const WATCH_DEBOUNCE_MS = 200;
 
@@ -43,9 +53,12 @@ export interface IWorkspaceRootSkillSource extends ISkillSource {
 }
 
 export const IWorkspaceRootSkillSource: ServiceIdentifier<IWorkspaceRootSkillSource> =
-  createDecorator<IWorkspaceRootSkillSource>('workspaceRootSkillSource');
+  createDecorator<IWorkspaceRootSkillSource>("workspaceRootSkillSource");
 
-export class WorkspaceRootSkillSource extends Disposable implements IWorkspaceRootSkillSource {
+export class WorkspaceRootSkillSource
+  extends Disposable
+  implements IWorkspaceRootSkillSource
+{
   declare readonly _serviceBrand: undefined;
 
   readonly id = WORKSPACE_ROOT_SKILL_SOURCE_ID;
@@ -65,7 +78,8 @@ export class WorkspaceRootSkillSource extends Disposable implements IWorkspaceRo
     super();
     this._register(
       this.config.onDidSectionChange((event) => {
-        if (event.domain === MERGE_ALL_AVAILABLE_SKILLS_SECTION) this.onDidChangeEmitter.fire();
+        if (event.domain === MERGE_ALL_AVAILABLE_SKILLS_SECTION)
+          this.onDidChangeEmitter.fire();
       }),
     );
     this.watchReady = this.watchProjectSkillRoots();
@@ -78,21 +92,28 @@ export class WorkspaceRootSkillSource extends Disposable implements IWorkspaceRo
     }
     await this.config.ready;
     const mergeAllAvailableSkills =
-      this.config.get<MergeAllAvailableSkillsConfig>(MERGE_ALL_AVAILABLE_SKILLS_SECTION) ?? true;
+      this.config.get<MergeAllAvailableSkillsConfig>(
+        MERGE_ALL_AVAILABLE_SKILLS_SECTION,
+      ) ?? true;
     return this.discovery.discover(
       await projectRoots(this.workspace.cwd, { mergeAllAvailableSkills }),
     );
   }
 
   private async watchProjectSkillRoots(): Promise<void> {
-    const { projectRoot, candidates } = await projectSkillRootCandidates(this.workspace.cwd);
+    const { projectRoot, candidates } = await projectSkillRootCandidates(
+      this.workspace.cwd,
+    );
     const handle = this.fsWatch.watch(projectRoot, {
       ignored: subtreeWatchFilter(projectRoot, candidates),
     });
     this._register(handle);
     this._register(
       handle.onDidChange(() => {
-        this.watchDebounce.cancelAndSet(() => this.onDidChangeEmitter.fire(), WATCH_DEBOUNCE_MS);
+        this.watchDebounce.cancelAndSet(
+          () => this.onDidChangeEmitter.fire(),
+          WATCH_DEBOUNCE_MS,
+        );
       }),
     );
   }
@@ -103,5 +124,5 @@ registerScopedService(
   IWorkspaceRootSkillSource,
   WorkspaceRootSkillSource,
   ScopeActivation.OnScopeCreated,
-  'workspaceSkillCatalog',
+  "workspaceSkillCatalog",
 );

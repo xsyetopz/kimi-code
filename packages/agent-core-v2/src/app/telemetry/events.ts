@@ -10,10 +10,13 @@ import type { TelemetryProperties } from "./telemetry";
 
 export type TelemetryEventName = string;
 
-export type TelemetryEventPayload<K extends TelemetryEventName = TelemetryEventName> =
-  TelemetryProperties;
+export type TelemetryEventPayload<
+  K extends TelemetryEventName = TelemetryEventName,
+> = TelemetryProperties;
 
-export type StrictPropertyCheck<T, E> = E extends TelemetryProperties ? E : never;
+export type StrictPropertyCheck<T, E> = E extends TelemetryProperties
+  ? E
+  : never;
 
 export interface TurnStartedEvent {
   turn_id: number;

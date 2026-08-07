@@ -24,8 +24,7 @@ export class WorkspaceLeaseWriteDenyPermissionPolicyService
     if (toolName !== "Write" && toolName !== "Edit") return undefined;
 
     const deniedPath = writeFileAccesses(context).find(
-      (access) =>
-        !this.leases.isWriteAllowed(this.scope.agentId, access.path),
+      (access) => !this.leases.isWriteAllowed(this.scope.agentId, access.path),
     );
     if (deniedPath === undefined) return undefined;
 

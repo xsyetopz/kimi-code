@@ -187,13 +187,11 @@ describe("resolveGithubSource", () => {
   it("release-lookup error message hints at the /tree/<ref> escape hatch", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue({
-          status: 502,
-          statusText: "Bad Gateway",
-          headers: new Headers(),
-        }),
+      vi.fn().mockResolvedValue({
+        status: 502,
+        statusText: "Bad Gateway",
+        headers: new Headers(),
+      }),
     );
 
     await expect(

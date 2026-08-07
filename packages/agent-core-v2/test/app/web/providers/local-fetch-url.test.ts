@@ -266,14 +266,12 @@ describe("LocalFetchURLProvider redirects", () => {
   });
 
   it("treats a redirect response without a Location header as final", async () => {
-    const fetchImpl = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        new Response("odd", {
-          status: 302,
-          headers: { "content-type": "text/plain" },
-        }),
-      );
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response("odd", {
+        status: 302,
+        headers: { "content-type": "text/plain" },
+      }),
+    );
     const provider = new LocalFetchURLProvider({ fetchImpl });
 
     const result = await provider.fetch("https://example.com/odd");

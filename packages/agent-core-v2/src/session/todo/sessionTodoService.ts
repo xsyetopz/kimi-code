@@ -9,40 +9,53 @@
  * Session scope.
  */
 
-import { Disposable, toDisposable, type IDisposable } from '#/_base/di/lifecycle';
+import {
+  Disposable,
+  toDisposable,
+  type IDisposable,
+} from "#/_base/di/lifecycle";
 import {
   type IAgentScopeHandle,
   LifecycleScope,
   ScopeActivation,
   registerScopedService,
-} from '#/_base/di/scope';
-import { Emitter } from '#/_base/event';
+} from "#/_base/di/scope";
+import { Emitter } from "#/_base/event";
 
-import { IAgentContextInjectorService } from '#/agent/contextInjector/contextInjector';
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { IAgentToolPolicyService } from '#/agent/toolPolicy/toolPolicy';
-import { IEventBus } from '#/app/event/eventBus';
-import { IAgentLifecycleService } from '#/session/agentLifecycle/agentLifecycle';
-import { IWireService } from '#/wire/wire';
+import { IAgentContextInjectorService } from "#/agent/contextInjector/contextInjector";
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { IAgentToolPolicyService } from "#/agent/toolPolicy/toolPolicy";
+import { IEventBus } from "#/app/event/eventBus";
+import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
+import { IWireService } from "#/wire/wire";
 
-import { ISessionTodoService } from './sessionTodo';
-import { TodoModel, todoSet } from './todoOps';
-import { TODO_LIST_TOOL_NAME, type TodoItem } from './todoItem';
-import { TODO_LIST_REMINDER_VARIANT, todoListStaleReminder } from './todoListReminder';
+import { ISessionTodoService } from "./sessionTodo";
+import { TodoModel, todoSet } from "./todoOps";
+import { TODO_LIST_TOOL_NAME, type TodoItem } from "./todoItem";
+import {
+  TODO_LIST_REMINDER_VARIANT,
+  todoListStaleReminder,
+} from "./todoListReminder";
 
-const MAIN_AGENT_ID = 'main';
+const MAIN_AGENT_ID = "main";
 
-export class SessionTodoService extends Disposable implements ISessionTodoService {
+export class SessionTodoService
+  extends Disposable
+  implements ISessionTodoService
+{
   declare readonly _serviceBrand: undefined;
 
-  private readonly onDidChangeEmitter = this._register(new Emitter<readonly TodoItem[]>());
+  private readonly onDidChangeEmitter = this._register(
+    new Emitter<readonly TodoItem[]>(),
+  );
   readonly onDidChange = this.onDidChangeEmitter.event;
 
   private readonly agentBindings = new Map<string, IDisposable[]>();
   private lastKnownTodos: readonly TodoItem[] = [];
 
   constructor(
-    @IAgentLifecycleService private readonly agentLifecycle: IAgentLifecycleService,
+    @IAgentLifecycleService
+    private readonly agentLifecycle: IAgentLifecycleService,
   ) {
     super();
 
@@ -52,7 +65,9 @@ export class SessionTodoService extends Disposable implements ISessionTodoServic
       }),
     );
     this._register(
-      this.agentLifecycle.onDidDispose((agentId) => this.disposeAgentBindings(agentId)),
+      this.agentLifecycle.onDidDispose((agentId) =>
+        this.disposeAgentBindings(agentId),
+      ),
     );
 
     for (const handle of this.agentLifecycle.list()) {
@@ -90,7 +105,7 @@ export class SessionTodoService extends Disposable implements ISessionTodoServic
     const main = this.agentLifecycle.get(MAIN_AGENT_ID);
     if (main === undefined) return;
     const wire = main.accessor.get(IWireService);
-    wire.dispatch(todoSet({ key: 'todo', value: todos }));
+    wire.dispatch(todoSet({ key: "todo", value: todos }));
     const current = wire.getModel(TodoModel).current;
     this.lastKnownTodos = current;
     this.onDidChangeEmitter.fire(current);
@@ -100,15 +115,21 @@ export class SessionTodoService extends Disposable implements ISessionTodoServic
     const injector = handle.accessor.get(IAgentContextInjectorService);
     this.trackAgentBinding(
       handle.id,
-      injector.register(TODO_LIST_REMINDER_VARIANT, () => this.staleReminder(handle)),
+      injector.register(TODO_LIST_REMINDER_VARIANT, () =>
+        this.staleReminder(handle),
+      ),
     );
     if (handle.id !== MAIN_AGENT_ID) return;
 
-    this.lastKnownTodos = handle.accessor.get(IWireService).getModel(TodoModel).current;
+    this.lastKnownTodos = handle.accessor
+      .get(IWireService)
+      .getModel(TodoModel).current;
     this.trackAgentBinding(
       handle.id,
-      handle.accessor.get(IEventBus).subscribe('context.undone', () => {
-        const current = handle.accessor.get(IWireService).getModel(TodoModel).current;
+      handle.accessor.get(IEventBus).subscribe("context.undone", () => {
+        const current = handle.accessor
+          .get(IWireService)
+          .getModel(TodoModel).current;
         if (todoItemsEqual(current, this.lastKnownTodos)) return;
         this.lastKnownTodos = current;
         this.onDidChangeEmitter.fire(current);
@@ -120,7 +141,7 @@ export class SessionTodoService extends Disposable implements ISessionTodoServic
     const memory = handle.accessor.get(IAgentContextMemoryService);
     const toolPolicy = handle.accessor.get(IAgentToolPolicyService);
     return todoListStaleReminder({
-      active: toolPolicy.isToolActive(TODO_LIST_TOOL_NAME, 'builtin'),
+      active: toolPolicy.isToolActive(TODO_LIST_TOOL_NAME, "builtin"),
       history: memory.get(),
       todos: this.getTodos(),
     });
@@ -146,10 +167,16 @@ export class SessionTodoService extends Disposable implements ISessionTodoServic
   }
 }
 
-function todoItemsEqual(a: readonly TodoItem[], b: readonly TodoItem[]): boolean {
+function todoItemsEqual(
+  a: readonly TodoItem[],
+  b: readonly TodoItem[],
+): boolean {
   return (
     a.length === b.length &&
-    a.every((item, index) => item.title === b[index]?.title && item.status === b[index]?.status)
+    a.every(
+      (item, index) =>
+        item.title === b[index]?.title && item.status === b[index]?.status,
+    )
   );
 }
 
@@ -158,5 +185,5 @@ registerScopedService(
   ISessionTodoService,
   SessionTodoService,
   ScopeActivation.OnScopeCreated,
-  'todo',
+  "todo",
 );

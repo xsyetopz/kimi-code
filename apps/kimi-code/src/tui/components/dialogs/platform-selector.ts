@@ -26,12 +26,13 @@ export const EXTERNAL_OAUTH_PROVIDER_IDS = new Set([
   OPENAI_CODEX_PROVIDER_ID,
 ]);
 
-export const EXTERNAL_OAUTH_PROVIDER_LABELS: Readonly<Record<string, string>> = {
-  opencode: "OpenCode Zen",
-  "opencode-go": "OpenCode Go",
-  [GITHUB_COPILOT_PROVIDER_ID]: "GitHub Copilot",
-  [OPENAI_CODEX_PROVIDER_ID]: "OpenAI Codex",
-};
+export const EXTERNAL_OAUTH_PROVIDER_LABELS: Readonly<Record<string, string>> =
+  {
+    opencode: "OpenCode Zen",
+    "opencode-go": "OpenCode Go",
+    [GITHUB_COPILOT_PROVIDER_ID]: "GitHub Copilot",
+    [OPENAI_CODEX_PROVIDER_ID]: "OpenAI Codex",
+  };
 
 export function buildPlatformOptions(options: {
   readonly showCopilotOAuth?: boolean;

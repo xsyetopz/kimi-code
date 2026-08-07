@@ -8,30 +8,40 @@
  * read/written through it. Bound at Session scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { AsyncEmitter, type Event } from '#/_base/event';
-import { defineState } from '#/_base/state/stateRegistry';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { ISessionStateService } from '#/session/state/sessionState';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { AsyncEmitter, type Event } from "#/_base/event";
+import { defineState } from "#/_base/state/stateRegistry";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { ISessionStateService } from "#/session/state/sessionState";
 
 import {
   ISessionToolPolicy,
   type SessionToolPolicyChangedEvent,
-} from './sessionToolPolicy';
+} from "./sessionToolPolicy";
 
 interface SessionToolPolicyState {
   readonly disabledTools: readonly string[];
 }
 
-export const sessionToolPolicyStateKey = defineState<SessionToolPolicyState>('sessionToolPolicy.state', () => ({
-  disabledTools: [],
-}));
+export const sessionToolPolicyStateKey = defineState<SessionToolPolicyState>(
+  "sessionToolPolicy.state",
+  () => ({
+    disabledTools: [],
+  }),
+);
 
-const STATE_KEY = 'state.json';
+const STATE_KEY = "state.json";
 
-export class SessionToolPolicyService extends Disposable implements ISessionToolPolicy {
+export class SessionToolPolicyService
+  extends Disposable
+  implements ISessionToolPolicy
+{
   declare readonly _serviceBrand: undefined;
   readonly ready: Promise<void>;
   readonly onDidChange: Event<SessionToolPolicyChangedEvent>;
@@ -49,7 +59,7 @@ export class SessionToolPolicyService extends Disposable implements ISessionTool
   ) {
     super();
     this.states.register(sessionToolPolicyStateKey);
-    this.scope = sessionContext.scope('tool-policy');
+    this.scope = sessionContext.scope("tool-policy");
     this.onDidChange = this.changeEmitter.event;
     this.ready = this.load();
   }
@@ -73,7 +83,10 @@ export class SessionToolPolicyService extends Disposable implements ISessionTool
   }
 
   private async load(): Promise<void> {
-    const stored = await this.store.get<SessionToolPolicyState>(this.scope, STATE_KEY);
+    const stored = await this.store.get<SessionToolPolicyState>(
+      this.scope,
+      STATE_KEY,
+    );
     if (stored !== undefined) {
       this.state = { disabledTools: [...new Set(stored.disabledTools)] };
     }
@@ -84,7 +97,9 @@ export class SessionToolPolicyService extends Disposable implements ISessionTool
     const disabledTools = [...new Set(names)];
     if (
       disabledTools.length === this.state.disabledTools.length &&
-      disabledTools.every((name, index) => name === this.state.disabledTools[index])
+      disabledTools.every(
+        (name, index) => name === this.state.disabledTools[index],
+      )
     ) {
       return;
     }
@@ -100,5 +115,5 @@ registerScopedService(
   ISessionToolPolicy,
   SessionToolPolicyService,
   ScopeActivation.OnScopeCreated,
-  'sessionToolPolicy',
+  "sessionToolPolicy",
 );

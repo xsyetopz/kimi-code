@@ -11,10 +11,7 @@ export class Database {
   private readonly triFts = new Map<string, string>();
   private readonly docsNorm = new Map<string, string>();
 
-  constructor(
-    _path: string,
-    _opts?: { readonly?: boolean },
-  ) {}
+  constructor(_path: string, _opts?: { readonly?: boolean }) {}
 
   run(sql: string): void {
     if (sql.startsWith("PRAGMA")) return;
@@ -98,7 +95,10 @@ export class Database {
     }
     if (sql.includes("SELECT key, value FROM kv WHERE key LIKE")) {
       const like = String(args[0]);
-      const prefix = like.replace(/\\%/g, "%").replace(/%$/, "").replace(/\\/g, "");
+      const prefix = like
+        .replace(/\\%/g, "%")
+        .replace(/%$/, "")
+        .replace(/\\/g, "");
       const rows = [...this.kv.entries()]
         .filter(([key]) => key.startsWith(prefix))
         .sort(([a], [b]) => a.localeCompare(b))

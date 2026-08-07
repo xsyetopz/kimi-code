@@ -2,9 +2,7 @@
  * `kosong/provider` domain — Google GenAI error conversion and abort helpers.
  */
 
-import {
-  ApiError as GoogleApiError,
-} from "@google/genai";
+import { ApiError as GoogleApiError } from "@google/genai";
 
 import {
   APIConnectionError,
@@ -61,7 +59,9 @@ export function createAbortError(): DOMException {
   return new DOMException("The operation was aborted.", "AbortError");
 }
 
-export async function abortPromise(signal: AbortSignal | undefined): Promise<never> {
+export async function abortPromise(
+  signal: AbortSignal | undefined,
+): Promise<never> {
   if (signal === undefined) {
     return new Promise(() => {});
   }

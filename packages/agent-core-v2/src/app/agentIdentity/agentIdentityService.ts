@@ -11,18 +11,22 @@
  * consumer would read.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { CoreErrors } from '#/_base/errors/codes';
-import { Error2 } from '#/_base/errors/errors';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { CoreErrors } from "#/_base/errors/codes";
+import { Error2 } from "#/_base/errors/errors";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
 
 import {
   buildAgentIdentitySnapshot,
   IAgentIdentity,
   type AgentIdentitySnapshot,
-} from './agentIdentity';
-import { IDENTITY_SECTION, type IdentityConfig } from './configSection';
+} from "./agentIdentity";
+import { IDENTITY_SECTION, type IdentityConfig } from "./configSection";
 
 export class AgentIdentityService implements IAgentIdentity {
   declare readonly _serviceBrand: undefined;
@@ -37,7 +41,8 @@ export class AgentIdentityService implements IAgentIdentity {
     this.frozen = config.ready
       .catch(() => undefined)
       .then(() => {
-        const section = config.get<IdentityConfig | undefined>(IDENTITY_SECTION) ?? {};
+        const section =
+          config.get<IdentityConfig | undefined>(IDENTITY_SECTION) ?? {};
         this.snapshot = buildAgentIdentitySnapshot({
           name: section.name,
           slug: section.slug,
@@ -56,7 +61,7 @@ export class AgentIdentityService implements IAgentIdentity {
     if (this.snapshot === undefined) {
       throw new Error2(
         CoreErrors.codes.INTERNAL,
-        'agent identity read before config load completed',
+        "agent identity read before config load completed",
       );
     }
     return this.snapshot;
@@ -68,5 +73,5 @@ registerScopedService(
   IAgentIdentity,
   AgentIdentityService,
   ScopeActivation.OnScopeCreated,
-  'agentIdentity',
+  "agentIdentity",
 );

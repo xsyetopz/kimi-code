@@ -88,7 +88,10 @@ export class StreamingUIToolGroups {
     };
     this.state.setActiveToolCall(id, toolCall);
 
-    if (this.state.getThinkingDraft().length > 0 || this.state.hasStreamingBlock()) {
+    if (
+      this.state.getThinkingDraft().length > 0 ||
+      this.state.hasStreamingBlock()
+    ) {
       this.state.finalizeLiveTextBuffers("tool");
     }
 

@@ -44,44 +44,52 @@
  * for expression parsing and timestamp formatting. Bound at Agent scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import type { ToolExecution } from '#/tool/toolContract';
-import { toInputJsonSchema } from '#/tool/input-schema';
-import { ISessionCronService } from '#/session/cron/sessionCronService';
-import { cronToHuman, parseCronExpression } from '#/app/cron/cron-expr';
-import { type CronTask } from '#/app/cron/cronTask';
-import { formatLocalIsoWithOffset } from '#/app/cron/format';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import type { ToolExecution } from "#/tool/toolContract";
+import { toInputJsonSchema } from "#/tool/input-schema";
+import { ISessionCronService } from "#/session/cron/sessionCronService";
+import { cronToHuman, parseCronExpression } from "#/app/cron/cron-expr";
+import { type CronTask } from "#/app/cron/cronTask";
+import { formatLocalIsoWithOffset } from "#/app/cron/format";
 
-import { ICronListTool, CronListInputSchema, type CronListInput } from './cron-list';
-import CRON_LIST_DESCRIPTION from './cron-list.md?raw';
-
+import {
+  ICronListTool,
+  CronListInputSchema,
+  type CronListInput,
+} from "./cron-list";
+import CRON_LIST_DESCRIPTION from "./cron-list.md?raw";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const PROMPT_PREVIEW_BYTES = 200;
 
 function previewPrompt(prompt: string): string {
-  const buf = Buffer.from(prompt, 'utf8');
+  const buf = Buffer.from(prompt, "utf8");
   if (buf.byteLength <= PROMPT_PREVIEW_BYTES) return prompt;
   let end = PROMPT_PREVIEW_BYTES;
   while (end > 0 && (buf[end]! & 0b1100_0000) === 0b1000_0000) end--;
-  return `${buf.subarray(0, end).toString('utf8')}…(truncated)`;
+  return `${buf.subarray(0, end).toString("utf8")}…(truncated)`;
 }
 
 export class CronListTool implements ICronListTool {
   declare readonly _serviceBrand: undefined;
 
-  readonly name = 'CronList' as const;
+  readonly name = "CronList" as const;
   readonly description = CRON_LIST_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(
-    CronListInputSchema,
-  );
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(CronListInputSchema);
 
-  constructor(@ISessionCronService private readonly cron: ISessionCronService) {}
+  constructor(
+    @ISessionCronService private readonly cron: ISessionCronService,
+  ) {}
 
   resolveExecution(_args: CronListInput): ToolExecution {
     return {
-      description: 'Listing scheduled cron jobs',
+      description: "Listing scheduled cron jobs",
       approvalRule: this.name,
       execute: async () => {
         const tasks = this.cron.list();
@@ -95,7 +103,7 @@ export class CronListTool implements ICronListTool {
           };
         }
         return {
-          output: `${header}\n${records.join('\n---\n')}`,
+          output: `${header}\n${records.join("\n---\n")}`,
           isError: false,
         };
       },
@@ -111,7 +119,7 @@ export class CronListTool implements ICronListTool {
     const stale = this.cron.isStale(task);
 
     let humanSchedule = task.cron;
-    let nextFireAtIso = 'null';
+    let nextFireAtIso = "null";
     try {
       const parsed = parseCronExpression(task.cron);
       humanSchedule = cronToHuman(parsed);
@@ -119,8 +127,7 @@ export class CronListTool implements ICronListTool {
       if (nextFireMs !== null) {
         nextFireAtIso = formatLocalIsoWithOffset(nextFireMs);
       }
-    } catch {
-    }
+    } catch {}
 
     return [
       `id: ${task.id}`,
@@ -131,7 +138,7 @@ export class CronListTool implements ICronListTool {
       `recurring: ${String(recurring)}`,
       `ageDays: ${ageDays.toFixed(2)}`,
       `stale: ${String(stale)}`,
-    ].join('\n');
+    ].join("\n");
   }
 }
 
@@ -140,5 +147,5 @@ registerScopedService(
   ICronListTool,
   CronListTool,
   ScopeActivation.OnScopeCreated,
-  'cron',
+  "cron",
 );

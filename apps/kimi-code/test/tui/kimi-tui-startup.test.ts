@@ -227,7 +227,10 @@ function makeHarness(
         cancelled: true,
         status: "cancelled" as const,
       })),
-      logout: vi.fn(async () => ({ logged_out: true as const, provider: "opencode" })),
+      logout: vi.fn(async () => ({
+        logged_out: true as const,
+        provider: "opencode",
+      })),
     },
     ...overrides,
   };

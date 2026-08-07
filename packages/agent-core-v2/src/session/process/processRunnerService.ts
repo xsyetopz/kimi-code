@@ -15,12 +15,20 @@
  * contracts.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { BugIndicatingError } from '#/errors';
-import { IHostProcessService } from '#/os/interface/hostProcess';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { BugIndicatingError } from "#/errors";
+import { IHostProcessService } from "#/os/interface/hostProcess";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
 
-import { type IProcess, ISessionProcessRunner, type ProcessExecOptions } from './processRunner';
+import {
+  type IProcess,
+  ISessionProcessRunner,
+  type ProcessExecOptions,
+} from "./processRunner";
 
 export class SessionProcessRunner implements ISessionProcessRunner {
   declare readonly _serviceBrand: undefined;
@@ -30,11 +38,14 @@ export class SessionProcessRunner implements ISessionProcessRunner {
     @IHostProcessService private readonly hostProcess: IHostProcessService,
   ) {}
 
-  async exec(args: readonly string[], options?: ProcessExecOptions): Promise<IProcess> {
+  async exec(
+    args: readonly string[],
+    options?: ProcessExecOptions,
+  ): Promise<IProcess> {
     const command = args[0];
     if (command === undefined) {
       throw new BugIndicatingError(
-        'SessionProcessRunner.exec(): at least one argument (the command to run) is required.',
+        "SessionProcessRunner.exec(): at least one argument (the command to run) is required.",
       );
     }
     const restArgs = args.slice(1);
@@ -63,5 +74,5 @@ registerScopedService(
   ISessionProcessRunner,
   SessionProcessRunner,
   ScopeActivation.OnScopeCreated,
-  'process',
+  "process",
 );

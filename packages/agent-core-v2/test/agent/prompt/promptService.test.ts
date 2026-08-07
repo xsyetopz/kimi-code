@@ -241,9 +241,9 @@ describe("AgentPromptService", () => {
     const turn = await submitSteerInput(prompt, message("mid goal"));
     expect(turn).toBeDefined();
     loop.drainNextBatch(context);
-    expect(context.get().some((entry) => entry.content[0]?.type === "text")).toBe(
-      true,
-    );
+    expect(
+      context.get().some((entry) => entry.content[0]?.type === "text"),
+    ).toBe(true);
     expect(prompt.list()).toEqual({ active: undefined, pending: [] });
   });
 });

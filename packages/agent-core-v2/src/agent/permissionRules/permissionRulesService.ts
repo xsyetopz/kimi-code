@@ -8,21 +8,27 @@
  * consumers read the getters instead. Bound at Agent scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
-import { IWireService } from '#/wire/wire';
+import { IWireService } from "#/wire/wire";
 import {
   IAgentPermissionRulesService,
   type PermissionApprovalResultRecord,
   type PermissionRule,
-} from './permissionRules';
+} from "./permissionRules";
 import {
   addPermissionRules,
   PermissionRulesModel,
   recordApprovalResult as recordApprovalResultOp,
-} from './permissionRulesOps';
+} from "./permissionRulesOps";
 
-export class AgentPermissionRulesService implements IAgentPermissionRulesService {
+export class AgentPermissionRulesService
+  implements IAgentPermissionRulesService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(@IWireService private readonly wire: IWireService) {}
@@ -32,7 +38,9 @@ export class AgentPermissionRulesService implements IAgentPermissionRulesService
   }
 
   get sessionApprovalRulePatterns(): readonly string[] {
-    return [...this.wire.getModel(PermissionRulesModel).sessionApprovalRulePatterns];
+    return [
+      ...this.wire.getModel(PermissionRulesModel).sessionApprovalRulePatterns,
+    ];
   }
 
   addRules(rules: readonly PermissionRule[]): void {
@@ -50,5 +58,5 @@ registerScopedService(
   IAgentPermissionRulesService,
   AgentPermissionRulesService,
   ScopeActivation.OnScopeCreated,
-  'permissionRules',
+  "permissionRules",
 );

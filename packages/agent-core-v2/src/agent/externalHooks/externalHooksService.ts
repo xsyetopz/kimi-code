@@ -21,71 +21,88 @@
  * hook listener registrations stay ordinary disposables on the instance.
  */
 
-import { IInstantiationService } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { isPlainRecord } from '#/_base/utils/canonical-args';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IAgentTaskService, type AgentTaskInfo, type AgentTaskNotificationContext } from '#/agent/task/task';
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { USER_PROMPT_ORIGIN } from '#/agent/contextMemory/types';
+import { IInstantiationService } from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import { isPlainRecord } from "#/_base/utils/canonical-args";
+import { IAgentStateService } from "#/agent/state/agentState";
+import {
+  IAgentTaskService,
+  type AgentTaskInfo,
+  type AgentTaskNotificationContext,
+} from "#/agent/task/task";
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { USER_PROMPT_ORIGIN } from "#/agent/contextMemory/types";
 import {
   IAgentFullCompactionService,
   type FullCompactionTask,
-} from '#/agent/fullCompaction/fullCompaction';
-import type { CompactionResult } from '#/agent/fullCompaction/types';
-import { IAgentLoopService, type AfterStepContext } from '#/agent/loop/loop';
-import { ContinuationStepRequest } from '#/agent/loop/stepRequest';
+} from "#/agent/fullCompaction/fullCompaction";
+import type { CompactionResult } from "#/agent/fullCompaction/types";
+import { IAgentLoopService, type AfterStepContext } from "#/agent/loop/loop";
+import { ContinuationStepRequest } from "#/agent/loop/stepRequest";
 import {
   IAgentPromptService,
   type PromptSubmitContext,
-} from '#/agent/prompt/prompt';
-import type { TurnEndedEvent, TurnStartedEvent } from '#/agent/loop/turnEvents';
-import { IEventBus } from '#/app/event/eventBus';
-import type { ExecutableToolResult } from '#/tool/toolContract';
-import type { ResolvedToolExecutionHookContext, ToolDidExecuteContext } from '#/agent/toolExecutor/toolHooks';
-import { denyToolExecution } from '#/agent/toolExecutor/beforeToolExecuteEvent';
-import { IAgentToolExecutorService } from '#/agent/toolExecutor/toolExecutor';
-import { toKimiErrorPayload } from '#/errors';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
+} from "#/agent/prompt/prompt";
+import type { TurnEndedEvent, TurnStartedEvent } from "#/agent/loop/turnEvents";
+import { IEventBus } from "#/app/event/eventBus";
+import type { ExecutableToolResult } from "#/tool/toolContract";
+import type {
+  ResolvedToolExecutionHookContext,
+  ToolDidExecuteContext,
+} from "#/agent/toolExecutor/toolHooks";
+import { denyToolExecution } from "#/agent/toolExecutor/beforeToolExecuteEvent";
+import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
+import { toKimiErrorPayload } from "#/errors";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 
-import { IAgentExternalHooksService } from './externalHooks';
-import { IExternalHooksRunnerService } from '#/app/externalHooksRunner/externalHooksRunner';
-import type { HookMatcherValue } from './types';
+import { IAgentExternalHooksService } from "./externalHooks";
+import { IExternalHooksRunnerService } from "#/app/externalHooksRunner/externalHooksRunner";
+import type { HookMatcherValue } from "./types";
 import {
   renderUserPromptHookBlockResult,
   renderUserPromptHookResult,
-} from './user-prompt';
+} from "./user-prompt";
 
 export interface HookResultEvent {
-  readonly type: 'hook.result';
+  readonly type: "hook.result";
   readonly turnId?: number;
   readonly hookEvent: string;
   readonly content: string;
   readonly blocked?: boolean;
 }
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'hook.result': HookResultEvent;
+    "hook.result": HookResultEvent;
   }
 }
 
 export const externalHooksStopHookContinuationUsedKey = defineState<boolean>(
-  'externalHooks.stopHookContinuationUsed',
+  "externalHooks.stopHookContinuationUsed",
   () => false,
 );
 
-export class AgentExternalHooksService extends Disposable implements IAgentExternalHooksService {
+export class AgentExternalHooksService
+  extends Disposable
+  implements IAgentExternalHooksService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
-    @IExternalHooksRunnerService private readonly runner: IExternalHooksRunnerService,
-    @IAgentContextMemoryService private readonly context: IAgentContextMemoryService,
+    @IExternalHooksRunnerService
+    private readonly runner: IExternalHooksRunnerService,
+    @IAgentContextMemoryService
+    private readonly context: IAgentContextMemoryService,
     @IEventBus private readonly eventBus: IEventBus,
-    @IInstantiationService private readonly instantiation: IInstantiationService,
+    @IInstantiationService
+    private readonly instantiation: IInstantiationService,
     @ISessionContext private readonly sessionContext: ISessionContext,
     @ISessionMetadata private readonly sessionMetadata: ISessionMetadata,
     @IAgentStateService private readonly states: IAgentStateService,
@@ -100,7 +117,7 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
       .catch(() => undefined);
     this._register(
       this.sessionMetadata.onDidChangeMetadata((event) => {
-        if (!event.changed.includes('title')) return;
+        if (!event.changed.includes("title")) return;
         void this.sessionMetadata
           .read()
           .then((meta) => {
@@ -114,7 +131,9 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
 
   private sessionTitle: string | undefined;
 
-  private withSessionFacts(inputData: Record<string, unknown>): Record<string, unknown> {
+  private withSessionFacts(
+    inputData: Record<string, unknown>,
+  ): Record<string, unknown> {
     return { sessionTitle: this.sessionTitle, ...inputData };
   }
 
@@ -146,25 +165,35 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
     this.registerPermissionHooks();
 
     this.registerToolHooks(
-      this.instantiation.invokeFunction((accessor) => accessor.get(IAgentToolExecutorService)),
+      this.instantiation.invokeFunction((accessor) =>
+        accessor.get(IAgentToolExecutorService),
+      ),
     );
 
     this.registerPromptHooks(
-      this.instantiation.invokeFunction((accessor) => accessor.get(IAgentPromptService)),
+      this.instantiation.invokeFunction((accessor) =>
+        accessor.get(IAgentPromptService),
+      ),
     );
 
     this.registerTurnHooks();
 
     this.registerLoopHooks(
-      this.instantiation.invokeFunction((accessor) => accessor.get(IAgentLoopService)),
+      this.instantiation.invokeFunction((accessor) =>
+        accessor.get(IAgentLoopService),
+      ),
     );
 
     this.registerFullCompactionHooks(
-      this.instantiation.invokeFunction((accessor) => accessor.get(IAgentFullCompactionService)),
+      this.instantiation.invokeFunction((accessor) =>
+        accessor.get(IAgentFullCompactionService),
+      ),
     );
 
     this.registerTaskHooks(
-      this.instantiation.invokeFunction((accessor) => accessor.get(IAgentTaskService)),
+      this.instantiation.invokeFunction((accessor) =>
+        accessor.get(IAgentTaskService),
+      ),
     );
   }
 
@@ -178,43 +207,53 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
       }),
     );
     this._register(
-      toolExecutor.hooks.onDidExecuteTool.register('externalHooks', async (ctx, next) => {
-        this.notifyPostToolUse(ctx);
-        await next();
-      }),
+      toolExecutor.hooks.onDidExecuteTool.register(
+        "externalHooks",
+        async (ctx, next) => {
+          this.notifyPostToolUse(ctx);
+          await next();
+        },
+      ),
     );
   }
 
   private registerPermissionHooks(): void {
     this._register(
-      this.eventBus.subscribe('permission.approval.requested', (e) => {
+      this.eventBus.subscribe("permission.approval.requested", (e) => {
         const { type: _type, ...inputData } = e;
-        this.fireAndForget('PermissionRequest', inputData, e.toolName);
+        this.fireAndForget("PermissionRequest", inputData, e.toolName);
       }),
     );
     this._register(
-      this.eventBus.subscribe('permission.approval.resolved', (e) => {
+      this.eventBus.subscribe("permission.approval.resolved", (e) => {
         const { type: _type, ...inputData } = e;
-        this.fireAndForget('PermissionResult', inputData, e.toolName);
+        this.fireAndForget("PermissionResult", inputData, e.toolName);
       }),
     );
   }
 
   private registerPromptHooks(prompt: IAgentPromptService): void {
     this._register(
-      prompt.hooks.onBeforeSubmitPrompt.register('externalHooks', async (ctx, next) => {
-        if (await this.runPromptSubmitHook(ctx)) {
-          ctx.block = true;
-          return;
-        }
-        await next();
-      }),
+      prompt.hooks.onBeforeSubmitPrompt.register(
+        "externalHooks",
+        async (ctx, next) => {
+          if (await this.runPromptSubmitHook(ctx)) {
+            ctx.block = true;
+            return;
+          }
+          await next();
+        },
+      ),
     );
     this._register(
-      this.eventBus.subscribe('prompt.queued', (e) => {
+      this.eventBus.subscribe("prompt.queued", (e) => {
         this.fireAndForget(
-          'UserPromptQueued',
-          { promptId: e.promptId, prompt: e.content, queueLength: e.queueLength },
+          "UserPromptQueued",
+          {
+            promptId: e.promptId,
+            prompt: e.content,
+            queueLength: e.queueLength,
+          },
           e.content,
         );
       }),
@@ -223,20 +262,20 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
 
   private registerTurnHooks(): void {
     this._register(
-      this.eventBus.subscribe('turn.started', (e) => this.notifyTurnStarted(e)),
+      this.eventBus.subscribe("turn.started", (e) => this.notifyTurnStarted(e)),
     );
     this._register(
-      this.eventBus.subscribe('turn.ended', (e) => this.notifyTurnEnded(e)),
+      this.eventBus.subscribe("turn.ended", (e) => this.notifyTurnEnded(e)),
     );
   }
 
   private notifyTurnStarted(event: TurnStartedEvent): void {
     this.fireAndForget(
-      'TurnStarted',
+      "TurnStarted",
       {
         turnId: event.turnId,
         originKind: event.origin.kind,
-        originName: 'name' in event.origin ? event.origin.name : undefined,
+        originName: "name" in event.origin ? event.origin.name : undefined,
         prompt: event.prompt,
       },
       event.origin.kind,
@@ -245,64 +284,74 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
 
   private registerLoopHooks(loop: IAgentLoopService): void {
     this._register(
-      loop.hooks.onDidFinishStep.register('externalHooks', async (ctx, next) => {
-        await next();
-        if (
-          ctx.finishReason === 'tool_calls' ||
-          ctx.finishReason === 'filtered' ||
-          loop.hasPendingRequests()
-        ) {
-          return;
-        }
-        const reason = await this.runStop(ctx);
-        if (reason !== undefined) {
-          this.stopHookContinuationUsed = true;
-          this.context.append({
-            role: 'user',
-            content: [{ type: 'text', text: reason }],
-            toolCalls: [],
-            origin: { kind: 'system_trigger', name: 'stop_hook' },
-          });
-          loop.enqueue(
-            new ContinuationStepRequest({
-              kind: 'stop_hook',
-              mergeable: true,
-              admission: 'activeOrNextTurn',
-            }),
-          );
-          return;
-        }
-      }),
+      loop.hooks.onDidFinishStep.register(
+        "externalHooks",
+        async (ctx, next) => {
+          await next();
+          if (
+            ctx.finishReason === "tool_calls" ||
+            ctx.finishReason === "filtered" ||
+            loop.hasPendingRequests()
+          ) {
+            return;
+          }
+          const reason = await this.runStop(ctx);
+          if (reason !== undefined) {
+            this.stopHookContinuationUsed = true;
+            this.context.append({
+              role: "user",
+              content: [{ type: "text", text: reason }],
+              toolCalls: [],
+              origin: { kind: "system_trigger", name: "stop_hook" },
+            });
+            loop.enqueue(
+              new ContinuationStepRequest({
+                kind: "stop_hook",
+                mergeable: true,
+                admission: "activeOrNextTurn",
+              }),
+            );
+            return;
+          }
+        },
+      ),
     );
   }
 
-  private registerFullCompactionHooks(fullCompaction: IAgentFullCompactionService): void {
+  private registerFullCompactionHooks(
+    fullCompaction: IAgentFullCompactionService,
+  ): void {
     this._register(
-      fullCompaction.hooks.onWillCompact.register('externalHooks', async (ctx, next) => {
-        await this.runPreCompact(ctx);
-        void ctx.promise
-          .then((result) => this.notifyPostCompact(ctx, result))
-          .catch(() => undefined);
-        await next();
-      }),
+      fullCompaction.hooks.onWillCompact.register(
+        "externalHooks",
+        async (ctx, next) => {
+          await this.runPreCompact(ctx);
+          void ctx.promise
+            .then((result) => this.notifyPostCompact(ctx, result))
+            .catch(() => undefined);
+          await next();
+        },
+      ),
     );
   }
 
   private registerTaskHooks(_tasks: IAgentTaskService): void {
     this._register(
-      this.eventBus.subscribe('task.notified', (e) => {
+      this.eventBus.subscribe("task.notified", (e) => {
         const { type: _type, ...ctx } = e;
         this.notifyTaskNotification(ctx);
       }),
     );
     this._register(
-      this.eventBus.subscribe('task.started', (e) => this.notifyTaskStarted(e.info)),
+      this.eventBus.subscribe("task.started", (e) =>
+        this.notifyTaskStarted(e.info),
+      ),
     );
   }
 
   private notifyTaskStarted(info: AgentTaskInfo): void {
     this.fireAndForget(
-      'TaskStarted',
+      "TaskStarted",
       {
         taskId: info.taskId,
         kind: info.kind,
@@ -315,10 +364,12 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
     );
   }
 
-  private async runPreToolUse(ctx: ResolvedToolExecutionHookContext): Promise<string | undefined> {
+  private async runPreToolUse(
+    ctx: ResolvedToolExecutionHookContext,
+  ): Promise<string | undefined> {
     ctx.signal.throwIfAborted();
     const toolInput = isPlainRecord(ctx.args) ? ctx.args : {};
-    const block = await this.runner.triggerBlock('PreToolUse', {
+    const block = await this.runner.triggerBlock("PreToolUse", {
       matcherValue: ctx.toolCall.name,
       signal: ctx.signal,
       sessionId: this.sessionContext.sessionId,
@@ -336,7 +387,7 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
     const output = toolOutputText(ctx.result.output);
     const isError = ctx.result.isError === true;
     this.fireAndForget(
-      isError ? 'PostToolUseFailure' : 'PostToolUse',
+      isError ? "PostToolUseFailure" : "PostToolUse",
       {
         toolName: ctx.toolCall.name,
         toolInput: isPlainRecord(ctx.args) ? ctx.args : {},
@@ -352,12 +403,13 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
   private async runPromptSubmitHook(
     ctx: PromptSubmitContext,
   ): Promise<boolean> {
-    if ((ctx.promptMessage.origin ?? USER_PROMPT_ORIGIN).kind !== 'user') return false;
+    if ((ctx.promptMessage.origin ?? USER_PROMPT_ORIGIN).kind !== "user")
+      return false;
 
     const signal = new AbortController().signal;
     const input = ctx.promptMessage.content;
     signal.throwIfAborted();
-    const results = await this.runner.trigger('UserPromptSubmit', {
+    const results = await this.runner.trigger("UserPromptSubmit", {
       matcherValue: input,
       signal,
       sessionId: this.sessionContext.sessionId,
@@ -368,13 +420,13 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
     const block = renderUserPromptHookBlockResult(results);
     if (block !== undefined) {
       this.context.append({
-        role: 'assistant',
-        content: [{ type: 'text', text: block.text }],
+        role: "assistant",
+        content: [{ type: "text", text: block.text }],
         toolCalls: [],
-        origin: { kind: 'hook_result', event: block.event, blocked: true },
+        origin: { kind: "hook_result", event: block.event, blocked: true },
       });
       this.eventBus.publish({
-        type: 'hook.result',
+        type: "hook.result",
         hookEvent: block.event,
         content: block.message,
         blocked: true,
@@ -385,13 +437,13 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
     const append = renderUserPromptHookResult(results);
     if (append !== undefined) {
       this.context.append({
-        role: 'user',
-        content: [{ type: 'text', text: append.text }],
+        role: "user",
+        content: [{ type: "text", text: append.text }],
         toolCalls: [],
-        origin: { kind: 'hook_result', event: append.event },
+        origin: { kind: "hook_result", event: append.event },
       });
       this.eventBus.publish({
-        type: 'hook.result',
+        type: "hook.result",
         hookEvent: append.event,
         content: append.message,
       });
@@ -399,20 +451,25 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
     return false;
   }
 
-  private notifyTurnEnded(event: Pick<TurnEndedEvent, 'turnId' | 'reason' | 'error'>): void {
+  private notifyTurnEnded(
+    event: Pick<TurnEndedEvent, "turnId" | "reason" | "error">,
+  ): void {
     this.stopHookContinuationUsed = false;
-    if (event.reason === 'failed' && event.error !== undefined) {
+    if (event.reason === "failed" && event.error !== undefined) {
       this.notifyStopFailure(event.error, new AbortController().signal);
     }
-    if (event.reason === 'cancelled') {
-      this.fireAndForget('Interrupt', { turnId: event.turnId, reason: 'cancelled' });
+    if (event.reason === "cancelled") {
+      this.fireAndForget("Interrupt", {
+        turnId: event.turnId,
+        reason: "cancelled",
+      });
     }
   }
 
   private notifyStopFailure(error: unknown, signal: AbortSignal): void {
     const payload = toKimiErrorPayload(error);
     this.fireAndForget(
-      'StopFailure',
+      "StopFailure",
       {
         errorType: payload.name,
         errorMessage: payload.message,
@@ -426,7 +483,7 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
     ctx.signal.throwIfAborted();
     if (this.stopHookContinuationUsed) return undefined;
 
-    const block = await this.runner.triggerBlock('Stop', {
+    const block = await this.runner.triggerBlock("Stop", {
       signal: ctx.signal,
       sessionId: this.sessionContext.sessionId,
       inputData: this.withSessionFacts({ stopHookActive: false }),
@@ -438,7 +495,7 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
   private async runPreCompact(ctx: FullCompactionTask): Promise<void> {
     const signal = ctx.abortController.signal;
     signal.throwIfAborted();
-    await this.runner.trigger('PreCompact', {
+    await this.runner.trigger("PreCompact", {
       matcherValue: ctx.trigger,
       signal,
       sessionId: this.sessionContext.sessionId,
@@ -450,9 +507,12 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
     signal.throwIfAborted();
   }
 
-  private notifyPostCompact(ctx: FullCompactionTask, result: CompactionResult): void {
+  private notifyPostCompact(
+    ctx: FullCompactionTask,
+    result: CompactionResult,
+  ): void {
     this.fireAndForget(
-      'PostCompact',
+      "PostCompact",
       {
         trigger: ctx.trigger,
         estimatedTokenCount: result.tokensAfter,
@@ -464,22 +524,26 @@ export class AgentExternalHooksService extends Disposable implements IAgentExter
   private notifyTaskNotification(ctx: AgentTaskNotificationContext): void {
     const signal = new AbortController().signal;
     this.fireAndForget(
-      'Notification',
-      { sink: 'context', ...ctx },
+      "Notification",
+      { sink: "context", ...ctx },
       ctx.notificationType,
       signal,
     );
   }
 }
 
-function toolOutputText(output: ExecutableToolResult['output']): string {
-  if (typeof output === 'string') return output;
+function toolOutputText(output: ExecutableToolResult["output"]): string {
+  if (typeof output === "string") return output;
   return output
-    .filter((part): part is Extract<(typeof output)[number], { type: 'text' }> => {
-      return typeof part === 'object' && part !== null && part.type === 'text';
-    })
+    .filter(
+      (part): part is Extract<(typeof output)[number], { type: "text" }> => {
+        return (
+          typeof part === "object" && part !== null && part.type === "text"
+        );
+      },
+    )
     .map((part) => part.text)
-    .join('');
+    .join("");
 }
 
 registerScopedService(
@@ -487,5 +551,5 @@ registerScopedService(
   IAgentExternalHooksService,
   AgentExternalHooksService,
   ScopeActivation.OnScopeCreated,
-  'externalHooks',
+  "externalHooks",
 );

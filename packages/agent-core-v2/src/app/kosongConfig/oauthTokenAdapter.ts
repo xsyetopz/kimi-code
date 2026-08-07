@@ -6,22 +6,32 @@
  * the port.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Error2 } from '#/_base/errors/errors';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Error2 } from "#/_base/errors/errors";
 
-import { IOAuthService } from '#/app/auth/auth';
-import { AuthErrors } from '#/app/auth/errors';
-import { getProviderAuthIntegration, type ProviderTokenProvider } from '#/app/auth/providerAuth';
-import { nonEmpty } from '#/kosong/model/modelAuth';
-import { IModelOAuthTokens } from '#/kosong/model/modelOAuth';
-import type { OAuthRef } from '#/kosong/provider/provider';
+import { IOAuthService } from "#/app/auth/auth";
+import { AuthErrors } from "#/app/auth/errors";
+import {
+  getProviderAuthIntegration,
+  type ProviderTokenProvider,
+} from "#/app/auth/providerAuth";
+import { nonEmpty } from "#/kosong/model/modelAuth";
+import { IModelOAuthTokens } from "#/kosong/model/modelOAuth";
+import type { OAuthRef } from "#/kosong/provider/provider";
 
 export class ModelOAuthTokenAdapter implements IModelOAuthTokens {
   declare readonly _serviceBrand: undefined;
 
   constructor(@IOAuthService private readonly oauth: IOAuthService) {}
 
-  async hasCachedAccessToken(provider: string, oauthRef: OAuthRef): Promise<boolean> {
+  async hasCachedAccessToken(
+    provider: string,
+    oauthRef: OAuthRef,
+  ): Promise<boolean> {
     try {
       const token = await this.oauth.getCachedAccessToken(provider, oauthRef);
       return nonEmpty(token) !== undefined;
@@ -50,7 +60,8 @@ export class ModelOAuthTokenAdapter implements IModelOAuthTokens {
     options?: { readonly force?: boolean },
   ): Promise<string | undefined> {
     if (
-      getProviderAuthIntegration(provider, providerType)?.kind !== 'external-oauth'
+      getProviderAuthIntegration(provider, providerType)?.kind !==
+      "external-oauth"
     ) {
       return undefined;
     }
@@ -67,7 +78,8 @@ export class ModelOAuthTokenAdapter implements IModelOAuthTokens {
     providerType?: string,
   ): Promise<Record<string, string> | undefined> {
     if (
-      getProviderAuthIntegration(provider, providerType)?.kind !== 'external-oauth'
+      getProviderAuthIntegration(provider, providerType)?.kind !==
+      "external-oauth"
     ) {
       return undefined;
     }
@@ -85,9 +97,9 @@ function loginRequired(providerKey: string): Error2 {
 }
 
 registerScopedService(
-LifecycleScope.App,
+  LifecycleScope.App,
   IModelOAuthTokens,
   ModelOAuthTokenAdapter,
   ScopeActivation.OnScopeCreated,
-  'kosongConfig',
+  "kosongConfig",
 );

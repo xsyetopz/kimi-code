@@ -162,10 +162,7 @@ export interface WorkspaceStateSnapshot {
             [key: string]: unknown;
           };
           readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-            | "project"
-            | "user"
-            | "extra"
-            | "builtin";
+          "project" | "user" | "extra" | "builtin";
           readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
             readonly id: string;
             readonly instructions?: string;
@@ -203,10 +200,7 @@ export interface WorkspaceStateSnapshot {
         [key: string]: unknown;
       };
       readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-        | "project"
-        | "user"
-        | "extra"
-        | "builtin";
+      "project" | "user" | "extra" | "builtin";
       readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
         readonly id: string;
         readonly instructions?: string;
@@ -234,10 +228,7 @@ export interface WorkspaceStateSnapshot {
           [key: string]: unknown;
         };
         readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-          | "project"
-          | "user"
-          | "extra"
-          | "builtin";
+        "project" | "user" | "extra" | "builtin";
         readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
           readonly id: string;
           readonly instructions?: string;
@@ -279,10 +270,7 @@ export interface WorkspaceStateSnapshot {
             [key: string]: unknown;
           };
           readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-            | "project"
-            | "user"
-            | "extra"
-            | "builtin";
+          "project" | "user" | "extra" | "builtin";
           readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
             readonly id: string;
             readonly instructions?: string;
@@ -314,10 +302,7 @@ export interface WorkspaceStateSnapshot {
             [key: string]: unknown;
           };
           readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-            | "project"
-            | "user"
-            | "extra"
-            | "builtin";
+          "project" | "user" | "extra" | "builtin";
           readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
             readonly id: string;
             readonly instructions?: string;
@@ -346,10 +331,7 @@ export interface WorkspaceStateSnapshot {
           [key: string]: unknown;
         };
         readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-          | "project"
-          | "user"
-          | "extra"
-          | "builtin";
+        "project" | "user" | "extra" | "builtin";
         readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
           readonly id: string;
           readonly instructions?: string;
@@ -381,10 +363,7 @@ export interface WorkspaceStateSnapshot {
         [key: string]: unknown;
       };
       readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-        | "project"
-        | "user"
-        | "extra"
-        | "builtin";
+      "project" | "user" | "extra" | "builtin";
       readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
         readonly id: string;
         readonly instructions?: string;
@@ -411,10 +390,7 @@ export interface WorkspaceStateSnapshot {
         [key: string]: unknown;
       };
       readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-        | "project"
-        | "user"
-        | "extra"
-        | "builtin";
+      "project" | "user" | "extra" | "builtin";
       readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
         readonly id: string;
         readonly instructions?: string;
@@ -478,9 +454,7 @@ export interface SessionStateSnapshot {
       readonly interaction: {
         readonly id: string;
         readonly kind: /* InteractionKind — packages/agent-core-v2/src/session/interaction/interaction.ts */
-          | "approval"
-          | "question"
-          | "user_tool";
+        "approval" | "question" | "user_tool";
         readonly payload: unknown;
         readonly origin: /* InteractionOrigin — packages/agent-core-v2/src/session/interaction/interaction.ts */ {
           readonly agentId?: string;
@@ -497,9 +471,7 @@ export interface SessionStateSnapshot {
     readonly busy: boolean;
     readonly mainTurnActive: boolean;
     readonly pendingInteraction: /* SessionPendingInteraction — packages/agent-core-v2/src/session/sessionActivity/sessionActivity.ts */
-      | "approval"
-      | "question"
-      | "none";
+    "approval" | "question" | "none";
     readonly lastTurnReason?: "completed" | "cancelled" | "failed";
   };
   "sessionActivity.folds": Map<
@@ -513,11 +485,7 @@ export interface SessionStateSnapshot {
   // src/session/sessionLog/sessionLogService.ts
   "sessionLog.rootLevel": /* LogLevelState — packages/agent-core-v2/src/_base/log/logService.ts */ {
     level: /* LogLevel — packages/agent-core-v2/src/_base/log/log.ts */
-      | "info"
-      | "off"
-      | "error"
-      | "warn"
-      | "debug";
+    "info" | "off" | "error" | "warn" | "debug";
   };
   // src/session/sessionMetadata/sessionMetadataService.ts
   "sessionMetadata.data": /* SessionMeta — packages/agent-core-v2/src/session/sessionMetadata/sessionMetadata.ts */
@@ -571,10 +539,7 @@ export interface SessionStateSnapshot {
             [key: string]: unknown;
           };
           readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-            | "project"
-            | "user"
-            | "extra"
-            | "builtin";
+          "project" | "user" | "extra" | "builtin";
           readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
             readonly id: string;
             readonly instructions?: string;
@@ -612,10 +577,7 @@ export interface SessionStateSnapshot {
         [key: string]: unknown;
       };
       readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-        | "project"
-        | "user"
-        | "extra"
-        | "builtin";
+      "project" | "user" | "extra" | "builtin";
       readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
         readonly id: string;
         readonly instructions?: string;
@@ -643,10 +605,7 @@ export interface SessionStateSnapshot {
           [key: string]: unknown;
         };
         readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-          | "project"
-          | "user"
-          | "extra"
-          | "builtin";
+        "project" | "user" | "extra" | "builtin";
         readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
           readonly id: string;
           readonly instructions?: string;
@@ -688,10 +647,7 @@ export interface SessionStateSnapshot {
             [key: string]: unknown;
           };
           readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-            | "project"
-            | "user"
-            | "extra"
-            | "builtin";
+          "project" | "user" | "extra" | "builtin";
           readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
             readonly id: string;
             readonly instructions?: string;
@@ -723,10 +679,7 @@ export interface SessionStateSnapshot {
             [key: string]: unknown;
           };
           readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-            | "project"
-            | "user"
-            | "extra"
-            | "builtin";
+          "project" | "user" | "extra" | "builtin";
           readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
             readonly id: string;
             readonly instructions?: string;
@@ -755,10 +708,7 @@ export interface SessionStateSnapshot {
           [key: string]: unknown;
         };
         readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-          | "project"
-          | "user"
-          | "extra"
-          | "builtin";
+        "project" | "user" | "extra" | "builtin";
         readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
           readonly id: string;
           readonly instructions?: string;
@@ -790,10 +740,7 @@ export interface SessionStateSnapshot {
         [key: string]: unknown;
       };
       readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-        | "project"
-        | "user"
-        | "extra"
-        | "builtin";
+      "project" | "user" | "extra" | "builtin";
       readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
         readonly id: string;
         readonly instructions?: string;
@@ -820,10 +767,7 @@ export interface SessionStateSnapshot {
         [key: string]: unknown;
       };
       readonly source: /* SkillSource — packages/agent-core-v2/src/app/skillCatalog/types.ts */
-        | "project"
-        | "user"
-        | "extra"
-        | "builtin";
+      "project" | "user" | "extra" | "builtin";
       readonly plugin?: /* SkillPluginContext — packages/agent-core-v2/src/app/skillCatalog/types.ts */ {
         readonly id: string;
         readonly instructions?: string;
@@ -865,8 +809,7 @@ export interface AgentStateSnapshot {
   >;
   "activityView.current": /* AgentActivityState — packages/agent-core-v2/src/agent/activityView/activityView.ts */ {
     readonly lifecycle: /* ActivityViewLifecycle — packages/agent-core-v2/src/agent/activityView/activityView.ts */
-      | "ready"
-      | "disposed";
+    "ready" | "disposed";
     readonly turn?: /* ActivityTurnState — packages/agent-core-v2/src/agent/activityView/activityView.ts */ {
       readonly turnId: number;
       readonly origin: /* PromptOrigin — packages/agent-core-v2/src/agent/contextMemory/types.ts */ /* UserPromptOrigin — packages/agent-core-v2/src/agent/contextMemory/types.ts */
@@ -948,10 +891,7 @@ export interface AgentStateSnapshot {
             readonly trigger?: string;
           };
       readonly phase: /* TurnPhase — packages/agent-core-v2/src/agent/activityView/activityView.ts */
-        | "running"
-        | "streaming"
-        | "tool_call"
-        | "retrying";
+      "running" | "streaming" | "tool_call" | "retrying";
       readonly stream?: "tool_call" | "assistant" | "thinking";
       readonly step: number;
       readonly ending: boolean;
@@ -979,10 +919,7 @@ export interface AgentStateSnapshot {
     readonly lastTurn?: /* ActivityLastTurnState — packages/agent-core-v2/src/agent/activityView/activityView.ts */ {
       readonly turnId: number;
       readonly reason: /* TurnEndReason — packages/agent-core-v2/src/agent/loop/turnEvents.ts */
-        | "completed"
-        | "cancelled"
-        | "failed"
-        | "blocked";
+      "completed" | "cancelled" | "failed" | "blocked";
       readonly durationMs?: number;
       readonly at: number;
     };
@@ -996,24 +933,17 @@ export interface AgentStateSnapshot {
     | {
         readonly turnId: number;
         readonly reason: /* TurnEndReason — packages/agent-core-v2/src/agent/loop/turnEvents.ts */
-          | "completed"
-          | "cancelled"
-          | "failed"
-          | "blocked";
+        "completed" | "cancelled" | "failed" | "blocked";
         readonly durationMs?: number;
         readonly at: number;
       }
     | undefined;
   "activityView.lifecycle": /* ActivityViewLifecycle — packages/agent-core-v2/src/agent/activityView/activityView.ts */
-    | "ready"
-    | "disposed";
+  "ready" | "disposed";
   "activityView.turn": /* MutableTurn — packages/agent-core-v2/src/agent/activityView/activityViewService.ts */
     | {
         phase: /* TurnPhase — packages/agent-core-v2/src/agent/activityView/activityView.ts */
-          | "running"
-          | "streaming"
-          | "tool_call"
-          | "retrying";
+        "running" | "streaming" | "tool_call" | "retrying";
         stream: "tool_call" | "assistant" | "thinking" | undefined;
         step: number;
         ending: boolean;
@@ -1205,10 +1135,7 @@ export interface AgentStateSnapshot {
                 readonly trigger?: string;
               };
           readonly phase: /* TurnPhase — packages/agent-core-v2/src/agent/activityView/activityView.ts */
-            | "running"
-            | "streaming"
-            | "tool_call"
-            | "retrying";
+          "running" | "streaming" | "tool_call" | "retrying";
           readonly stream?: "tool_call" | "assistant" | "thinking";
           readonly step: number;
           readonly ending: boolean;
@@ -1305,9 +1232,7 @@ export interface AgentStateSnapshot {
         readonly maxOutputSize: number | undefined;
         readonly alwaysThinking: boolean | undefined;
         readonly thinkingLevel: /* ThinkingEffort — packages/agent-core-v2/src/kosong/contract/provider.ts */
-          | "off"
-          | "on"
-          | (string & {});
+        "off" | "on" | (string & {});
         readonly reservedContextSize: number | undefined;
         readonly compactionTriggerRatio: number | undefined;
       };
@@ -1401,12 +1326,7 @@ export interface AgentStateSnapshot {
         readonly taskId: string;
         readonly description: string;
         readonly status: /* AgentTaskStatus — packages/agent-core-v2/src/agent/task/types.ts */
-          | "completed"
-          | "failed"
-          | "running"
-          | "timed_out"
-          | "killed"
-          | "lost";
+        "completed" | "failed" | "running" | "timed_out" | "killed" | "lost";
         readonly detached?: boolean;
         readonly startedAt: number;
         readonly endedAt: number | null;
@@ -1421,12 +1341,7 @@ export interface AgentStateSnapshot {
         readonly taskId: string;
         readonly description: string;
         readonly status: /* AgentTaskStatus — packages/agent-core-v2/src/agent/task/types.ts */
-          | "completed"
-          | "failed"
-          | "running"
-          | "timed_out"
-          | "killed"
-          | "lost";
+        "completed" | "failed" | "running" | "timed_out" | "killed" | "lost";
         readonly detached?: boolean;
         readonly startedAt: number;
         readonly endedAt: number | null;
@@ -1442,12 +1357,7 @@ export interface AgentStateSnapshot {
         readonly taskId: string;
         readonly description: string;
         readonly status: /* AgentTaskStatus — packages/agent-core-v2/src/agent/task/types.ts */
-          | "completed"
-          | "failed"
-          | "running"
-          | "timed_out"
-          | "killed"
-          | "lost";
+        "completed" | "failed" | "running" | "timed_out" | "killed" | "lost";
         readonly detached?: boolean;
         readonly startedAt: number;
         readonly endedAt: number | null;
@@ -1471,8 +1381,7 @@ export interface AgentStateSnapshot {
   "toolExecutor.toolCallDupTypes": Map<
     string,
     /* ToolCallDupType — packages/agent-core-v2/src/agent/toolExecutor/toolExecutor.ts */
-    | "same_step"
-    | "cross_step"
+    "same_step" | "cross_step"
   >;
   // src/agent/toolSelect/toolSelectAnnouncementsService.ts
   "toolSelect.needsBoundaryInjection": boolean;

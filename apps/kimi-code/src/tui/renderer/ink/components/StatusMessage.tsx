@@ -22,9 +22,7 @@ export function StatusMessage({ entry }: StatusMessageProps): ReactNode {
             {entry.content}
           </Text>
           {entry.detail ? (
-            <Text color={currentTheme.color("textMuted")}>
-              {entry.detail}
-            </Text>
+            <Text color={currentTheme.color("textMuted")}>{entry.detail}</Text>
           ) : null}
         </Box>
       </Box>
@@ -32,7 +30,9 @@ export function StatusMessage({ entry }: StatusMessageProps): ReactNode {
   }
 
   const colorToken = entry.color;
-  const color = colorToken ? currentTheme.color(colorToken) : currentTheme.color("textDim");
+  const color = colorToken
+    ? currentTheme.color(colorToken)
+    : currentTheme.color("textDim");
 
   return (
     <Box flexDirection="column">

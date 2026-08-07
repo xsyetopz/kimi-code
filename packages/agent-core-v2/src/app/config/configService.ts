@@ -28,16 +28,20 @@
  * at App scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Emitter, type Event } from '#/_base/event';
-import { BugIndicatingError } from '#/errors';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { ILogService } from '#/_base/log/log';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Emitter, type Event } from "#/_base/event";
+import { BugIndicatingError } from "#/errors";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { ILogService } from "#/_base/log/log";
 import {
   IAtomicTomlDocumentStore,
   type IAtomicDocumentStore,
-} from '#/persistence/interface/atomicDocumentStore';
+} from "#/persistence/interface/atomicDocumentStore";
 
 import {
   type AnyEnvBindings,
@@ -59,12 +63,17 @@ import {
   ConfigTarget,
   IConfigRegistry,
   IConfigService,
-} from './config';
-import { deepEqual, deepMerge, describeUnknownError, isPlainObject } from './configPure';
-import { getConfigSectionContributions } from './configSectionContributions';
-import { getConfigOverlayContributions } from './configOverlayContributions';
-import { collectKeyDeprecations } from './deprecations';
-import { migrateThinkingEffortMaxToHigh } from './migrations';
+} from "./config";
+import {
+  deepEqual,
+  deepMerge,
+  describeUnknownError,
+  isPlainObject,
+} from "./configPure";
+import { getConfigSectionContributions } from "./configSectionContributions";
+import { getConfigOverlayContributions } from "./configOverlayContributions";
+import { collectKeyDeprecations } from "./deprecations";
+import { migrateThinkingEffortMaxToHigh } from "./migrations";
 import {
   applySectionToToml,
   camelToSnake,
@@ -72,9 +81,9 @@ import {
   describeTomlSyntaxError,
   TomlError,
   transformTomlData,
-} from './toml';
+} from "./toml";
 
-const CONFIG_SCOPE = '';
+const CONFIG_SCOPE = "";
 
 type GetEnv = (name: string) => string | undefined;
 
@@ -82,11 +91,15 @@ type GetEnv = (name: string) => string | undefined;
 type OnDeprecatedEnv = (oldName: string, newName: string) => void;
 
 function isEnvBinding(value: unknown): value is EnvBinding {
-  return typeof value === 'string' || (isPlainObject(value) && 'env' in value);
+  return typeof value === "string" || (isPlainObject(value) && "env" in value);
 }
 
 function parseBoundRaw(binding: EnvBinding, raw: string): unknown {
-  return typeof binding === 'string' ? raw : binding.parse ? binding.parse(raw) : raw;
+  return typeof binding === "string"
+    ? raw
+    : binding.parse
+      ? binding.parse(raw)
+      : raw;
 }
 
 function resolveBinding(
@@ -95,7 +108,7 @@ function resolveBinding(
   existing: unknown,
   onDeprecatedEnv?: OnDeprecatedEnv,
 ): unknown {
-  if (typeof binding !== 'string') {
+  if (typeof binding !== "string") {
     const raw = getEnv(binding.env);
     if (raw !== undefined) {
       const parsed = parseBoundRaw(binding, raw);
@@ -115,7 +128,11 @@ function resolveBinding(
     const raw = getEnv(binding);
     if (raw !== undefined) return raw;
   }
-  if (typeof binding === 'object' && binding.default !== undefined && existing === undefined) {
+  if (
+    typeof binding === "object" &&
+    binding.default !== undefined &&
+    existing === undefined
+  ) {
     return binding.default;
   }
   return existing;
@@ -129,14 +146,24 @@ function applyEnvBindings(
 ): void {
   for (const [key, binding] of Object.entries(bindings)) {
     if (isEnvBinding(binding)) {
-      const resolved = resolveBinding(binding, getEnv, target[key], onDeprecatedEnv);
+      const resolved = resolveBinding(
+        binding,
+        getEnv,
+        target[key],
+        onDeprecatedEnv,
+      );
       if (resolved !== undefined) target[key] = resolved;
     } else if (binding !== undefined) {
       const child: Record<string, unknown> = isPlainObject(target[key])
         ? { ...target[key] }
         : {};
       target[key] = child;
-      applyEnvBindings(child, binding as AnyEnvBindings, getEnv, onDeprecatedEnv);
+      applyEnvBindings(
+        child,
+        binding as AnyEnvBindings,
+        getEnv,
+        onDeprecatedEnv,
+      );
       if (Object.keys(child).length === 0) {
         delete target[key];
       }
@@ -153,7 +180,9 @@ function applySectionEnv(
   if (isEnvBinding(env)) {
     return resolveBinding(env, getEnv, base, onDeprecatedEnv);
   }
-  const target: Record<string, unknown> = isPlainObject(base) ? { ...base } : {};
+  const target: Record<string, unknown> = isPlainObject(base)
+    ? { ...base }
+    : {};
   applyEnvBindings(target, env, getEnv, onDeprecatedEnv);
   return target;
 }
@@ -167,8 +196,8 @@ function isSameSection(
     existing.schema === schema &&
     existing.merge === (options.merge ?? deepMerge) &&
     existing.scope === (options.scope ?? ConfigScope.Core) &&
-    existing.env === (options.env as ConfigSection['env']) &&
-    existing.stripEnv === (options.stripEnv as ConfigSection['stripEnv']) &&
+    existing.env === (options.env as ConfigSection["env"]) &&
+    existing.stripEnv === (options.stripEnv as ConfigSection["stripEnv"]) &&
     existing.fromToml === options.fromToml &&
     existing.toToml === options.toToml &&
     deepEqual(existing.defaultValue, options.defaultValue) &&
@@ -180,10 +209,12 @@ export class ConfigRegistry implements IConfigRegistry {
   declare readonly _serviceBrand: undefined;
   private readonly sections = new Map<string, ConfigSection>();
   private readonly overlays: ConfigEffectiveOverlay[] = [];
-  private readonly _onDidRegisterSection = new Emitter<ConfigSectionRegisteredEvent>();
+  private readonly _onDidRegisterSection =
+    new Emitter<ConfigSectionRegisteredEvent>();
   readonly onDidRegisterSection: Event<ConfigSectionRegisteredEvent> =
     this._onDidRegisterSection.event;
-  private readonly _onDidRegisterOverlay = new Emitter<ConfigOverlayRegisteredEvent>();
+  private readonly _onDidRegisterOverlay =
+    new Emitter<ConfigOverlayRegisteredEvent>();
   readonly onDidRegisterOverlay: Event<ConfigOverlayRegisteredEvent> =
     this._onDidRegisterOverlay.event;
 
@@ -212,7 +243,9 @@ export class ConfigRegistry implements IConfigRegistry {
       ) {
         return;
       }
-      throw new BugIndicatingError(`ConfigRegistry: section '${domain}' is already registered`);
+      throw new BugIndicatingError(
+        `ConfigRegistry: section '${domain}' is already registered`,
+      );
     }
     this.sections.set(domain, {
       domain,
@@ -220,8 +253,8 @@ export class ConfigRegistry implements IConfigRegistry {
       defaultValue: options.defaultValue,
       merge: (options.merge ?? deepMerge) as ConfigMerge<unknown>,
       scope: options.scope ?? ConfigScope.Core,
-      env: options.env as ConfigSection['env'],
-      stripEnv: options.stripEnv as ConfigSection['stripEnv'],
+      env: options.env as ConfigSection["env"],
+      stripEnv: options.stripEnv as ConfigSection["stripEnv"],
       fromToml: options.fromToml,
       toToml: options.toToml,
       deprecations: options.deprecations,
@@ -263,10 +296,16 @@ export class ConfigRegistry implements IConfigRegistry {
 
 export class ConfigService extends Disposable implements IConfigService {
   declare readonly _serviceBrand: undefined;
-  private readonly _onDidChangeConfiguration = this._register(new Emitter<ConfigChangedEvent>());
-  readonly onDidChangeConfiguration: Event<ConfigChangedEvent> = this._onDidChangeConfiguration.event;
-  private readonly _onDidSectionChange = this._register(new Emitter<ConfigSectionChangedEvent>());
-  readonly onDidSectionChange: Event<ConfigSectionChangedEvent> = this._onDidSectionChange.event;
+  private readonly _onDidChangeConfiguration = this._register(
+    new Emitter<ConfigChangedEvent>(),
+  );
+  readonly onDidChangeConfiguration: Event<ConfigChangedEvent> =
+    this._onDidChangeConfiguration.event;
+  private readonly _onDidSectionChange = this._register(
+    new Emitter<ConfigSectionChangedEvent>(),
+  );
+  readonly onDidSectionChange: Event<ConfigSectionChangedEvent> =
+    this._onDidSectionChange.event;
   private readonly _onDidChangeDiagnostics = this._register(
     new Emitter<readonly ConfigDiagnostic[]>(),
   );
@@ -283,27 +322,41 @@ export class ConfigService extends Disposable implements IConfigService {
   private memory: ResolvedConfig = {};
   private delivered: ResolvedConfig = {};
   private readonly diagnosticsList: ConfigDiagnostic[] = [];
-  private lastDiagnosticsSnapshot = '[]';
+  private lastDiagnosticsSnapshot = "[]";
   private readonly configKey: string;
 
   constructor(
     @IConfigRegistry private readonly registry: IConfigRegistry,
     @IBootstrapService private readonly bootstrap: IBootstrapService,
     @ILogService private readonly log: ILogService,
-    @IAtomicTomlDocumentStore private readonly documentStore: IAtomicDocumentStore,
+    @IAtomicTomlDocumentStore
+    private readonly documentStore: IAtomicDocumentStore,
   ) {
     super();
     this.configKey = this.bootstrap.configKey;
-    this._register(this.registry.onDidRegisterSection((e) => this.revalidateDomain(e.domain)));
-    this._register(this.registry.onDidRegisterOverlay(() => this.reapplyOverlays()));
+    this._register(
+      this.registry.onDidRegisterSection((e) =>
+        this.revalidateDomain(e.domain),
+      ),
+    );
+    this._register(
+      this.registry.onDidRegisterOverlay(() => this.reapplyOverlays()),
+    );
     const { configKey } = this;
     const { homeDir } = this.bootstrap;
     this.ready = (async () => {
-      await migrateThinkingEffortMaxToHigh(this.documentStore, configKey, homeDir);
-      await this.load('load');
+      await migrateThinkingEffortMaxToHigh(
+        this.documentStore,
+        configKey,
+        homeDir,
+      );
+      await this.load("load");
     })();
     this._register(
-      this.documentStore.watch(CONFIG_SCOPE, this.configKey)(() => {
+      this.documentStore.watch(
+        CONFIG_SCOPE,
+        this.configKey,
+      )(() => {
         void this.reload();
       }),
     );
@@ -373,7 +426,7 @@ export class ConfigService extends Disposable implements IConfigService {
       } else {
         this.memory[domain] = validated;
       }
-      this.commit('set', [domain]);
+      this.commit("set", [domain]);
       return;
     }
     await this.enqueueStateTransition(async () => {
@@ -388,7 +441,7 @@ export class ConfigService extends Disposable implements IConfigService {
         this.raw[domain] = stripped;
       }
       await this.persist(domain);
-      this.rebuildEffective('set', [domain]);
+      this.rebuildEffective("set", [domain]);
     });
   }
 
@@ -407,7 +460,7 @@ export class ConfigService extends Disposable implements IConfigService {
       } else {
         this.memory[domain] = this.registry.validate(domain, effectiveValue);
       }
-      this.commit('set', [domain]);
+      this.commit("set", [domain]);
       return;
     }
     await this.enqueueStateTransition(async () => {
@@ -418,7 +471,7 @@ export class ConfigService extends Disposable implements IConfigService {
         this.raw[domain] = this.registry.validate(domain, stripped);
       }
       await this.persist(domain);
-      this.rebuildEffective('set', [domain]);
+      this.rebuildEffective("set", [domain]);
     });
   }
 
@@ -440,7 +493,7 @@ export class ConfigService extends Disposable implements IConfigService {
         }
       }
       this.memory = staged;
-      this.commit('set', domains);
+      this.commit("set", domains);
       return;
     }
     await this.enqueueStateTransition(async () => {
@@ -457,7 +510,7 @@ export class ConfigService extends Disposable implements IConfigService {
       }
       this.raw = staged;
       await this.persistDomains(domains);
-      this.rebuildEffective('set', domains);
+      this.rebuildEffective("set", domains);
     });
   }
 
@@ -465,7 +518,8 @@ export class ConfigService extends Disposable implements IConfigService {
     let result = value;
     const section = this.registry.getSection(domain);
     if (section?.stripEnv !== undefined) {
-      const getEnv = (name: string): string | undefined => this.bootstrap.getEnv(name);
+      const getEnv = (name: string): string | undefined =>
+        this.bootstrap.getEnv(name);
       result = section.stripEnv(result, this.raw[domain], getEnv);
     }
     if (result === undefined) return result;
@@ -479,7 +533,7 @@ export class ConfigService extends Disposable implements IConfigService {
 
   async reload(): Promise<void> {
     await this.ready;
-    await this.enqueueStateTransition(() => this.load('reload'));
+    await this.enqueueStateTransition(() => this.load("reload"));
   }
 
   private enqueueStateTransition<T>(fn: () => Promise<T>): Promise<T> {
@@ -495,24 +549,35 @@ export class ConfigService extends Disposable implements IConfigService {
     this.diagnosticsList.length = 0;
     let fileData: ResolvedConfig = {};
     try {
-      const data = await this.documentStore.get<ResolvedConfig>(CONFIG_SCOPE, this.configKey);
+      const data = await this.documentStore.get<ResolvedConfig>(
+        CONFIG_SCOPE,
+        this.configKey,
+      );
       fileData = data !== undefined && isPlainObject(data) ? data : {};
     } catch (error) {
       const message =
         error instanceof TomlError
           ? `Failed to parse ${this.bootstrap.configPath}: ${describeTomlSyntaxError(error)}`
           : describeUnknownError(error);
-      this.pushDiagnostic({ severity: 'error', message });
-      this.log.warn('config load failed', { error: describeUnknownError(error) });
+      this.pushDiagnostic({ severity: "error", message });
+      this.log.warn("config load failed", {
+        error: describeUnknownError(error),
+      });
     }
     const nextRawSnake = cloneRecord(fileData);
     // Key-deprecation warnings derive from the on-disk document, so collect
     // them before the unchanged-file early return — the list was just cleared
     // above and a no-op reload must not drop them.
-    for (const diagnostic of collectKeyDeprecations(nextRawSnake, this.registry.listSections())) {
+    for (const diagnostic of collectKeyDeprecations(
+      nextRawSnake,
+      this.registry.listSections(),
+    )) {
       this.pushDiagnostic(diagnostic);
     }
-    if (source !== 'load' && JSON.stringify(nextRawSnake) === JSON.stringify(this.rawSnake)) {
+    if (
+      source !== "load" &&
+      JSON.stringify(nextRawSnake) === JSON.stringify(this.rawSnake)
+    ) {
       // The file is unchanged, so values and change events stay as they are —
       // but env-derived diagnostics (deprecated env fallbacks, overlay
       // failures) were cleared above and must be recollected over a scratch
@@ -529,7 +594,7 @@ export class ConfigService extends Disposable implements IConfigService {
   }
 
   private rebuildEffective(
-    source: ConfigChangeSource = 'reload',
+    source: ConfigChangeSource = "reload",
     domains?: readonly string[],
   ): void {
     const previous = this.effective;
@@ -542,7 +607,10 @@ export class ConfigService extends Disposable implements IConfigService {
     const candidates = new Set(
       domains ?? [...Object.keys(previous), ...Object.keys(next)],
     );
-    for (const domain of new Set([...Object.keys(previous), ...Object.keys(next)])) {
+    for (const domain of new Set([
+      ...Object.keys(previous),
+      ...Object.keys(next),
+    ])) {
       if (!deepEqual(previous[domain], next[domain])) candidates.add(domain);
     }
     this.commit(source, [...candidates]);
@@ -559,7 +627,12 @@ export class ConfigService extends Disposable implements IConfigService {
     for (const domain of domains) {
       const previousValue = this.delivered[domain];
       const value = this.deliveredValue(domain);
-      this._onDidChangeConfiguration.fire({ domain, source, value, previousValue });
+      this._onDidChangeConfiguration.fire({
+        domain,
+        source,
+        value,
+        previousValue,
+      });
       if (!deepEqual(value, previousValue)) {
         this._onDidSectionChange.fire({ domain, source, value, previousValue });
       }
@@ -575,21 +648,28 @@ export class ConfigService extends Disposable implements IConfigService {
       } catch (error) {
         this.pushDiagnostic({
           domain,
-          severity: 'warning',
+          severity: "warning",
           message: `Ignored invalid config section '${domain}': ${describeUnknownError(error)}`,
         });
       }
     }
     for (const section of this.registry.listSections()) {
-      if (validated[section.domain] === undefined && section.defaultValue !== undefined) {
+      if (
+        validated[section.domain] === undefined &&
+        section.defaultValue !== undefined
+      ) {
         validated[section.domain] = section.defaultValue;
       }
     }
     return validated;
   }
 
-  private applySectionEnvBindings(effective: ResolvedConfig, reportErrors: boolean): void {
-    const getEnv = (name: string): string | undefined => this.bootstrap.getEnv(name);
+  private applySectionEnvBindings(
+    effective: ResolvedConfig,
+    reportErrors: boolean,
+  ): void {
+    const getEnv = (name: string): string | undefined =>
+      this.bootstrap.getEnv(name);
     for (const section of this.registry.listSections()) {
       if (section.env === undefined) continue;
       try {
@@ -598,18 +678,26 @@ export class ConfigService extends Disposable implements IConfigService {
           ? (oldName, newName) => {
               this.pushDiagnostic({
                 domain: section.domain,
-                severity: 'warning',
+                severity: "warning",
                 message: `Environment variable ${oldName} is deprecated; use ${newName} instead.`,
               });
             }
           : undefined;
-        const next = applySectionEnv(base, section.env, getEnv, onDeprecatedEnv);
-        effective[section.domain] = this.registry.validate(section.domain, next);
+        const next = applySectionEnv(
+          base,
+          section.env,
+          getEnv,
+          onDeprecatedEnv,
+        );
+        effective[section.domain] = this.registry.validate(
+          section.domain,
+          next,
+        );
       } catch (error) {
         if (reportErrors) {
           this.pushDiagnostic({
             domain: section.domain,
-            severity: 'warning',
+            severity: "warning",
             message: `Ignoring env overlay for '${section.domain}': ${describeUnknownError(error)}`,
           });
         }
@@ -617,8 +705,12 @@ export class ConfigService extends Disposable implements IConfigService {
     }
   }
 
-  private applyEnvOverlay(effective: ResolvedConfig, reportErrors = true): void {
-    const getEnv = (name: string): string | undefined => this.bootstrap.getEnv(name);
+  private applyEnvOverlay(
+    effective: ResolvedConfig,
+    reportErrors = true,
+  ): void {
+    const getEnv = (name: string): string | undefined =>
+      this.bootstrap.getEnv(name);
     const validate = (domain: string, value: unknown): unknown =>
       this.registry.validate(domain, value);
     for (const overlay of this.registry.listEffectiveOverlays()) {
@@ -627,7 +719,7 @@ export class ConfigService extends Disposable implements IConfigService {
       } catch (error) {
         if (reportErrors) {
           this.pushDiagnostic({
-            severity: 'warning',
+            severity: "warning",
             message: `Ignoring config environment overlay: ${describeUnknownError(error)}`,
           });
         }
@@ -642,7 +734,9 @@ export class ConfigService extends Disposable implements IConfigService {
     this.applySectionEnvBindings(next, true);
     this.applyEnvOverlay(next);
     this.effective = next;
-    this.commit('reload', [...new Set([...Object.keys(before), ...Object.keys(next)])]);
+    this.commit("reload", [
+      ...new Set([...Object.keys(before), ...Object.keys(next)]),
+    ]);
     this.emitDiagnosticsIfChanged();
   }
 
@@ -665,7 +759,10 @@ export class ConfigService extends Disposable implements IConfigService {
       } catch {
         return;
       }
-    } else if (section.defaultValue !== undefined && this.effective[domain] === undefined) {
+    } else if (
+      section.defaultValue !== undefined &&
+      this.effective[domain] === undefined
+    ) {
       this.validated[domain] = section.defaultValue;
       this.effective[domain] = section.defaultValue;
     } else {
@@ -674,26 +771,32 @@ export class ConfigService extends Disposable implements IConfigService {
 
     this.applyEnvOverlay(this.effective);
     if (section.env !== undefined) {
-      const getEnv = (name: string): string | undefined => this.bootstrap.getEnv(name);
+      const getEnv = (name: string): string | undefined =>
+        this.bootstrap.getEnv(name);
       try {
         const onDeprecatedEnv: OnDeprecatedEnv = (oldName, newName) => {
           this.pushDiagnostic({
             domain,
-            severity: 'warning',
+            severity: "warning",
             message: `Environment variable ${oldName} is deprecated; use ${newName} instead.`,
           });
         };
-        const next = applySectionEnv(this.effective[domain], section.env, getEnv, onDeprecatedEnv);
+        const next = applySectionEnv(
+          this.effective[domain],
+          section.env,
+          getEnv,
+          onDeprecatedEnv,
+        );
         this.effective[domain] = this.registry.validate(domain, next);
       } catch (error) {
         this.pushDiagnostic({
           domain,
-          severity: 'warning',
+          severity: "warning",
           message: `Ignoring env overlay for '${domain}': ${describeUnknownError(error)}`,
         });
       }
     }
-    this.commit('reload', [domain]);
+    this.commit("reload", [domain]);
     this.emitDiagnosticsIfChanged();
   }
 
@@ -703,7 +806,12 @@ export class ConfigService extends Disposable implements IConfigService {
 
   private async persistDomains(domains: readonly string[]): Promise<void> {
     for (const domain of domains) {
-      applySectionToToml(this.rawSnake, domain, this.raw[domain], this.registry);
+      applySectionToToml(
+        this.rawSnake,
+        domain,
+        this.raw[domain],
+        this.registry,
+      );
     }
     await this.documentStore.set(CONFIG_SCOPE, this.configKey, this.rawSnake);
   }
@@ -714,12 +822,12 @@ registerScopedService(
   IConfigRegistry,
   ConfigRegistry,
   ScopeActivation.OnScopeCreated,
-  'config',
+  "config",
 );
 registerScopedService(
   LifecycleScope.App,
   IConfigService,
   ConfigService,
   ScopeActivation.OnScopeCreated,
-  'config',
+  "config",
 );

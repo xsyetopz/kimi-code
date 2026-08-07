@@ -1,44 +1,49 @@
 {
-    "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
-    "vcs": {
-        "enabled": true,
-        "clientKind": "git",
-        "useIgnoreFile": true,
-        "defaultBranch": "main"
-    },
-    "files": {
-        "includes": [
-            "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc}",
-            "!!**/node_modules",
-            "!!**/dist",
-            "!!**/coverage",
-            "!!**/*.generated.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"
-        ],
-        "ignoreUnknown": true
+  "$schema": "https://biomejs.dev/schemas/2.5.7/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true,
+    "defaultBranch": "main"
+  },
+  "files": {
+    "includes": [
+      "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,jsonc}",
+      "!!**/node_modules",
+      "!!**/dist",
+      "!!**/coverage",
+      "!!**/*.generated.{js,jsx,mjs,cjs,ts,tsx,mts,cts}",
+      "!!packages/agent-core-v2/scripts/debarrel.mjs",
+      "!!packages/agent-core-v2/scripts/gen-contract-types.mjs"
+    ],
+    "ignoreUnknown": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": false
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
     },
     "formatter": {
-        "enabled": true,
-        "indentStyle": "space",
-        "indentWidth": 2
-    },
-    "assist": {
-        "actions": {
-            "source": {
-                "organizeImports": "on"
-            }
-        }
-    },
-    "linter": {
-        "enabled": false
-    },
-    "javascript": {
-        "formatter": {
-            "quoteStyle": "double"
-        }
-    },
-    "css": {
-        "linter": {
-            "enabled": false
-        }
+      "quoteStyle": "double"
     }
+  },
+  "css": {
+    "linter": {
+      "enabled": false
+    }
+  }
 }

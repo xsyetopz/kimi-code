@@ -35,7 +35,8 @@ export class AgentHarnessInterceptorService
   constructor(
     @IHarnessInterceptorRegistry
     private readonly registry: IHarnessInterceptorRegistry,
-    @IInstantiationService private readonly instantiation: IInstantiationService,
+    @IInstantiationService
+    private readonly instantiation: IInstantiationService,
   ) {
     super();
     this.wireInterceptors();

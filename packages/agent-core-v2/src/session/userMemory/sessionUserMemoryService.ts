@@ -8,7 +8,11 @@
  */
 
 import { Disposable } from "#/_base/di/lifecycle";
-import { LifecycleScope, ScopeActivation, registerScopedService } from "#/_base/di/scope";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import { IUserMemoryService } from "#/app/userMemory/userMemory";
 import type { Hooks } from "#/hooks";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
@@ -35,10 +39,13 @@ export class SessionUserMemoryService
   ) {
     super();
     this._register(
-      lifecycleHooks.onWillCloseSession.register("userMemory", async (event, next) => {
-        await this.stageSessionSummary(event.reason);
-        await next();
-      }),
+      lifecycleHooks.onWillCloseSession.register(
+        "userMemory",
+        async (event, next) => {
+          await this.stageSessionSummary(event.reason);
+          await next();
+        },
+      ),
     );
   }
 
@@ -68,7 +75,8 @@ export function buildSessionSummary(input: SessionSummaryInput): string {
   ];
   const lastPrompt = input.lastPrompt?.trim();
   if (lastPrompt !== undefined && lastPrompt.length > 0) {
-    const excerpt = lastPrompt.length > 200 ? `${lastPrompt.slice(0, 200)}…` : lastPrompt;
+    const excerpt =
+      lastPrompt.length > 200 ? `${lastPrompt.slice(0, 200)}…` : lastPrompt;
     parts.push(`Last prompt: ${excerpt}`);
   }
   return parts.join(". ");

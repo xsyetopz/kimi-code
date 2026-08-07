@@ -14,10 +14,14 @@
  * on the full-headers path never touch it.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IAgentIdentity } from '#/app/agentIdentity/agentIdentity';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IHostRequestHeaders } from '#/kosong/model/hostRequestHeaders';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IAgentIdentity } from "#/app/agentIdentity/agentIdentity";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IHostRequestHeaders } from "#/kosong/model/hostRequestHeaders";
 
 export class HostRequestHeadersAdapter implements IHostRequestHeaders {
   readonly headers: Readonly<Record<string, string>>;
@@ -31,7 +35,7 @@ export class HostRequestHeadersAdapter implements IHostRequestHeaders {
 
   get thirdPartyHeaders(): Readonly<Record<string, string>> {
     const userAgent = this.identity.current().thirdPartyUserAgent;
-    return userAgent === undefined ? {} : { 'User-Agent': userAgent };
+    return userAgent === undefined ? {} : { "User-Agent": userAgent };
   }
 
   get identitySlug(): string | undefined {
@@ -44,5 +48,5 @@ registerScopedService(
   IHostRequestHeaders,
   HostRequestHeadersAdapter,
   ScopeActivation.OnDemand,
-  'kosongConfig',
+  "kosongConfig",
 );

@@ -27,7 +27,11 @@ import {
   wrapWithSideBorders,
 } from "./custom-editor-render";
 
-export { highlightFirstSlashToken, injectPromptSymbol, wrapWithSideBorders } from "./custom-editor-render";
+export {
+  highlightFirstSlashToken,
+  injectPromptSymbol,
+  wrapWithSideBorders,
+} from "./custom-editor-render";
 export { normalizeCapsLockedCtrl } from "./custom-editor-caps-lock";
 
 const PASTE_MARKER_RE = /\[paste #(\d+)(?: (?:\+\d+ lines|\d+ chars))?\]/g;
@@ -132,7 +136,10 @@ export class CustomEditor extends Editor {
     (
       this as unknown as AutocompleteListFactoryInternals
     ).createAutocompleteList = (prefix, items) => {
-      if (prefix.startsWith("/") || prefix.startsWith(INLINE_SKILL_TOKEN_PREFIX)) {
+      if (
+        prefix.startsWith("/") ||
+        prefix.startsWith(INLINE_SKILL_TOKEN_PREFIX)
+      ) {
         return new WrappingSelectList(
           items,
           this.getAutocompleteMaxVisible(),

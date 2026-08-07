@@ -1017,11 +1017,7 @@ export const usageStatusSchema = z.object({
   total: tokenUsageSchema.optional(),
 });
 
-export const permissionModeSchema = z.enum([
-  "manual",
-  "yolo",
-  "auto",
-]);
+export const permissionModeSchema = z.enum(["manual", "yolo", "auto"]);
 
 export const skillSourceSchema = z.enum([
   "project",
@@ -1145,12 +1141,7 @@ export const goalStatusSchema = z.enum([
   "complete",
 ]);
 
-export const goalActorSchema = z.enum([
-  "user",
-  "model",
-  "runtime",
-  "system",
-]);
+export const goalActorSchema = z.enum(["user", "model", "runtime", "system"]);
 
 export const goalBudgetLimitsSchema = z.object({
   tokenBudget: z.number().optional(),
@@ -1193,10 +1184,7 @@ export const goalChangeStatsSchema = z.object({
   wallClockMs: z.number(),
 });
 
-export const goalChangeKindSchema = z.enum([
-  "lifecycle",
-  "completion",
-]);
+export const goalChangeKindSchema = z.enum(["lifecycle", "completion"]);
 
 export const goalChangeSchema = z.object({
   kind: goalChangeKindSchema,

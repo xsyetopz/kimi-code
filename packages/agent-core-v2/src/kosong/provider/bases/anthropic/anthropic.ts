@@ -88,13 +88,13 @@ import {
   sanitizeToolCallId,
 } from "../tool-call-id";
 
-import { AnthropicStreamedMessage } from './anthropic.stream';
+import { AnthropicStreamedMessage } from "./anthropic.stream";
 import {
   applyThinkingKeep,
   convertAnthropicError,
   resolveDefaultMaxTokens,
-} from './anthropic.convert';
-export { getAnthropicModelCapability } from './anthropic.convert';
+} from "./anthropic.convert";
+export { getAnthropicModelCapability } from "./anthropic.convert";
 
 export class AnthropicChatProvider implements ChatProvider {
   readonly name: string = "anthropic";

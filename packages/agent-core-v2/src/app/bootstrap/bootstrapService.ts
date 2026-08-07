@@ -9,18 +9,22 @@
  * Bound at App scope.
  */
 
-import { basename, join, relative } from 'pathe';
+import { basename, join, relative } from "pathe";
 
-import type { KimiHostIdentity } from '@moonshot-ai/kimi-code-oauth';
+import type { KimiHostIdentity } from "@moonshot-ai/kimi-code-oauth";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
 import {
   IBootstrapOptions,
   IBootstrapService,
   type HostArgs,
   type PersistenceScopeName,
-} from './bootstrap';
+} from "./bootstrap";
 
 export class BootstrapService implements IBootstrapService {
   declare readonly _serviceBrand: undefined;
@@ -54,23 +58,23 @@ export class BootstrapService implements IBootstrapService {
     this.configPath = options.configPath;
     this.clientIdentity = options.clientIdentity;
     this.args = options.args;
-    this.sessionsDir = join(options.homeDir, 'sessions');
-    this.blobsDir = join(options.homeDir, 'blobs');
-    this.storeDir = join(options.homeDir, 'store');
-    this.cacheDir = join(options.homeDir, 'cache');
-    this.logsDir = join(options.homeDir, 'logs');
-    this.memoryDir = join(options.homeDir, 'memory');
+    this.sessionsDir = join(options.homeDir, "sessions");
+    this.blobsDir = join(options.homeDir, "blobs");
+    this.storeDir = join(options.homeDir, "store");
+    this.cacheDir = join(options.homeDir, "cache");
+    this.logsDir = join(options.homeDir, "logs");
+    this.memoryDir = join(options.homeDir, "memory");
     this.configKey = basename(options.configPath);
     this.scopes = {
-      config: '',
-      sessions: relative(options.homeDir, join(options.homeDir, 'sessions')),
+      config: "",
+      sessions: relative(options.homeDir, join(options.homeDir, "sessions")),
       blobs: relative(options.homeDir, this.blobsDir),
       store: relative(options.homeDir, this.storeDir),
       logs: relative(options.homeDir, this.logsDir),
       cache: relative(options.homeDir, this.cacheDir),
-      credentials: 'credentials',
-      cron: 'cron',
-      memory: 'memory',
+      credentials: "credentials",
+      cron: "cron",
+      memory: "memory",
     };
   }
 
@@ -83,4 +87,10 @@ export class BootstrapService implements IBootstrapService {
   }
 }
 
-registerScopedService(LifecycleScope.App, IBootstrapService, BootstrapService, ScopeActivation.OnScopeCreated, 'bootstrap');
+registerScopedService(
+  LifecycleScope.App,
+  IBootstrapService,
+  BootstrapService,
+  ScopeActivation.OnScopeCreated,
+  "bootstrap",
+);

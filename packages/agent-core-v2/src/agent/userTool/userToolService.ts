@@ -17,21 +17,29 @@
  * Bound at Agent scope.
  */
 
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { abortable } from '#/_base/utils/abort';
-import { IAgentProfileService } from '#/agent/profile/profile';
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { abortable } from "#/_base/utils/abort";
+import { IAgentProfileService } from "#/agent/profile/profile";
 import type {
   ExecutableTool,
   ExecutableToolContext,
   ExecutableToolResult,
-} from '#/tool/toolContract';
-import { IAgentToolRegistryService } from '#/agent/toolRegistry/toolRegistry';
-import { ISessionInteractionService } from '#/session/interaction/interaction';
-import { IWireService } from '#/wire/wire';
+} from "#/tool/toolContract";
+import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
+import { ISessionInteractionService } from "#/session/interaction/interaction";
+import { IWireService } from "#/wire/wire";
 
-import { IAgentUserToolService, type UserToolRegistration } from './userTool';
-import { registerUserTool, unregisterUserTool, UserToolModel } from './userToolOps';
+import { IAgentUserToolService, type UserToolRegistration } from "./userTool";
+import {
+  registerUserTool,
+  unregisterUserTool,
+  UserToolModel,
+} from "./userToolOps";
 
 interface UserToolExecutionRequest {
   readonly turnId?: number;
@@ -40,20 +48,25 @@ interface UserToolExecutionRequest {
   readonly args: unknown;
 }
 
-export class AgentUserToolService extends Disposable implements IAgentUserToolService {
+export class AgentUserToolService
+  extends Disposable
+  implements IAgentUserToolService
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly registrations = new Map<string, IDisposable>();
 
   constructor(
-    @IAgentToolRegistryService private readonly registry: IAgentToolRegistryService,
+    @IAgentToolRegistryService
+    private readonly registry: IAgentToolRegistryService,
     @IAgentProfileService private readonly profile: IAgentProfileService,
-    @ISessionInteractionService private readonly interaction: ISessionInteractionService,
+    @ISessionInteractionService
+    private readonly interaction: ISessionInteractionService,
     @IWireService private readonly wire: IWireService,
   ) {
     super();
     this._register(
-      this.wire.hooks.onDidRestore.register('user-tool', async (_ctx, next) => {
+      this.wire.hooks.onDidRestore.register("user-tool", async (_ctx, next) => {
         this.restoreRegisteredTools();
         await next();
       }),
@@ -84,12 +97,16 @@ export class AgentUserToolService extends Disposable implements IAgentUserToolSe
     const persistedActive = this.profile.getActiveToolNames();
     for (const registration of this.wire.getModel(UserToolModel).values()) {
       const activate =
-        persistedActive === undefined || persistedActive.includes(registration.name);
+        persistedActive === undefined ||
+        persistedActive.includes(registration.name);
       this.applyRegister(registration, { activate });
     }
   }
 
-  private applyRegister(input: UserToolRegistration, options?: { readonly activate?: boolean }): void {
+  private applyRegister(
+    input: UserToolRegistration,
+    options?: { readonly activate?: boolean },
+  ): void {
     const { name, description, parameters } = input;
     this.applyUnregister(name);
     const tool: ExecutableTool = {
@@ -104,7 +121,10 @@ export class AgentUserToolService extends Disposable implements IAgentUserToolSe
     this.registrations.set(
       name,
       this._register(
-        this.registry.register(tool, { source: 'user', disclosure: input.disclosure }),
+        this.registry.register(tool, {
+          source: "user",
+          disclosure: input.disclosure,
+        }),
       ),
     );
     if (options?.activate === false) return;
@@ -124,9 +144,12 @@ export class AgentUserToolService extends Disposable implements IAgentUserToolSe
     name: string,
     args: unknown,
   ): Promise<ExecutableToolResult> {
-    const request = this.interaction.request<UserToolExecutionRequest, ExecutableToolResult>({
+    const request = this.interaction.request<
+      UserToolExecutionRequest,
+      ExecutableToolResult
+    >({
       id: context.toolCallId,
-      kind: 'user_tool',
+      kind: "user_tool",
       payload: {
         turnId: context.turnId,
         toolCallId: context.toolCallId,
@@ -156,5 +179,5 @@ registerScopedService(
   IAgentUserToolService,
   AgentUserToolService,
   ScopeActivation.OnScopeCreated,
-  'userTool',
+  "userTool",
 );

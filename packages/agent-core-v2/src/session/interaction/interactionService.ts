@@ -16,15 +16,19 @@
  * from the journal. Bound at Session scope.
  */
 
-import { Emitter, type Event } from '#/_base/event';
-import { IInstantiationService } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
+import { Emitter, type Event } from "#/_base/event";
+import { IInstantiationService } from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
 
-import { IAgentLifecycleService } from '#/session/agentLifecycle/agentLifecycle';
-import { ISessionStateService } from '#/session/state/sessionState';
-import { IWireService } from '#/wire/wire';
+import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
+import { ISessionStateService } from "#/session/state/sessionState";
+import { IWireService } from "#/wire/wire";
 
 import {
   type Interaction,
@@ -34,8 +38,8 @@ import {
   type InteractionRequest,
   type InteractionResolution,
   ISessionInteractionService,
-} from './interaction';
-import { interactionRequest, interactionResolved } from './interactionOps';
+} from "./interaction";
+import { interactionRequest, interactionResolved } from "./interactionOps";
 
 interface Pending {
   readonly interaction: Interaction;
@@ -44,29 +48,42 @@ interface Pending {
 
 const RECENTLY_RESOLVED_TTL_MS = 60_000;
 const RECENTLY_RESOLVED_MAX = 256;
-const MAIN_AGENT_ID = 'main';
+const MAIN_AGENT_ID = "main";
 
 export const interactionPendingKey = defineState<Map<string, Pending>>(
-  'interaction.pending',
+  "interaction.pending",
   () => new Map(),
 );
 export const interactionRecentlyResolvedKey = defineState<Map<string, number>>(
-  'interaction.recentlyResolved',
+  "interaction.recentlyResolved",
   () => new Map(),
 );
-export const interactionNextIdKey = defineState<number>('interaction.nextId', () => 0);
+export const interactionNextIdKey = defineState<number>(
+  "interaction.nextId",
+  () => 0,
+);
 
-export class SessionInteractionService extends Disposable implements ISessionInteractionService {
+export class SessionInteractionService
+  extends Disposable
+  implements ISessionInteractionService
+{
   declare readonly _serviceBrand: undefined;
 
-  private readonly _onDidChangePending = this._register(new Emitter<InteractionPendingChangedEvent>());
-  readonly onDidChangePending: Event<InteractionPendingChangedEvent> = this._onDidChangePending.event;
-  private readonly _onDidResolve = this._register(new Emitter<InteractionResolution>());
-  readonly onDidResolve: Event<InteractionResolution> = this._onDidResolve.event;
+  private readonly _onDidChangePending = this._register(
+    new Emitter<InteractionPendingChangedEvent>(),
+  );
+  readonly onDidChangePending: Event<InteractionPendingChangedEvent> =
+    this._onDidChangePending.event;
+  private readonly _onDidResolve = this._register(
+    new Emitter<InteractionResolution>(),
+  );
+  readonly onDidResolve: Event<InteractionResolution> =
+    this._onDidResolve.event;
 
   constructor(
     @ISessionStateService private readonly states: ISessionStateService,
-    @IInstantiationService private readonly instantiation?: IInstantiationService,
+    @IInstantiationService
+    private readonly instantiation?: IInstantiationService,
   ) {
     super();
     this.states.register(interactionPendingKey);
@@ -96,7 +113,7 @@ export class SessionInteractionService extends Disposable implements ISessionInt
       if (entry.interaction.origin?.turnId !== turnId) continue;
       this.pending.delete(id);
       this.rememberResolved(id);
-      const response = { cancelled: true, reason: 'turn_ended' };
+      const response = { cancelled: true, reason: "turn_ended" };
       entry.resolve(response);
       this.recordResolved(id, response, entry.interaction.origin);
       this._onDidResolve.fire({ id, response });
@@ -107,7 +124,9 @@ export class SessionInteractionService extends Disposable implements ISessionInt
     }
   }
 
-  request<TPayload, TResponse>(req: InteractionRequest<TPayload>): Promise<TResponse> {
+  request<TPayload, TResponse>(
+    req: InteractionRequest<TPayload>,
+  ): Promise<TResponse> {
     return new Promise<TResponse>((resolve) => {
       this.park(req, resolve as (response: unknown) => void);
     });
@@ -176,7 +195,11 @@ export class SessionInteractionService extends Disposable implements ISessionInt
     );
   }
 
-  private recordResolved(id: string, response: unknown, origin: InteractionOrigin): void {
+  private recordResolved(
+    id: string,
+    response: unknown,
+    origin: InteractionOrigin,
+  ): void {
     const wire = this.originWire(origin);
     if (wire === undefined) return;
     wire.dispatch(interactionResolved({ id, response }));
@@ -186,8 +209,11 @@ export class SessionInteractionService extends Disposable implements ISessionInt
     if (this.instantiation === undefined) return undefined;
     const agentId = origin.agentId ?? MAIN_AGENT_ID;
     try {
-      return this.instantiation.invokeFunction(
-        (accessor) => accessor.get(IAgentLifecycleService).get(agentId)?.accessor.get(IWireService),
+      return this.instantiation.invokeFunction((accessor) =>
+        accessor
+          .get(IAgentLifecycleService)
+          .get(agentId)
+          ?.accessor.get(IWireService),
       );
     } catch {
       return undefined;
@@ -197,7 +223,8 @@ export class SessionInteractionService extends Disposable implements ISessionInt
   private rememberResolved(id: string): void {
     const now = Date.now();
     for (const [key, resolvedAt] of this.recentlyResolved) {
-      if (now - resolvedAt > RECENTLY_RESOLVED_TTL_MS) this.recentlyResolved.delete(key);
+      if (now - resolvedAt > RECENTLY_RESOLVED_TTL_MS)
+        this.recentlyResolved.delete(key);
     }
     while (this.recentlyResolved.size >= RECENTLY_RESOLVED_MAX) {
       const oldest = this.recentlyResolved.keys().next().value;
@@ -213,9 +240,9 @@ export class SessionInteractionService extends Disposable implements ISessionInt
 }
 
 function readPayloadToolCallId(payload: unknown): string | undefined {
-  if (typeof payload !== 'object' || payload === null) return undefined;
-  const value = (payload as Record<string, unknown>)['toolCallId'];
-  return typeof value === 'string' ? value : undefined;
+  if (typeof payload !== "object" || payload === null) return undefined;
+  const value = (payload as Record<string, unknown>)["toolCallId"];
+  return typeof value === "string" ? value : undefined;
 }
 
 registerScopedService(
@@ -223,5 +250,5 @@ registerScopedService(
   ISessionInteractionService,
   SessionInteractionService,
   ScopeActivation.OnScopeCreated,
-  'interaction',
+  "interaction",
 );

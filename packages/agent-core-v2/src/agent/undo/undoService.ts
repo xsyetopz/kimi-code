@@ -7,41 +7,45 @@
  * `eventBus`, `telemetry`, and `wire`. Bound at Agent scope.
  */
 
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { IAgentConversationUndoParticipantRegistry } from '#/agent/contextMemory/conversationUndoParticipants';
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { IAgentConversationUndoParticipantRegistry } from "#/agent/contextMemory/conversationUndoParticipants";
 import {
   computeUndoCut,
   formatUndoUnavailableMessage,
   precheckUndo,
-} from '#/agent/contextMemory/contextOps';
+} from "#/agent/contextMemory/contextOps";
 import {
   CHECKPOINTED_MODELS,
   isUndoAnchor,
   isValidUndoCount,
   type Checkpointed,
-} from '#/agent/contextMemory/conversationTime';
-import { IAgentFullCompactionService } from '#/agent/fullCompaction/fullCompaction';
-import { IAgentLoopService } from '#/agent/loop/loop';
-import { IAgentPromptService } from '#/agent/prompt/prompt';
-import { promptMetadataTextFromContentParts } from '#/agent/prompt/promptMetadataText';
-import { IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { IEventService } from '#/app/event/event';
-import { IEventBus } from '#/app/event/eventBus';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { ErrorCodes, Error2 } from '#/errors';
-import { MAIN_AGENT_ID } from '#/session/agentLifecycle/agentLifecycle';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
-import { IWireService } from '#/wire/wire';
+} from "#/agent/contextMemory/conversationTime";
+import { IAgentFullCompactionService } from "#/agent/fullCompaction/fullCompaction";
+import { IAgentLoopService } from "#/agent/loop/loop";
+import { IAgentPromptService } from "#/agent/prompt/prompt";
+import { promptMetadataTextFromContentParts } from "#/agent/prompt/promptMetadataText";
+import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
+import { IEventService } from "#/app/event/event";
+import { IEventBus } from "#/app/event/eventBus";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { ErrorCodes, Error2 } from "#/errors";
+import { MAIN_AGENT_ID } from "#/session/agentLifecycle/agentLifecycle";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
+import { IWireService } from "#/wire/wire";
 
-import { IAgentConversationUndoService, type UndoAvailability } from './undo';
+import { IAgentConversationUndoService, type UndoAvailability } from "./undo";
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'context.undone': { turns: number };
+    "context.undone": { turns: number };
   }
 }
 
@@ -55,9 +59,11 @@ export class AgentConversationUndoService
 
   constructor(
     @IAgentLoopService private readonly loop: IAgentLoopService,
-    @IAgentFullCompactionService private readonly fullCompaction: IAgentFullCompactionService,
+    @IAgentFullCompactionService
+    private readonly fullCompaction: IAgentFullCompactionService,
     @IAgentPromptService private readonly prompt: IAgentPromptService,
-    @IAgentContextMemoryService private readonly context: IAgentContextMemoryService,
+    @IAgentContextMemoryService
+    private readonly context: IAgentContextMemoryService,
     @IAgentConversationUndoParticipantRegistry
     private readonly participants: IAgentConversationUndoParticipantRegistry,
     @IAgentScopeContext private readonly agentCtx: IAgentScopeContext,
@@ -77,7 +83,8 @@ export class AgentConversationUndoService
     const maxTurns = Math.min(cut.removedCount, this.checkpointDepth().depth);
     return {
       maxTurns,
-      stoppedAtCompaction: cut.stoppedAtCompaction || maxTurns < cut.removedCount,
+      stoppedAtCompaction:
+        cut.stoppedAtCompaction || maxTurns < cut.removedCount,
     };
   }
 
@@ -85,8 +92,8 @@ export class AgentConversationUndoService
     if (!isValidUndoCount(turns)) {
       throw new Error2(
         ErrorCodes.REQUEST_INVALID,
-        'Undo count must be a positive safe integer',
-        { details: { field: 'count' } },
+        "Undo count must be a positive safe integer",
+        { details: { field: "count" } },
       );
     }
     const run = this.undoQueue.then(() => this.undoNow(turns));
@@ -102,19 +109,19 @@ export class AgentConversationUndoService
     try {
       quiescence = this.loop.tryAcquireQuiescence();
       if (quiescence === undefined) {
-        throw this.busyError('loop');
+        throw this.busyError("loop");
       }
       if (this.fullCompaction.compacting !== null) {
-        throw this.busyError('compaction');
+        throw this.busyError("compaction");
       }
       this.assertUndoAvailable(turns);
       this.context.undo(turns);
-      await this.flushAfterCommit('context cut');
+      await this.flushAfterCommit("context cut");
       await this.reconcileParticipants();
-      await this.flushAfterCommit('state reconciliation');
+      await this.flushAfterCommit("state reconciliation");
       await this.reconcileLastPromptSafely();
-      this.telemetry.track2('conversation_undo', { count: turns });
-      this.eventBus.publish({ type: 'context.undone', turns });
+      this.telemetry.track2("conversation_undo", { count: turns });
+      this.eventBus.publish({ type: "context.undone", turns });
       return turns;
     } finally {
       quiescence?.dispose();
@@ -123,7 +130,7 @@ export class AgentConversationUndoService
 
   private checkpointDepth(): { depth: number; model: string } {
     let depth = Number.POSITIVE_INFINITY;
-    let model = '';
+    let model = "";
     for (const def of CHECKPOINTED_MODELS) {
       const state = this.wire.getModel(def) as Checkpointed<unknown>;
       if (state.checkpoints.length < depth) {
@@ -134,11 +141,14 @@ export class AgentConversationUndoService
     return { depth, model };
   }
 
-  private busyError(reason: 'loop' | 'compaction'): Error2 {
-    const message = reason === 'loop'
-      ? 'Cannot undo while a turn is active or queued. Wait for it to finish, then retry.'
-      : 'Cannot undo while conversation compaction is running. Wait for it to finish, then retry.';
-    return new Error2(ErrorCodes.SESSION_BUSY, message, { details: { reason } });
+  private busyError(reason: "loop" | "compaction"): Error2 {
+    const message =
+      reason === "loop"
+        ? "Cannot undo while a turn is active or queued. Wait for it to finish, then retry."
+        : "Cannot undo while conversation compaction is running. Wait for it to finish, then retry.";
+    return new Error2(ErrorCodes.SESSION_BUSY, message, {
+      details: { reason },
+    });
   }
 
   private assertUndoAvailable(turns: number): void {
@@ -159,7 +169,9 @@ export class AgentConversationUndoService
     const { depth, model } = this.checkpointDepth();
     if (depth >= turns) return;
     const fullCut = computeUndoCut(this.context.get(), Number.MAX_SAFE_INTEGER);
-    const reason = fullCut.stoppedAtCompaction ? 'compaction_boundary' : 'checkpoint_lost';
+    const reason = fullCut.stoppedAtCompaction
+      ? "compaction_boundary"
+      : "checkpoint_lost";
     throw new Error2(
       ErrorCodes.SESSION_UNDO_UNAVAILABLE,
       formatUndoUnavailableMessage({
@@ -185,8 +197,8 @@ export class AgentConversationUndoService
       participants.map((participant) => participant.reconcileAfterUndo()),
     );
     results.forEach((result, index) => {
-      if (result.status === 'fulfilled') return;
-      this.log.error('undo participant reconciliation failed', {
+      if (result.status === "fulfilled") return;
+      this.log.error("undo participant reconciliation failed", {
         participantId: participants[index]?.id,
         error: result.reason,
       });
@@ -197,7 +209,7 @@ export class AgentConversationUndoService
     try {
       await this.reconcileLastPrompt();
     } catch (error) {
-      this.log.error('undo lastPrompt reconciliation failed', { error });
+      this.log.error("undo lastPrompt reconciliation failed", { error });
     }
   }
 
@@ -205,7 +217,10 @@ export class AgentConversationUndoService
     try {
       await this.wire.flush();
     } catch (error) {
-      this.log.error('undo wire flush failed after in-memory commit', { stage, error });
+      this.log.error("undo wire flush failed after in-memory commit", {
+        stage,
+        error,
+      });
       throw error;
     }
   }
@@ -213,9 +228,10 @@ export class AgentConversationUndoService
   private async reconcileLastPrompt(): Promise<void> {
     if (this.agentCtx.agentId !== MAIN_AGENT_ID) return;
     const pending = this.prompt.list().pending.at(-1);
-    let lastPrompt = pending === undefined
-      ? undefined
-      : promptMetadataTextFromContentParts(pending.message.content);
+    let lastPrompt =
+      pending === undefined
+        ? undefined
+        : promptMetadataTextFromContentParts(pending.message.content);
     if (lastPrompt === undefined) {
       const history = this.context.get();
       for (let i = history.length - 1; i >= 0; i--) {
@@ -227,7 +243,7 @@ export class AgentConversationUndoService
     }
     await this.metadata.update({ lastPrompt });
     this.eventService.publish({
-      type: 'session.meta.updated',
+      type: "session.meta.updated",
       payload: {
         agentId: MAIN_AGENT_ID,
         sessionId: this.session.sessionId,
@@ -242,5 +258,5 @@ registerScopedService(
   IAgentConversationUndoService,
   AgentConversationUndoService,
   ScopeActivation.OnScopeCreated,
-  'undo',
+  "undo",
 );

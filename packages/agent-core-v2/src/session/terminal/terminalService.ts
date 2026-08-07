@@ -7,11 +7,18 @@
  * session id through `sessionContext` to tag frames. Bound at Session scope.
  */
 
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
 
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import type {
   CreateTerminalRequest,
   Terminal,
@@ -21,11 +28,11 @@ import type {
   TerminalFrame,
   TerminalOutputMessage,
   TerminalProcess,
-} from '#/os/interface/terminal';
-import { IHostTerminalService } from '#/os/interface/terminal';
-import { ErrorCodes, Error2 } from '#/errors';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
+} from "#/os/interface/terminal";
+import { IHostTerminalService } from "#/os/interface/terminal";
+import { ErrorCodes, Error2 } from "#/errors";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
 
 const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 24;
@@ -60,16 +67,21 @@ export interface ISessionTerminalService {
 }
 
 export const ISessionTerminalService: ServiceIdentifier<ISessionTerminalService> =
-  createDecorator<ISessionTerminalService>('sessionTerminalService');
+  createDecorator<ISessionTerminalService>("sessionTerminalService");
 
-export class SessionTerminalService extends Disposable implements ISessionTerminalService {
+export class SessionTerminalService
+  extends Disposable
+  implements ISessionTerminalService
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly records = new Map<string, TerminalRecord>();
 
   constructor(
-    @IHostTerminalService private readonly terminalService: IHostTerminalService,
-    @ISessionWorkspaceContext private readonly workspace: ISessionWorkspaceContext,
+    @IHostTerminalService
+    private readonly terminalService: IHostTerminalService,
+    @ISessionWorkspaceContext
+    private readonly workspace: ISessionWorkspaceContext,
     @ISessionContext private readonly sessionContext: ISessionContext,
   ) {
     super();
@@ -79,11 +91,16 @@ export class SessionTerminalService extends Disposable implements ISessionTermin
     const cwd =
       input.cwd === undefined
         ? this.workspace.workDir
-        : this.workspace.assertAllowed(input.cwd, 'execute');
+        : this.workspace.assertAllowed(input.cwd, "execute");
     const shell = input.shell ?? defaultShell();
     const cols = input.cols ?? DEFAULT_COLS;
     const rows = input.rows ?? DEFAULT_ROWS;
-    const process = await this.terminalService.spawn({ cwd, shell, cols, rows });
+    const process = await this.terminalService.spawn({
+      cwd,
+      shell,
+      cols,
+      rows,
+    });
     const terminal: Terminal = {
       id: `term_${randomUUID()}`,
       session_id: this.sessionContext.sessionId,
@@ -91,7 +108,7 @@ export class SessionTerminalService extends Disposable implements ISessionTermin
       shell,
       cols,
       rows,
-      status: 'running',
+      status: "running",
       created_at: new Date().toISOString(),
     };
     const record: TerminalRecord = {
@@ -172,8 +189,7 @@ export class SessionTerminalService extends Disposable implements ISessionTermin
       disposeAll(record.disposables);
       try {
         record.process.kill();
-      } catch {
-      }
+      } catch {}
     }
     this.records.clear();
     super.dispose();
@@ -192,7 +208,7 @@ export class SessionTerminalService extends Disposable implements ISessionTermin
 
   private onData(record: TerminalRecord, data: string): void {
     const frame: TerminalOutputMessage = {
-      type: 'terminal_output',
+      type: "terminal_output",
       seq: ++record.nextSeq,
       session_id: record.terminal.session_id,
       terminal_id: record.terminal.id,
@@ -207,16 +223,16 @@ export class SessionTerminalService extends Disposable implements ISessionTermin
   }
 
   private markExited(record: TerminalRecord, exitCode: number | null): void {
-    if (record.terminal.status === 'exited') return;
+    if (record.terminal.status === "exited") return;
     record.closed = true;
     record.terminal = {
       ...record.terminal,
-      status: 'exited',
+      status: "exited",
       exited_at: new Date().toISOString(),
       exit_code: exitCode,
     };
     const frame: TerminalExitMessage = {
-      type: 'terminal_exit',
+      type: "terminal_exit",
       session_id: record.terminal.session_id,
       terminal_id: record.terminal.id,
       timestamp: new Date().toISOString(),
@@ -230,7 +246,10 @@ export class SessionTerminalService extends Disposable implements ISessionTermin
   private pushFrame(record: TerminalRecord, frame: TerminalFrame): void {
     record.buffer.push(frame);
     if (record.buffer.length > DEFAULT_MAX_BUFFERED_FRAMES) {
-      record.buffer.splice(0, record.buffer.length - DEFAULT_MAX_BUFFERED_FRAMES);
+      record.buffer.splice(
+        0,
+        record.buffer.length - DEFAULT_MAX_BUFFERED_FRAMES,
+      );
     }
     for (const sink of record.sinks.values()) {
       sink.send(frame);
@@ -245,11 +264,11 @@ function disposeAll(items: Iterable<IDisposable>): void {
 }
 
 function frameSeq(frame: TerminalFrame): number {
-  return frame.type === 'terminal_output' ? frame.seq : Number.MAX_SAFE_INTEGER;
+  return frame.type === "terminal_output" ? frame.seq : Number.MAX_SAFE_INTEGER;
 }
 
 function defaultShell(): string {
-  return process.env['SHELL'] || '/bin/sh';
+  return process.env["SHELL"] || "/bin/sh";
 }
 
 registerScopedService(
@@ -257,5 +276,5 @@ registerScopedService(
   ISessionTerminalService,
   SessionTerminalService,
   ScopeActivation.OnScopeCreated,
-  'terminal',
+  "terminal",
 );

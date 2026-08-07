@@ -77,7 +77,9 @@ describe("ink effort selector", () => {
     );
     expect(
       (
-        tui as unknown as { handleInkSimpleDialogInput: (data: string) => boolean }
+        tui as unknown as {
+          handleInkSimpleDialogInput: (data: string) => boolean;
+        }
       ).handleInkSimpleDialogInput("\r"),
     ).toBe(true);
     expect(onSelect).toHaveBeenCalledWith("low");

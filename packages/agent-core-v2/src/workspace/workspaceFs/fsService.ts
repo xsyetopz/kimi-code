@@ -19,7 +19,15 @@
  * session of the workspace.
  */
 
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 
 import {
   type FsDiffRequest,
@@ -46,11 +54,15 @@ import {
   type FsStatManyResponse,
   type FsStatRequest,
   type FsStatResponse,
-} from './fs';
+} from "./fs";
 
-import ignore, { type Ignore } from 'ignore';
+import ignore, { type Ignore } from "ignore";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import {
   buildEtag,
   countLines,
@@ -58,18 +70,30 @@ import {
   FS_BINARY_SAMPLE_BYTES,
   guessLanguageId,
   guessMime,
-} from '#/_base/utils/fileMeta';
-import { ErrorCodes, Error2, isError2, unwrapErrorCause } from '#/errors';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { IHostFileSystem, type HostDirEntry, type HostFileStat } from '#/os/interface/hostFileSystem';
-import { ISessionProcessRunner } from '#/session/process/processRunner';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
-import { IWorkspaceDirs } from '#/workspace/workspaceDirs/workspaceDirs';
-import { IWorkspaceGitService } from '#/workspace/workspaceGit/workspaceGit';
+} from "#/_base/utils/fileMeta";
+import { ErrorCodes, Error2, isError2, unwrapErrorCause } from "#/errors";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import {
+  IHostFileSystem,
+  type HostDirEntry,
+  type HostFileStat,
+} from "#/os/interface/hostFileSystem";
+import { ISessionProcessRunner } from "#/session/process/processRunner";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
+import { IWorkspaceDirs } from "#/workspace/workspaceDirs/workspaceDirs";
+import { IWorkspaceGitService } from "#/workspace/workspaceGit/workspaceGit";
 
-import { type FsDownloadResolved, type FsPathResolved, IWorkspaceFsService } from './fs';
-import { readStream, runCommand } from './internal/fsProcess';
-import { ensureRgPath, type RgProbe, type RgResolution } from './internal/rgLocator';
+import {
+  type FsDownloadResolved,
+  type FsPathResolved,
+  IWorkspaceFsService,
+} from "./fs";
+import { readStream, runCommand } from "./internal/fsProcess";
+import {
+  ensureRgPath,
+  type RgProbe,
+  type RgResolution,
+} from "./internal/rgLocator";
 import {
   compileGrepPattern,
   computeFuzzyScore,
@@ -79,7 +103,7 @@ import {
   rgPath,
   rgText,
   stripTrailingNewline,
-} from './internal/fsSearch';
+} from "./internal/fsSearch";
 
 import {
   RgJsonAccumulator,
@@ -90,7 +114,7 @@ import {
   isPrematureCloseError,
   mapFsError,
   sortChildren,
-} from './fsService.support';
+} from "./fsService.support";
 
 const SEARCH_HARD_CAP = 500;
 const GREP_TIMEOUT_MS = 30_000;
@@ -98,11 +122,9 @@ const WALK_MAX_DEPTH = 64;
 
 const FS_READ_MAX_BYTES = 10 * 1024 * 1024;
 
-
-import { WorkspaceFsServiceCore } from './fsService.core';
+import { WorkspaceFsServiceCore } from "./fsService.core";
 
 export class WorkspaceFsService extends WorkspaceFsServiceCore {
-
   async grep(req: FsGrepRequest): Promise<FsGrepResponse> {
     const startedAt = Date.now();
     const controller = new AbortController();
@@ -111,9 +133,14 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
     try {
       const resolution = await this.resolveRg();
       if (resolution !== null) {
-        return await this.grepWithRg(req, controller.signal, startedAt, resolution.path);
+        return await this.grepWithRg(
+          req,
+          controller.signal,
+          startedAt,
+          resolution.path,
+        );
       }
-      this.telemetry.track2('fs_grep_node_fallback', { reason: 'rg_missing' });
+      this.telemetry.track2("fs_grep_node_fallback", { reason: "rg_missing" });
       return await this.grepWithNode(req, controller.signal, startedAt);
     } finally {
       clearTimeout(timer);
@@ -143,47 +170,49 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
     startedAt: number,
     rgPath: string,
   ): Promise<FsGrepResponse> {
-    const args = ['--json'];
+    const args = ["--json"];
     if (req.context_lines > 0) {
-      args.push('--context', String(req.context_lines));
+      args.push("--context", String(req.context_lines));
     }
-    if (!req.case_sensitive) args.push('--ignore-case');
-    if (!req.regex) args.push('--fixed-strings');
+    if (!req.case_sensitive) args.push("--ignore-case");
+    if (!req.regex) args.push("--fixed-strings");
     if (req.follow_gitignore) {
-      args.push('--no-require-git');
+      args.push("--no-require-git");
     } else {
-      args.push('--no-ignore');
+      args.push("--no-ignore");
     }
     if (req.include_globs) {
-      for (const g of req.include_globs) args.push('--glob', g);
+      for (const g of req.include_globs) args.push("--glob", g);
     }
     if (req.exclude_globs) {
-      for (const g of req.exclude_globs) args.push('--glob', `!${g}`);
+      for (const g of req.exclude_globs) args.push("--glob", `!${g}`);
     }
-    args.push('--max-count', String(req.max_matches_per_file));
+    args.push("--max-count", String(req.max_matches_per_file));
     args.push(req.pattern);
-    args.push('.');
+    args.push(".");
 
-    const proc = await this.runner.exec([rgPath, ...args], { cwd: this.workDir });
+    const proc = await this.runner.exec([rgPath, ...args], {
+      cwd: this.workDir,
+    });
 
     const acc = new RgJsonAccumulator(req);
     let killed = false;
     const kill = (): void => {
       if (killed) return;
       killed = true;
-      void proc.kill('SIGKILL');
+      void proc.kill("SIGKILL");
     };
     const onAbort = (): void => kill();
     if (signal.aborted) kill();
-    else signal.addEventListener('abort', onAbort, { once: true });
+    else signal.addEventListener("abort", onAbort, { once: true });
 
-    let stdoutBuf = '';
+    let stdoutBuf = "";
     const drainStdout = async (): Promise<void> => {
-      proc.stdout.setEncoding('utf-8');
+      proc.stdout.setEncoding("utf-8");
       try {
         for await (const chunk of proc.stdout) {
           stdoutBuf += chunk as string;
-          let nl = stdoutBuf.indexOf('\n');
+          let nl = stdoutBuf.indexOf("\n");
           while (nl >= 0) {
             const line = stdoutBuf.slice(0, nl);
             stdoutBuf = stdoutBuf.slice(nl + 1);
@@ -191,7 +220,7 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
               acc.feed(line);
               if (acc.capped) kill();
             }
-            nl = stdoutBuf.indexOf('\n');
+            nl = stdoutBuf.indexOf("\n");
           }
         }
         if (stdoutBuf.length > 0) acc.feed(stdoutBuf);
@@ -201,13 +230,16 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
     };
 
     try {
-      await Promise.all([drainStdout(), readStream(proc.stderr), proc.wait().catch(() => -1)]);
+      await Promise.all([
+        drainStdout(),
+        readStream(proc.stderr),
+        proc.wait().catch(() => -1),
+      ]);
     } finally {
-      signal.removeEventListener('abort', onAbort);
+      signal.removeEventListener("abort", onAbort);
       try {
         void proc.dispose();
-      } catch {
-      }
+      } catch {}
     }
 
     return acc.finish(signal.aborted, Date.now() - startedAt);
@@ -227,8 +259,8 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
     let truncated = false;
 
     const filePaths: string[] = [];
-    await this.walk('', matcher, async (rel, _name, kind) => {
-      if (kind !== 'file') return;
+    await this.walk("", matcher, async (rel, _name, kind) => {
+      if (kind !== "file") return;
       if (req.include_globs && !matchesAnyGlob(rel, req.include_globs)) return;
       if (req.exclude_globs && matchesAnyGlob(rel, req.exclude_globs)) return;
       filePaths.push(rel);
@@ -237,7 +269,10 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
     for (const rel of filePaths) {
       if (signal.aborted) {
         if (totalMatches === 0 && filesScanned === 0) {
-          throw new Error2(ErrorCodes.FS_GREP_TIMEOUT, `grep timed out after ${Date.now() - startedAt}ms`);
+          throw new Error2(
+            ErrorCodes.FS_GREP_TIMEOUT,
+            `grep timed out after ${Date.now() - startedAt}ms`,
+          );
         }
         truncated = true;
         break;
@@ -263,13 +298,23 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
         if (matches.length >= req.max_matches_per_file) break;
         const before: string[] = [];
         for (let k = Math.max(0, i - req.context_lines); k < i; k++) {
-          before.push(lines[k] ?? '');
+          before.push(lines[k] ?? "");
         }
         const after: string[] = [];
-        for (let k = i + 1; k < Math.min(lines.length, i + 1 + req.context_lines); k++) {
-          after.push(lines[k] ?? '');
+        for (
+          let k = i + 1;
+          k < Math.min(lines.length, i + 1 + req.context_lines);
+          k++
+        ) {
+          after.push(lines[k] ?? "");
         }
-        matches.push({ line: i + 1, col: m.index + 1, text: line, before, after });
+        matches.push({
+          line: i + 1,
+          col: m.index + 1,
+          text: line,
+          before,
+          after,
+        });
         totalMatches += 1;
         if (totalMatches >= req.max_total_matches) {
           truncated = true;
@@ -282,7 +327,12 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
       if (totalMatches >= req.max_total_matches) break;
     }
 
-    return { files, files_scanned: filesScanned, truncated, elapsed_ms: Date.now() - startedAt };
+    return {
+      files,
+      files_scanned: filesScanned,
+      truncated,
+      elapsed_ms: Date.now() - startedAt,
+    };
   }
 
   private async walk(
@@ -291,7 +341,7 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
     visit: (
       relPath: string,
       name: string,
-      kind: 'file' | 'directory' | 'symlink',
+      kind: "file" | "directory" | "symlink",
     ) => Promise<void>,
     depth = 0,
   ): Promise<void> {
@@ -304,25 +354,24 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
     }
     for (const entry of entries) {
       const { name } = entry;
-      if (name === '.git') continue;
-      const childRel = rootRel === '' ? name : `${rootRel}/${name}`;
+      if (name === ".git") continue;
+      const childRel = rootRel === "" ? name : `${rootRel}/${name}`;
       const isDir = entry.isDirectory && entry.isSymbolicLink !== true;
       if (matcher) {
         const probe = isDir ? `${childRel}/` : childRel;
         if (matcher.ignores(probe)) continue;
       }
-      const kind: 'file' | 'directory' | 'symlink' = entry.isSymbolicLink
-        ? 'symlink'
+      const kind: "file" | "directory" | "symlink" = entry.isSymbolicLink
+        ? "symlink"
         : isDir
-          ? 'directory'
-          : 'file';
+          ? "directory"
+          : "file";
       await visit(childRel, name, kind);
       if (isDir) {
         await this.walk(childRel, matcher, visit, depth + 1);
       }
     }
   }
-
 }
 
 registerScopedService(
@@ -330,5 +379,5 @@ registerScopedService(
   IWorkspaceFsService,
   WorkspaceFsService,
   ScopeActivation.OnScopeCreated,
-  'workspaceFs',
+  "workspaceFs",
 );

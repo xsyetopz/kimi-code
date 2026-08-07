@@ -10,16 +10,20 @@
  * absolute `cwd` and already-confined repo-relative paths.
  */
 
-import type { FsDiffResponse, FsGitStatusResponse, FsPullRequest } from './git';
+import type { FsDiffResponse, FsGitStatusResponse, FsPullRequest } from "./git";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ErrorCodes, Error2 } from '#/errors';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { IHostProcessService } from '#/os/interface/hostProcess';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ErrorCodes, Error2 } from "#/errors";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { IHostProcessService } from "#/os/interface/hostProcess";
 
-import { IGitService } from './git';
-import { parseNumstat, parsePorcelain, parsePullRequest } from './gitParsers';
-import { findGitWorkTree, type GitWorkTree } from './workTree';
+import { IGitService } from "./git";
+import { parseNumstat, parsePorcelain, parsePullRequest } from "./gitParsers";
+import { findGitWorkTree, type GitWorkTree } from "./workTree";
 
 const DIFF_MAX_BYTES = 1_048_576;
 
@@ -39,26 +43,51 @@ export class GitService implements IGitService {
     @IHostFileSystem private readonly fs: IHostFileSystem,
   ) {}
 
-  async status(cwd: string, pathFilter?: ReadonlySet<string>): Promise<FsGitStatusResponse> {
-    const inside = await this.runCommand('git', ['rev-parse', '--is-inside-work-tree'], cwd);
-    if (inside.exitCode !== 0 || inside.stdout.trim() !== 'true') {
-      throw this.gitUnavailable(cwd, inside.stderr.trim() || `git rev-parse exit ${inside.exitCode}`);
+  async status(
+    cwd: string,
+    pathFilter?: ReadonlySet<string>,
+  ): Promise<FsGitStatusResponse> {
+    const inside = await this.runCommand(
+      "git",
+      ["rev-parse", "--is-inside-work-tree"],
+      cwd,
+    );
+    if (inside.exitCode !== 0 || inside.stdout.trim() !== "true") {
+      throw this.gitUnavailable(
+        cwd,
+        inside.stderr.trim() || `git rev-parse exit ${inside.exitCode}`,
+      );
     }
 
-    const porc = await this.runCommand('git', ['status', '--porcelain=v1', '--branch'], cwd);
+    const porc = await this.runCommand(
+      "git",
+      ["status", "--porcelain=v1", "--branch"],
+      cwd,
+    );
     if (porc.exitCode !== 0) {
-      throw this.gitUnavailable(cwd, porc.stderr.trim() || `git status exit ${porc.exitCode}`);
+      throw this.gitUnavailable(
+        cwd,
+        porc.stderr.trim() || `git status exit ${porc.exitCode}`,
+      );
     }
 
     const result = parsePorcelain(porc.stdout, pathFilter);
 
     const dirty = porc.stdout
-      .split('\n')
-      .some((line) => line.length > 0 && !line.startsWith('## '));
+      .split("\n")
+      .some((line) => line.length > 0 && !line.startsWith("## "));
     if (dirty) {
-      const head = await this.runCommand('git', ['rev-parse', '--verify', '--quiet', 'HEAD'], cwd);
+      const head = await this.runCommand(
+        "git",
+        ["rev-parse", "--verify", "--quiet", "HEAD"],
+        cwd,
+      );
       if (head.exitCode === 0) {
-        const numstat = await this.runCommand('git', ['diff', '--no-color', '--numstat', 'HEAD', '--'], cwd);
+        const numstat = await this.runCommand(
+          "git",
+          ["diff", "--no-color", "--numstat", "HEAD", "--"],
+          cwd,
+        );
         if (numstat.exitCode === 0) {
           const stats = parseNumstat(numstat.stdout);
           result.additions = stats.additions;
@@ -71,36 +100,68 @@ export class GitService implements IGitService {
     return result;
   }
 
-  async diff(cwd: string, relPath: string, absPath: string): Promise<FsDiffResponse> {
-    const inside = await this.runCommand('git', ['rev-parse', '--is-inside-work-tree'], cwd);
-    if (inside.exitCode !== 0 || inside.stdout.trim() !== 'true') {
-      throw this.gitUnavailable(cwd, inside.stderr.trim() || `git rev-parse exit ${inside.exitCode}`);
+  async diff(
+    cwd: string,
+    relPath: string,
+    absPath: string,
+  ): Promise<FsDiffResponse> {
+    const inside = await this.runCommand(
+      "git",
+      ["rev-parse", "--is-inside-work-tree"],
+      cwd,
+    );
+    if (inside.exitCode !== 0 || inside.stdout.trim() !== "true") {
+      throw this.gitUnavailable(
+        cwd,
+        inside.stderr.trim() || `git rev-parse exit ${inside.exitCode}`,
+      );
     }
 
-    const statusRes = await this.runCommand('git', ['status', '--porcelain=v1', '--', relPath], cwd);
+    const statusRes = await this.runCommand(
+      "git",
+      ["status", "--porcelain=v1", "--", relPath],
+      cwd,
+    );
     if (statusRes.exitCode !== 0) {
-      throw this.gitUnavailable(cwd, statusRes.stderr.trim() || `git status exit ${statusRes.exitCode}`);
+      throw this.gitUnavailable(
+        cwd,
+        statusRes.stderr.trim() || `git status exit ${statusRes.exitCode}`,
+      );
     }
-    const untracked = statusRes.stdout.startsWith('??');
+    const untracked = statusRes.stdout.startsWith("??");
 
-    const headRes = await this.runCommand('git', ['rev-parse', '--verify', '--quiet', 'HEAD'], cwd);
+    const headRes = await this.runCommand(
+      "git",
+      ["rev-parse", "--verify", "--quiet", "HEAD"],
+      cwd,
+    );
     const hasHead = headRes.exitCode === 0;
 
     let diffStdout: string;
     if (untracked || !hasHead) {
       const res = await this.runCommand(
-        'git',
-        ['diff', '--no-color', '--no-index', '--', '/dev/null', relPath],
+        "git",
+        ["diff", "--no-color", "--no-index", "--", "/dev/null", relPath],
         cwd,
       );
       if (res.exitCode !== 0 && res.exitCode !== 1) {
-        throw this.gitUnavailable(cwd, res.stderr.trim() || `git diff exit ${res.exitCode}`);
+        throw this.gitUnavailable(
+          cwd,
+          res.stderr.trim() || `git diff exit ${res.exitCode}`,
+        );
       }
       diffStdout = res.stdout;
     } else {
-      const res = await this.runCommand('git', ['diff', '--no-color', 'HEAD', '--', relPath], cwd);
+      const res = await this.runCommand(
+        "git",
+        ["diff", "--no-color", "HEAD", "--", relPath],
+        cwd,
+      );
       if (res.exitCode !== 0) {
-        throw this.gitUnavailable(cwd, res.stderr.trim() || `git diff exit ${res.exitCode}`);
+        throw this.gitUnavailable(
+          cwd,
+          res.stderr.trim() || `git diff exit ${res.exitCode}`,
+        );
       }
       if (res.stdout.length === 0 && statusRes.stdout.length === 0) {
         const exists = await this.fs.lstat(absPath).then(
@@ -108,9 +169,13 @@ export class GitService implements IGitService {
           () => false,
         );
         if (!exists) {
-          throw new Error2(ErrorCodes.FS_PATH_NOT_FOUND, `path not found: ${relPath}`, {
-            details: { path: relPath },
-          });
+          throw new Error2(
+            ErrorCodes.FS_PATH_NOT_FOUND,
+            `path not found: ${relPath}`,
+            {
+              details: { path: relPath },
+            },
+          );
         }
       }
       diffStdout = res.stdout;
@@ -136,11 +201,11 @@ export class GitService implements IGitService {
     }
 
     const res = await this.runCommand(
-      'gh',
-      ['pr', 'view', '--json', 'number,url,state'],
+      "gh",
+      ["pr", "view", "--json", "number,url,state"],
       cwd,
       {
-        env: { GH_NO_UPDATE_NOTIFIER: '1', GH_PROMPT_DISABLED: '1' },
+        env: { GH_NO_UPDATE_NOTIFIER: "1", GH_PROMPT_DISABLED: "1" },
         timeoutMs: PR_SPAWN_TIMEOUT_MS,
       },
     );
@@ -162,7 +227,7 @@ export class GitService implements IGitService {
         () => ({ ok: false as const }),
       );
     if (!spawned.ok) {
-      return { exitCode: -1, stdout: '', stderr: '' };
+      return { exitCode: -1, stdout: "", stderr: "" };
     }
     const { proc } = spawned;
 
@@ -179,24 +244,30 @@ export class GitService implements IGitService {
         const [stdout, stderr, exitCode] = await work;
         return { exitCode, stdout, stderr };
       }
-      const timeout = new Promise<'timeout'>((resolve) => {
-        timer = setTimeout(() => resolve('timeout'), options.timeoutMs);
+      const timeout = new Promise<"timeout">((resolve) => {
+        timer = setTimeout(() => resolve("timeout"), options.timeoutMs);
         timer.unref?.();
       });
       const result = await Promise.race([
-        work.then(
-          ([stdout, stderr, exitCode]) =>
-            ({ kind: 'done' as const, stdout, stderr, exitCode }),
-        ),
+        work.then(([stdout, stderr, exitCode]) => ({
+          kind: "done" as const,
+          stdout,
+          stderr,
+          exitCode,
+        })),
         timeout.then((kind) => ({ kind })),
       ]);
-      if (result.kind === 'done') {
-        return { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr };
+      if (result.kind === "done") {
+        return {
+          exitCode: result.exitCode,
+          stdout: result.stdout,
+          stderr: result.stderr,
+        };
       }
-      await proc.kill('SIGKILL').catch(() => {});
+      await proc.kill("SIGKILL").catch(() => {});
       const [stdout, stderr] = await work
         .then(([so, se]) => [so, se] as const)
-        .catch(() => ['', ''] as const);
+        .catch(() => ["", ""] as const);
       return { exitCode: -1, stdout, stderr };
     } finally {
       if (timer !== undefined) clearTimeout(timer);
@@ -205,9 +276,13 @@ export class GitService implements IGitService {
   }
 
   private gitUnavailable(cwd: string, detail: string): Error2 {
-    return new Error2(ErrorCodes.FS_GIT_UNAVAILABLE, `git unavailable at ${cwd}: ${detail}`, {
-      details: { cwd, detail },
-    });
+    return new Error2(
+      ErrorCodes.FS_GIT_UNAVAILABLE,
+      `git unavailable at ${cwd}: ${detail}`,
+      {
+        details: { cwd, detail },
+      },
+    );
   }
 }
 
@@ -222,14 +297,25 @@ interface RunOptions {
   readonly env?: Record<string, string>;
 }
 
-async function collect(stream: AsyncIterable<Uint8Array | string>): Promise<string> {
+async function collect(
+  stream: AsyncIterable<Uint8Array | string>,
+): Promise<string> {
   const decoder = new TextDecoder();
-  let out = '';
+  let out = "";
   for await (const chunk of stream) {
-    out += typeof chunk === 'string' ? chunk : decoder.decode(chunk, { stream: true });
+    out +=
+      typeof chunk === "string"
+        ? chunk
+        : decoder.decode(chunk, { stream: true });
   }
   out += decoder.decode();
   return out;
 }
 
-registerScopedService(LifecycleScope.App, IGitService, GitService, ScopeActivation.OnScopeCreated, 'git');
+registerScopedService(
+  LifecycleScope.App,
+  IGitService,
+  GitService,
+  ScopeActivation.OnScopeCreated,
+  "git",
+);

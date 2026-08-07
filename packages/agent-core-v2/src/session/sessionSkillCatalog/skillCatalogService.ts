@@ -14,23 +14,31 @@
  * Bound at Session scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { InMemorySkillCatalog } from '#/app/skillCatalog/registry';
-import type { SkillContribution } from '#/app/skillCatalog/skillSource';
-import { summarizeSkill, type SkillCatalog, type SkillSummary } from '#/app/skillCatalog/types';
-import { ISessionStateService } from '#/session/state/sessionState';
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import { InMemorySkillCatalog } from "#/app/skillCatalog/registry";
+import type { SkillContribution } from "#/app/skillCatalog/skillSource";
+import {
+  summarizeSkill,
+  type SkillCatalog,
+  type SkillSummary,
+} from "#/app/skillCatalog/types";
+import { ISessionStateService } from "#/session/state/sessionState";
 
-import { ISessionSkillCatalog, type ISkillCatalogSink } from './skillCatalog';
-import { ISessionSkillCatalogData } from './skillCatalogData';
+import { ISessionSkillCatalog, type ISkillCatalogSink } from "./skillCatalog";
+import { ISessionSkillCatalogData } from "./skillCatalogData";
 
 export const skillCatalogContributionsKey = defineState<
   Map<string, { readonly c: SkillContribution; readonly priority: number }>
->('sessionSkillCatalog.contributions', () => new Map());
+>("sessionSkillCatalog.contributions", () => new Map());
 export const skillCatalogMergedKey = defineState<InMemorySkillCatalog>(
-  'sessionSkillCatalog.merged',
+  "sessionSkillCatalog.merged",
   () => new InMemorySkillCatalog(),
 );
 
@@ -87,7 +95,7 @@ export class SessionSkillCatalogService
   async reload(): Promise<void> {
     await this.ready;
     this.remerge();
-    this.onDidChangeEmitter.fire('catalog');
+    this.onDidChangeEmitter.fire("catalog");
   }
 
   async list(): Promise<readonly SkillSummary[]> {
@@ -95,7 +103,11 @@ export class SessionSkillCatalogService
     return this.catalog.listSkills().map(summarizeSkill);
   }
 
-  set(id: string, c: SkillContribution, { priority }: { readonly priority: number }): void {
+  set(
+    id: string,
+    c: SkillContribution,
+    { priority }: { readonly priority: number },
+  ): void {
     this.contributions.set(id, { c, priority });
     this.remerge();
     this.onDidChangeEmitter.fire(id);
@@ -113,7 +125,9 @@ export class SessionSkillCatalogService
     for (const skill of base.listSkills()) m.register(skill, { replace: true });
     m.addRoots(base.getSkillRoots());
     m.recordSkipped(base.getSkippedByPolicy());
-    const ordered = [...this.contributions.values()].toSorted((a, b) => a.priority - b.priority);
+    const ordered = [...this.contributions.values()].toSorted(
+      (a, b) => a.priority - b.priority,
+    );
     for (const { c } of ordered) {
       for (const skill of c.skills) m.register(skill, { replace: true });
       m.addRoots(c.scannedRoots ?? []);
@@ -128,5 +142,5 @@ registerScopedService(
   ISessionSkillCatalog,
   SessionSkillCatalogService,
   ScopeActivation.OnScopeCreated,
-  'sessionSkillCatalog',
+  "sessionSkillCatalog",
 );

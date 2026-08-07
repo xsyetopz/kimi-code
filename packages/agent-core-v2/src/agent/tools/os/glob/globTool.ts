@@ -59,28 +59,32 @@
  * load.
  */
 
-import { normalize, resolve } from 'pathe';
+import { normalize, resolve } from "pathe";
 
-import { ensureRgPath, rgUnavailableMessage, type RgProbe } from '#/os/backends/node-local/tools/rgLocator';
+import {
+  ensureRgPath,
+  rgUnavailableMessage,
+  type RgProbe,
+} from "#/os/backends/node-local/tools/rgLocator";
 import {
   DEFAULT_TIMEOUT_MS,
   MAX_OUTPUT_BYTES,
   runRgOnce,
   shouldRetryRipgrepEagain,
-} from '#/os/backends/node-local/tools/runRg';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { IHostProcessService } from '#/os/interface/hostProcess';
-import { unwrapErrorCause } from '#/_base/errors/errors';
-import { ISessionSkillCatalog } from '#/session/sessionSkillCatalog/skillCatalog';
-import { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
+} from "#/os/backends/node-local/tools/runRg";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { IHostProcessService } from "#/os/interface/hostProcess";
+import { unwrapErrorCause } from "#/_base/errors/errors";
+import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
+import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   ToolAccesses,
   type ExecutableToolResult,
   type ToolExecution,
-} from '#/tool/toolContract';
-import { registerAgentToolService } from '#/agent/toolRegistry/toolContribution';
+} from "#/tool/toolContract";
+import { registerAgentToolService } from "#/agent/toolRegistry/toolContribution";
 import {
   extendWorkspaceWithSkillRoots,
   isWithinDirectory,
@@ -89,49 +93,60 @@ import {
   isSensitiveFile,
   SENSITIVE_DOT_VARIANT_SUFFIXES,
   type WorkspaceConfig,
-} from '#/tool/path-access';
-import { toInputJsonSchema } from '#/tool/input-schema';
-import { literalRulePattern, matchesGlobRuleSubject } from '#/tool/rule-match';
-import globDescription from './glob.md?raw';
+} from "#/tool/path-access";
+import { toInputJsonSchema } from "#/tool/input-schema";
+import { literalRulePattern, matchesGlobRuleSubject } from "#/tool/rule-match";
+import globDescription from "./glob.md?raw";
 import {
   type GlobInput,
   GlobInputSchema,
   IGlobTool,
   MAX_MATCHES,
   WINDOWS_PATH_HINT,
-} from './glob';
+} from "./glob";
 
-const VCS_DIRECTORIES_TO_EXCLUDE = ['.git', '.svn', '.hg', '.bzr', '.jj', '.sl'] as const;
+const VCS_DIRECTORIES_TO_EXCLUDE = [
+  ".git",
+  ".svn",
+  ".hg",
+  ".bzr",
+  ".jj",
+  ".sl",
+] as const;
 
-const SENSITIVE_KEY_BASENAMES = ['id_rsa', 'id_ed25519', 'id_ecdsa'] as const;
+const SENSITIVE_KEY_BASENAMES = ["id_rsa", "id_ed25519", "id_ecdsa"] as const;
 const SENSITIVE_GLOBS_TO_EXCLUDE: readonly string[] = [
-  '**/.env',
+  "**/.env",
   ...SENSITIVE_KEY_BASENAMES.flatMap((name) => [
     `**/${name}`,
     `**/${name}[-_]*`,
     ...SENSITIVE_DOT_VARIANT_SUFFIXES.map((suffix) => `**/${name}${suffix}`),
   ]),
-  '**/.aws/credentials',
-  '**/.aws/credentials/**',
-  '**/.gcp/credentials',
-  '**/.gcp/credentials/**',
+  "**/.aws/credentials",
+  "**/.aws/credentials/**",
+  "**/.gcp/credentials",
+  "**/.gcp/credentials/**",
 ];
 
 export class GlobTool implements IGlobTool {
   declare readonly _serviceBrand: undefined;
-  readonly name = 'Glob' as const;
+  readonly name = "Glob" as const;
   readonly description: string;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(GlobInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(GlobInputSchema);
   constructor(
     @IHostFileSystem private readonly fs: IHostFileSystem,
     @IHostEnvironment private readonly env: IHostEnvironment,
     @IHostProcessService private readonly processService: IHostProcessService,
-    @ISessionWorkspaceContext private readonly workspaceCtx: ISessionWorkspaceContext,
+    @ISessionWorkspaceContext
+    private readonly workspaceCtx: ISessionWorkspaceContext,
     @ITelemetryService private readonly telemetry: ITelemetryService,
     @ISessionSkillCatalog private readonly skillCatalog?: ISessionSkillCatalog,
   ) {
     this.description =
-      this.env.pathClass === 'win32' ? globDescription + WINDOWS_PATH_HINT : globDescription;
+      this.env.pathClass === "win32"
+        ? globDescription + WINDOWS_PATH_HINT
+        : globDescription;
   }
 
   private get workspaceConfig(): WorkspaceConfig {
@@ -151,8 +166,11 @@ export class GlobTool implements IGlobTool {
       path = resolvePathAccessPath(args.path, {
         env: this.env,
         workspace: this.workspaceConfig,
-        operation: 'search',
-        policy: { guardMode: 'absolute-outside-allowed', checkSensitive: false },
+        operation: "search",
+        policy: {
+          guardMode: "absolute-outside-allowed",
+          checkSensitive: false,
+        },
       });
     }
     const searchRoots = [path ?? this.workspaceConfig.workspaceDir];
@@ -162,17 +180,17 @@ export class GlobTool implements IGlobTool {
       detailParts.push(`path: ${args.path}`);
     }
     if (args.include_ignored === true) {
-      detailParts.push('include_ignored: true');
+      detailParts.push("include_ignored: true");
     }
 
     return {
       accesses: ToolAccesses.searchTree(searchRoots[0]!),
       description: `Searching ${args.pattern}`,
       display: {
-        kind: 'file_io',
-        operation: 'glob',
+        kind: "file_io",
+        operation: "glob",
         path: searchRoots[0]!,
-        detail: detailParts.join(', '),
+        detail: detailParts.join(", "),
       },
       approvalRule: literalRulePattern(this.name, args.pattern),
       matchesRule: (ruleArgs) => matchesGlobRuleSubject(ruleArgs, args.pattern),
@@ -193,55 +211,71 @@ export class GlobTool implements IGlobTool {
         return { isError: true, output: `${searchRoot} is not a directory` };
       }
     } catch (error) {
-      if (errorCode(error) === 'ENOENT') {
+      if (errorCode(error) === "ENOENT") {
         return { isError: true, output: `${searchRoot} does not exist` };
       }
-      return { isError: true, output: error instanceof Error ? error.message : String(error) };
+      return {
+        isError: true,
+        output: error instanceof Error ? error.message : String(error),
+      };
     }
 
     if (signal.aborted) {
-      return { isError: true, output: 'Glob aborted' };
+      return { isError: true, output: "Glob aborted" };
     }
 
     let rgPath: string;
     try {
-      const resolution = await ensureRgPath(createRgProbe(this.processService), {
-        signal,
-        allowCachedFallback: true,
-      });
+      const resolution = await ensureRgPath(
+        createRgProbe(this.processService),
+        {
+          signal,
+          allowCachedFallback: true,
+        },
+      );
       rgPath = resolution.path;
-      if (resolution.source !== 'system-path') {
-        this.telemetry.track2('glob_tool_rg_fallback', {
+      if (resolution.source !== "system-path") {
+        this.telemetry.track2("glob_tool_rg_fallback", {
           source: resolution.source,
-          outcome: 'resolved',
+          outcome: "resolved",
         });
       }
     } catch (error) {
       if (signal.aborted) {
-        return { isError: true, output: 'Glob aborted' };
+        return { isError: true, output: "Glob aborted" };
       }
-      this.telemetry.track2('glob_tool_rg_fallback', { outcome: 'failed' });
+      this.telemetry.track2("glob_tool_rg_fallback", { outcome: "failed" });
       return { isError: true, output: rgUnavailableMessage(error) };
     }
 
     let run;
     try {
-      run = await runRgOnce(this.processService, buildRgArgs(rgPath, args), signal, { cwd: searchRoot });
+      run = await runRgOnce(
+        this.processService,
+        buildRgArgs(rgPath, args),
+        signal,
+        { cwd: searchRoot },
+      );
     } catch (error) {
       return { isError: true, output: formatSpawnError(error) };
     }
-    if (run.kind === 'aborted') {
-      return { isError: true, output: 'Glob aborted' };
+    if (run.kind === "aborted") {
+      return { isError: true, output: "Glob aborted" };
     }
 
     if (shouldRetryRipgrepEagain(run)) {
       try {
-        run = await runRgOnce(this.processService, buildRgArgs(rgPath, args, true), signal, { cwd: searchRoot });
+        run = await runRgOnce(
+          this.processService,
+          buildRgArgs(rgPath, args, true),
+          signal,
+          { cwd: searchRoot },
+        );
       } catch (error) {
         return { isError: true, output: formatSpawnError(error) };
       }
-      if (run.kind === 'aborted') {
-        return { isError: true, output: 'Glob aborted' };
+      if (run.kind === "aborted") {
+        return { isError: true, output: "Glob aborted" };
       }
     }
 
@@ -251,17 +285,21 @@ export class GlobTool implements IGlobTool {
     if (exitCode !== 0 && exitCode !== 1 && !timedOut) {
       const rawPathsBeforeError = splitCompletePaths(stdoutText, true);
       if (rawPathsBeforeError.length === 0) {
-        return { isError: true, output: formatGlobError(searchRoot, stderrText) };
+        return {
+          isError: true,
+          output: formatGlobError(searchRoot, stderrText),
+        };
       }
       traversalWarning = formatGlobWarning(stderrText);
     }
     if (signal.aborted) {
-      return { isError: true, output: 'Glob aborted' };
+      return { isError: true, output: "Glob aborted" };
     }
 
-    const rawPaths = splitCompletePaths(stdoutText, bufferTruncated || timedOut).map((p) =>
-      resolve(searchRoot, p),
-    );
+    const rawPaths = splitCompletePaths(
+      stdoutText,
+      bufferTruncated || timedOut,
+    ).map((p) => resolve(searchRoot, p));
 
     const kept: string[] = [];
     let filteredSensitive = 0;
@@ -282,11 +320,15 @@ export class GlobTool implements IGlobTool {
           output: `No non-sensitive matches found (${String(filteredSensitive)} sensitive file(s) filtered).`,
         };
       }
-      return { output: 'No matches found' };
+      return { output: "No matches found" };
     }
 
     const pathClass = this.env.pathClass;
-    const shouldRelativize = isWithinDirectory(searchRoot, this.workspaceConfig.workspaceDir, pathClass);
+    const shouldRelativize = isWithinDirectory(
+      searchRoot,
+      this.workspaceConfig.workspaceDir,
+      pathClass,
+    );
     const displayLines = limited.map((p) =>
       shouldRelativize ? relativizeIfUnder(p, searchRoot, pathClass) : p,
     );
@@ -306,7 +348,9 @@ export class GlobTool implements IGlobTool {
       lines.push(traversalWarning);
     }
     if (truncated) {
-      lines.push(`[Truncated at ${String(MAX_MATCHES)} matches — use a more specific pattern]`);
+      lines.push(
+        `[Truncated at ${String(MAX_MATCHES)} matches — use a more specific pattern]`,
+      );
       lines.push(`Only the first ${String(MAX_MATCHES)} matches are returned.`);
     }
     lines.push(...displayLines);
@@ -316,11 +360,14 @@ export class GlobTool implements IGlobTool {
     if (!truncated && limited.length === MAX_MATCHES) {
       lines.push(`Found ${String(limited.length)} matches`);
     }
-    return { output: lines.join('\n') };
+    return { output: lines.join("\n") };
   }
 }
 
-registerAgentToolService(IGlobTool, GlobTool, { name: 'Glob', domain: 'os/backends' });
+registerAgentToolService(IGlobTool, GlobTool, {
+  name: "Glob",
+  domain: "os/backends",
+});
 
 function createRgProbe(processService: IHostProcessService): RgProbe {
   return {
@@ -330,33 +377,35 @@ function createRgProbe(processService: IHostProcessService): RgProbe {
       const proc = await processService.spawn(command, rest);
       try {
         proc.stdin.end();
-      } catch {
-      }
+      } catch {}
       proc.stdout.resume();
       proc.stderr.resume();
       const exitCode = await proc.wait();
       try {
         proc.dispose();
-      } catch {
-      }
+      } catch {}
       return { exitCode };
     },
   };
 }
 
-function buildRgArgs(rgPath: string, args: GlobInput, singleThreaded = false): string[] {
+function buildRgArgs(
+  rgPath: string,
+  args: GlobInput,
+  singleThreaded = false,
+): string[] {
   const cmd: string[] = [rgPath];
-  if (singleThreaded) cmd.push('-j', '1');
-  cmd.push('--files', '--hidden', '--sortr=modified');
+  if (singleThreaded) cmd.push("-j", "1");
+  cmd.push("--files", "--hidden", "--sortr=modified");
   for (const dir of VCS_DIRECTORIES_TO_EXCLUDE) {
-    cmd.push('--glob', `!${dir}`);
+    cmd.push("--glob", `!${dir}`);
   }
-  cmd.push('--glob', args.pattern);
+  cmd.push("--glob", args.pattern);
   for (const glob of SENSITIVE_GLOBS_TO_EXCLUDE) {
-    cmd.push('--glob', `!${glob}`);
+    cmd.push("--glob", `!${glob}`);
   }
-  if (args.include_ignored) cmd.push('--no-ignore');
-  cmd.push('.');
+  if (args.include_ignored) cmd.push("--no-ignore");
+  cmd.push(".");
   return cmd;
 }
 
@@ -365,18 +414,18 @@ function formatGlobError(searchRoot: string, stderr: string): string {
   if (/no such file or directory/i.test(trimmed)) {
     return `${searchRoot} does not exist`;
   }
-  return trimmed.length > 0 ? `Glob failed: ${trimmed}` : 'Glob failed';
+  return trimmed.length > 0 ? `Glob failed: ${trimmed}` : "Glob failed";
 }
 
 function formatGlobWarning(stderr: string): string {
   const trimmed = stderr.trim();
   return trimmed.length > 0
     ? `Glob completed with warnings; some directories could not be read: ${trimmed}`
-    : 'Glob completed with warnings; some directories could not be read.';
+    : "Glob completed with warnings; some directories could not be read.";
 }
 
 function formatSpawnError(error: unknown): string {
-  return errorCode(error) === 'ENOENT'
+  return errorCode(error) === "ENOENT"
     ? rgUnavailableMessage(error)
     : error instanceof Error
       ? error.message
@@ -385,29 +434,44 @@ function formatSpawnError(error: unknown): string {
 
 function errorCode(error: unknown): string | undefined {
   const unwrapped = unwrapErrorCause(error);
-  if (unwrapped !== null && typeof unwrapped === 'object' && 'code' in unwrapped) {
+  if (
+    unwrapped !== null &&
+    typeof unwrapped === "object" &&
+    "code" in unwrapped
+  ) {
     const code = (unwrapped as { code?: unknown }).code;
-    return typeof code === 'string' ? code : undefined;
+    return typeof code === "string" ? code : undefined;
   }
   return undefined;
 }
 
-export function splitCompletePaths(stdoutText: string, truncatedOutput: boolean): string[] {
+export function splitCompletePaths(
+  stdoutText: string,
+  truncatedOutput: boolean,
+): string[] {
   let text = stdoutText;
-  if (truncatedOutput && !text.endsWith('\n')) {
-    const lastNewline = text.lastIndexOf('\n');
-    text = lastNewline >= 0 ? text.slice(0, lastNewline + 1) : '';
+  if (truncatedOutput && !text.endsWith("\n")) {
+    const lastNewline = text.lastIndexOf("\n");
+    text = lastNewline >= 0 ? text.slice(0, lastNewline + 1) : "";
   }
-  return text.split('\n').filter((p) => p.length > 0);
+  return text.split("\n").filter((p) => p.length > 0);
 }
 
-function relativizeIfUnder(candidate: string, base: string, pathClass: PathClass): string {
+function relativizeIfUnder(
+  candidate: string,
+  base: string,
+  pathClass: PathClass,
+): string {
   const normCandidate = normalize(candidate);
   const normBase = normalize(base);
-  const comparableCandidate = pathClass === 'win32' ? normCandidate.toLowerCase() : normCandidate;
-  const comparableBase = pathClass === 'win32' ? normBase.toLowerCase() : normBase;
-  if (comparableCandidate === comparableBase) return '.';
-  const prefix = comparableBase.endsWith('/') ? comparableBase : comparableBase + '/';
+  const comparableCandidate =
+    pathClass === "win32" ? normCandidate.toLowerCase() : normCandidate;
+  const comparableBase =
+    pathClass === "win32" ? normBase.toLowerCase() : normBase;
+  if (comparableCandidate === comparableBase) return ".";
+  const prefix = comparableBase.endsWith("/")
+    ? comparableBase
+    : comparableBase + "/";
   if (comparableCandidate.startsWith(prefix)) {
     return normCandidate.slice(prefix.length);
   }

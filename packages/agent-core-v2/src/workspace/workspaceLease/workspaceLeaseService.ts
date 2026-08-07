@@ -9,7 +9,11 @@
 
 import { resolve } from "node:path";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from "#/_base/di/scope";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import { Error2, ErrorCodes } from "#/errors";
 import { isWithinDirectory } from "#/tool/path-access";
 import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
@@ -25,7 +29,9 @@ export class WorkspaceLeaseService implements IWorkspaceLeaseService {
 
   private readonly leases = new Map<string, WorkspaceLeaseRecord>();
 
-  constructor(@IWorkspaceContext private readonly workspace: IWorkspaceContext) {}
+  constructor(
+    @IWorkspaceContext private readonly workspace: IWorkspaceContext,
+  ) {}
 
   acquire(input: WorkspaceLeaseAcquireInput): void {
     this.pruneExpired();
@@ -78,10 +84,7 @@ export class WorkspaceLeaseService implements IWorkspaceLeaseService {
     let match: WorkspaceLeaseRecord | undefined;
     for (const lease of this.leases.values()) {
       if (!isWithinDirectory(target, lease.path)) continue;
-      if (
-        match === undefined ||
-        lease.path.length > match.path.length
-      ) {
+      if (match === undefined || lease.path.length > match.path.length) {
         match = lease;
       }
     }

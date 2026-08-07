@@ -11,19 +11,23 @@
  * scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { BugIndicatingError } from '#/errors';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { BugIndicatingError } from "#/errors";
 
-import type { AgentProfile } from './agentProfileCatalog';
-import { DEFAULT_AGENT_PROFILE_NAME } from './agentProfileCatalog';
-import { AGENT_PROFILE_SOURCE_PRIORITY } from './agentProfileContribution';
-import { IAgentProfileRegistry } from './agentProfileRegistry';
+import type { AgentProfile } from "./agentProfileCatalog";
+import { DEFAULT_AGENT_PROFILE_NAME } from "./agentProfileCatalog";
+import { AGENT_PROFILE_SOURCE_PRIORITY } from "./agentProfileContribution";
+import { IAgentProfileRegistry } from "./agentProfileRegistry";
 import {
   BUILTIN_AGENT_PROFILE_SOURCE_ID,
   IBuiltinAgentProfileLoader,
-} from './builtinAgentProfileLoader';
-import { getAgentProfileContributions } from './contribution';
+} from "./builtinAgentProfileLoader";
+import { getAgentProfileContributions } from "./contribution";
 
 export class BuiltinAgentProfileLoaderService
   extends Disposable
@@ -72,5 +76,5 @@ registerScopedService(
   IBuiltinAgentProfileLoader,
   BuiltinAgentProfileLoaderService,
   ScopeActivation.OnScopeCreated,
-  'agentProfileCatalog',
+  "agentProfileCatalog",
 );

@@ -45,7 +45,10 @@ export interface InkModelSelectorView {
   readonly rows: readonly InkModelSelectorRowView[];
   readonly thinkingHeader: string | undefined;
   readonly thinkingSegments: readonly InkModelThinkingSegmentView[];
-  readonly tabs: readonly { readonly label: string; readonly active: boolean }[];
+  readonly tabs: readonly {
+    readonly label: string;
+    readonly active: boolean;
+  }[];
 }
 
 export class InkModelSelectorSession {
@@ -154,19 +157,15 @@ export class InkModelSelectorSession {
       totalCount,
       filteredCount: view.items.length,
       belowCount: Math.max(0, view.items.length - view.page.end),
-      rows: view.items
-        .slice(view.page.start, view.page.end)
-        .map((choice) => ({
-          alias: choice.alias,
-          name: choice.name,
-          provider: choice.provider,
-          isCurrent: choice.alias === this.opts.currentValue,
-        })),
+      rows: view.items.slice(view.page.start, view.page.end).map((choice) => ({
+        alias: choice.alias,
+        name: choice.name,
+        provider: choice.provider,
+        isCurrent: choice.alias === this.opts.currentValue,
+      })),
       thinkingHeader,
       thinkingSegments:
-        selected === undefined
-          ? []
-          : this.projectThinkingSegments(selected),
+        selected === undefined ? [] : this.projectThinkingSegments(selected),
       tabs,
     };
   }

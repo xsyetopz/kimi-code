@@ -13,11 +13,19 @@
  * of the workspace.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { BugIndicatingError } from '#/errors';
-import { IHostProcessService } from '#/os/interface/hostProcess';
-import { type IProcess, ISessionProcessRunner, type ProcessExecOptions } from '#/session/process/processRunner';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { BugIndicatingError } from "#/errors";
+import { IHostProcessService } from "#/os/interface/hostProcess";
+import {
+  type IProcess,
+  ISessionProcessRunner,
+  type ProcessExecOptions,
+} from "#/session/process/processRunner";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 
 export class WorkspaceProcessRunnerService implements ISessionProcessRunner {
   declare readonly _serviceBrand: undefined;
@@ -27,11 +35,14 @@ export class WorkspaceProcessRunnerService implements ISessionProcessRunner {
     @IHostProcessService private readonly hostProcess: IHostProcessService,
   ) {}
 
-  async exec(args: readonly string[], options?: ProcessExecOptions): Promise<IProcess> {
+  async exec(
+    args: readonly string[],
+    options?: ProcessExecOptions,
+  ): Promise<IProcess> {
     const command = args[0];
     if (command === undefined) {
       throw new BugIndicatingError(
-        'WorkspaceProcessRunnerService.exec(): at least one argument (the command to run) is required.',
+        "WorkspaceProcessRunnerService.exec(): at least one argument (the command to run) is required.",
       );
     }
     const restArgs = args.slice(1);
@@ -60,5 +71,5 @@ registerScopedService(
   ISessionProcessRunner,
   WorkspaceProcessRunnerService,
   ScopeActivation.OnScopeCreated,
-  'workspaceProcess',
+  "workspaceProcess",
 );

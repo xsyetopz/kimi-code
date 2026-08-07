@@ -30,9 +30,7 @@ export function GoalEntry({ entry }: GoalEntryProps): ReactNode {
   const change = entry.goalData.change;
   return (
     <Box flexDirection="column">
-      <Text color={currentTheme.color("textMuted")}>
-        ◦ Goal {change}
-      </Text>
+      <Text color={currentTheme.color("textMuted")}>◦ Goal {change}</Text>
     </Box>
   );
 }

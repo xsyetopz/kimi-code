@@ -9,8 +9,12 @@
  * level from `ILogOptions`.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
 import {
   type ILogger,
@@ -22,9 +26,9 @@ import {
   type LogPayload,
   ILogService,
   levelEnabled,
-} from './log';
-import { createFileLogWriter, type FileLogWriter } from './fileLog';
-import { ILogOptions } from './logConfig';
+} from "./log";
+import { createFileLogWriter, type FileLogWriter } from "./fileLog";
+import { ILogOptions } from "./logConfig";
 
 interface ExtractedPayload {
   readonly ctx?: LogContext;
@@ -36,7 +40,7 @@ function errorEntry(error: Error): LogEntryError {
 }
 
 function stringifyPayload(payload: Exclude<LogPayload, undefined>): string {
-  if (typeof payload === 'string') return payload;
+  if (typeof payload === "string") return payload;
   try {
     const json = JSON.stringify(payload);
     return json === undefined ? String(payload) : json;
@@ -48,7 +52,7 @@ function stringifyPayload(payload: Exclude<LogPayload, undefined>): string {
 function extractPayload(payload: LogPayload): ExtractedPayload | undefined {
   if (payload === undefined) return {};
   if (payload instanceof Error) return { error: errorEntry(payload) };
-  if (typeof payload === 'object' && payload !== null) {
+  if (typeof payload === "object" && payload !== null) {
     let entries: [string, unknown][];
     try {
       entries = Object.entries(payload as Record<string, unknown>);
@@ -59,7 +63,7 @@ function extractPayload(payload: LogPayload): ExtractedPayload | undefined {
     let error: LogEntryError | undefined;
     const ctx: LogContext = {};
     for (const [key, value] of entries) {
-      if (key === 'error' && value instanceof Error) {
+      if (key === "error" && value instanceof Error) {
         error = errorEntry(value);
         continue;
       }
@@ -88,24 +92,27 @@ export class BoundLogger extends Disposable implements ILogger {
   }
 
   child(ctx: LogContext): ILogger {
-    return new BoundLogger(this.writer, this.levelState, { ...this.bound, ...ctx });
+    return new BoundLogger(this.writer, this.levelState, {
+      ...this.bound,
+      ...ctx,
+    });
   }
 
   error(message: string, payload?: LogPayload): void {
-    this.emit('error', message, payload);
+    this.emit("error", message, payload);
   }
   warn(message: string, payload?: LogPayload): void {
-    this.emit('warn', message, payload);
+    this.emit("warn", message, payload);
   }
   info(message: string, payload?: LogPayload): void {
-    this.emit('info', message, payload);
+    this.emit("info", message, payload);
   }
   debug(message: string, payload?: LogPayload): void {
-    this.emit('debug', message, payload);
+    this.emit("debug", message, payload);
   }
 
   private emit(
-    level: Exclude<LogLevel, 'off'>,
+    level: Exclude<LogLevel, "off">,
     message: string,
     payload?: LogPayload,
   ): void {
@@ -170,5 +177,5 @@ registerScopedService(
   ILogService,
   AppLogService,
   ScopeActivation.OnScopeCreated,
-  'log',
+  "log",
 );

@@ -38,7 +38,9 @@ export function projectAgentGroupLines(state: AgentGroupViewState): string[] {
   const lines: string[] = [""];
   lines.push(buildAgentGroupHeader(snapshots));
   snapshots.forEach((snapshot, index) => {
-    lines.push(...buildAgentGroupBodyLines(snapshot, index === snapshots.length - 1));
+    lines.push(
+      ...buildAgentGroupBodyLines(snapshot, index === snapshots.length - 1),
+    );
   });
   if (state.showDetachHint) {
     lines.push(currentTheme.dim(DETACH_HINT_TEXT));
@@ -59,14 +61,22 @@ function buildAgentGroupHeader(
 
   if (allDone) {
     const types = new Set(
-      snapshots.map((snapshot) => snapshot.agentName).filter((name) => name !== undefined),
+      snapshots
+        .map((snapshot) => snapshot.agentName)
+        .filter((name) => name !== undefined),
     );
     const headerLabel =
       types.size === 1
         ? `${String(total)} ${[...types][0]} agents finished`
         : `${String(total)} agents finished`;
-    const totalTools = snapshots.reduce((acc, snapshot) => acc + snapshot.toolCount, 0);
-    const totalTokens = snapshots.reduce((acc, snapshot) => acc + snapshot.tokens, 0);
+    const totalTools = snapshots.reduce(
+      (acc, snapshot) => acc + snapshot.toolCount,
+      0,
+    );
+    const totalTokens = snapshots.reduce(
+      (acc, snapshot) => acc + snapshot.tokens,
+      0,
+    );
     const tail = formatHeaderTail({
       toolCount: totalTools,
       tokens: totalTokens,

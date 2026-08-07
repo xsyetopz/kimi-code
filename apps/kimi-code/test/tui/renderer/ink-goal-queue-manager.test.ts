@@ -107,7 +107,9 @@ describe("ink goal queue manager", () => {
     expect(tui.state.editorContainer.children).toHaveLength(0);
     expect(
       (
-        tui as unknown as { handleInkSimpleDialogInput: (data: string) => boolean }
+        tui as unknown as {
+          handleInkSimpleDialogInput: (data: string) => boolean;
+        }
       ).handleInkSimpleDialogInput("\u001B"),
     ).toBe(true);
     expect(onCancel).toHaveBeenCalledOnce();

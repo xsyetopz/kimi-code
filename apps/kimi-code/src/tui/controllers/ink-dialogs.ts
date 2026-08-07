@@ -426,7 +426,9 @@ export class InkDialogsController implements InkDialogsControllerHost {
     dialog: "trust-prompt" | "session-picker",
   ): boolean {
     const count =
-      dialog === "trust-prompt" ? 2 : Math.min(8, this.host.state.sessions.length);
+      dialog === "trust-prompt"
+        ? 2
+        : Math.min(8, this.host.state.sessions.length);
     if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
       if (count === 0) return true;
       const delta = matchesKey(data, Key.up) ? -1 : 1;

@@ -19,7 +19,15 @@
  * session of the workspace.
  */
 
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 
 import {
   type FsDiffRequest,
@@ -46,11 +54,15 @@ import {
   type FsStatManyResponse,
   type FsStatRequest,
   type FsStatResponse,
-} from './fs';
+} from "./fs";
 
-import ignore, { type Ignore } from 'ignore';
+import ignore, { type Ignore } from "ignore";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import {
   buildEtag,
   countLines,
@@ -58,18 +70,30 @@ import {
   FS_BINARY_SAMPLE_BYTES,
   guessLanguageId,
   guessMime,
-} from '#/_base/utils/fileMeta';
-import { ErrorCodes, Error2, isError2, unwrapErrorCause } from '#/errors';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { IHostFileSystem, type HostDirEntry, type HostFileStat } from '#/os/interface/hostFileSystem';
-import { ISessionProcessRunner } from '#/session/process/processRunner';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
-import { IWorkspaceDirs } from '#/workspace/workspaceDirs/workspaceDirs';
-import { IWorkspaceGitService } from '#/workspace/workspaceGit/workspaceGit';
+} from "#/_base/utils/fileMeta";
+import { ErrorCodes, Error2, isError2, unwrapErrorCause } from "#/errors";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import {
+  IHostFileSystem,
+  type HostDirEntry,
+  type HostFileStat,
+} from "#/os/interface/hostFileSystem";
+import { ISessionProcessRunner } from "#/session/process/processRunner";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
+import { IWorkspaceDirs } from "#/workspace/workspaceDirs/workspaceDirs";
+import { IWorkspaceGitService } from "#/workspace/workspaceGit/workspaceGit";
 
-import { type FsDownloadResolved, type FsPathResolved, IWorkspaceFsService } from './fs';
-import { readStream, runCommand } from './internal/fsProcess';
-import { ensureRgPath, type RgProbe, type RgResolution } from './internal/rgLocator';
+import {
+  type FsDownloadResolved,
+  type FsPathResolved,
+  IWorkspaceFsService,
+} from "./fs";
+import { readStream, runCommand } from "./internal/fsProcess";
+import {
+  ensureRgPath,
+  type RgProbe,
+  type RgResolution,
+} from "./internal/rgLocator";
 import {
   compileGrepPattern,
   computeFuzzyScore,
@@ -79,7 +103,7 @@ import {
   rgPath,
   rgText,
   stripTrailingNewline,
-} from './internal/fsSearch';
+} from "./internal/fsSearch";
 
 import {
   RgJsonAccumulator,
@@ -90,7 +114,7 @@ import {
   isPrematureCloseError,
   mapFsError,
   sortChildren,
-} from './fsService.support';
+} from "./fsService.support";
 
 const SEARCH_HARD_CAP = 500;
 const GREP_TIMEOUT_MS = 30_000;
@@ -98,14 +122,14 @@ const WALK_MAX_DEPTH = 64;
 
 const FS_READ_MAX_BYTES = 10 * 1024 * 1024;
 
-
 export class WorkspaceFsServiceCore implements IWorkspaceFsService {
   declare readonly _serviceBrand: undefined;
 
   private readonly gitignoreCache = new Map<string, Ignore>();
   private rgResolution: RgResolution | null | undefined = undefined;
-  private realRootsCache: { readonly key: string; readonly roots: readonly string[] } | undefined =
-    undefined;
+  private realRootsCache:
+    | { readonly key: string; readonly roots: readonly string[] }
+    | undefined = undefined;
   private readonly workDir: string;
 
   constructor(
@@ -127,15 +151,15 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
     const target = resolve(absPath);
     if (target === this.workDir) return true;
     const rel = relative(this.workDir, target);
-    if (rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)) return true;
+    if (rel !== "" && !rel.startsWith("..") && !isAbsolute(rel)) return true;
     return this.workspaceDirs.additionalDirs.some((dir) => {
       const r = relative(resolve(dir), target);
-      return r === '' || (!r.startsWith('..') && !isAbsolute(r));
+      return r === "" || (!r.startsWith("..") && !isAbsolute(r));
     });
   }
 
   private absOf(rel: string): string {
-    return rel === '' || rel === '.' ? this.workDir : join(this.workDir, rel);
+    return rel === "" || rel === "." ? this.workDir : join(this.workDir, rel);
   }
 
   async list(req: FsListRequest): Promise<FsListResponse> {
@@ -149,9 +173,13 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       throw mapFsError(err, req.path);
     }
     if (!topStat.isDirectory) {
-      throw new Error2(ErrorCodes.FS_PATH_NOT_FOUND, `path not found: ${req.path}`, {
-        details: { path: req.path },
-      });
+      throw new Error2(
+        ErrorCodes.FS_PATH_NOT_FOUND,
+        `path not found: ${req.path}`,
+        {
+          details: { path: req.path },
+        },
+      );
     }
 
     const gitignore = req.follow_gitignore ? await this.matcher() : undefined;
@@ -165,7 +193,7 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       readonly depthRemaining: number;
     }
     const queue: QueueEntry[] = [
-      { relPath: rel === '.' ? '' : rel, depthRemaining: req.depth },
+      { relPath: rel === "." ? "" : rel, depthRemaining: req.depth },
     ];
 
     interface Child {
@@ -178,9 +206,11 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       const entry = queue.shift()!;
       let names: readonly string[];
       try {
-        names = (await this.hostFs.readdir(this.absOf(entry.relPath))).map((e) => e.name);
+        names = (await this.hostFs.readdir(this.absOf(entry.relPath))).map(
+          (e) => e.name,
+        );
       } catch (err) {
-        if (entry.relPath === (rel === '.' ? '' : rel)) {
+        if (entry.relPath === (rel === "." ? "" : rel)) {
           throw mapFsError(err, req.path);
         }
         continue;
@@ -189,32 +219,47 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       const visible: Child[] = [];
       for (const name of names) {
         if (!req.show_hidden && isHidden(name)) continue;
-        const childRel = entry.relPath === '' ? name : `${entry.relPath}/${name}`;
-        if (gitignore && (gitignore.ignores(childRel) || gitignore.ignores(`${childRel}/`))) {
+        const childRel =
+          entry.relPath === "" ? name : `${entry.relPath}/${name}`;
+        if (
+          gitignore &&
+          (gitignore.ignores(childRel) || gitignore.ignores(`${childRel}/`))
+        ) {
           continue;
         }
-        if (req.exclude_globs && matchesAnyGlob(childRel, req.exclude_globs)) continue;
-        const st = await this.hostFs.lstat(this.absOf(childRel)).catch(() => undefined);
+        if (req.exclude_globs && matchesAnyGlob(childRel, req.exclude_globs))
+          continue;
+        const st = await this.hostFs
+          .lstat(this.absOf(childRel))
+          .catch(() => undefined);
         if (st === undefined) continue;
         visible.push({ name, relPath: childRel, stat: st });
       }
 
       sortChildren(visible, req.sort);
 
-      const parentKey = entry.relPath === '' ? '.' : entry.relPath;
+      const parentKey = entry.relPath === "" ? "." : entry.relPath;
       const bucket: FsEntry[] = [];
       for (const child of visible) {
         if (items.length >= req.limit && entry.depthRemaining === req.depth) {
           truncated = true;
           break;
         }
-        const fsEntry = buildFsEntry(child.relPath, child.name, child.stat, false);
+        const fsEntry = buildFsEntry(
+          child.relPath,
+          child.name,
+          child.stat,
+          false,
+        );
         if (entry.depthRemaining === req.depth) {
           items.push(fsEntry);
         }
         bucket.push(fsEntry);
         if (child.stat.isDirectory && entry.depthRemaining > 1) {
-          queue.push({ relPath: child.relPath, depthRemaining: entry.depthRemaining - 1 });
+          queue.push({
+            relPath: child.relPath,
+            depthRemaining: entry.depthRemaining - 1,
+          });
         }
       }
 
@@ -241,9 +286,13 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       throw mapFsError(err, req.path);
     }
     if (st.isDirectory) {
-      throw new Error2(ErrorCodes.FS_IS_DIRECTORY, `path is a directory: ${req.path}`, {
-        details: { path: req.path },
-      });
+      throw new Error2(
+        ErrorCodes.FS_IS_DIRECTORY,
+        `path is a directory: ${req.path}`,
+        {
+          details: { path: req.path },
+        },
+      );
     }
     if (st.size > FS_READ_MAX_BYTES) {
       throw new Error2(
@@ -255,10 +304,12 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
 
     const sampleSize = Math.min(FS_BINARY_SAMPLE_BYTES, st.size);
     const sample =
-      sampleSize === 0 ? new Uint8Array() : await this.hostFs.readBytes(abs, sampleSize);
+      sampleSize === 0
+        ? new Uint8Array()
+        : await this.hostFs.readBytes(abs, sampleSize);
     const isBinary = detectBinary(sample);
 
-    if (isBinary && req.encoding === 'utf-8') {
+    if (isBinary && req.encoding === "utf-8") {
       throw new Error2(ErrorCodes.FS_IS_BINARY, `file is binary: ${req.path}`, {
         details: { path: req.path },
       });
@@ -269,16 +320,21 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
     if (effectiveLength <= 0) {
       bytes = new Uint8Array();
     } else {
-      const window = await this.hostFs.readBytes(abs, req.offset + effectiveLength);
+      const window = await this.hostFs.readBytes(
+        abs,
+        req.offset + effectiveLength,
+      );
       bytes = window.subarray(req.offset, req.offset + effectiveLength);
     }
 
-    const encoding: 'utf-8' | 'base64' =
-      req.encoding === 'base64' || (req.encoding === 'auto' && isBinary) ? 'base64' : 'utf-8';
+    const encoding: "utf-8" | "base64" =
+      req.encoding === "base64" || (req.encoding === "auto" && isBinary)
+        ? "base64"
+        : "utf-8";
     const content =
-      encoding === 'utf-8'
-        ? Buffer.from(bytes).toString('utf-8')
-        : Buffer.from(bytes).toString('base64');
+      encoding === "utf-8"
+        ? Buffer.from(bytes).toString("utf-8")
+        : Buffer.from(bytes).toString("base64");
     const truncated = req.offset + effectiveLength < st.size;
 
     const out: FsReadResponse = {
@@ -291,9 +347,9 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       mime: guessMime(rel, isBinary),
       is_binary: isBinary,
     };
-    const languageId = encoding === 'utf-8' ? guessLanguageId(rel) : undefined;
+    const languageId = encoding === "utf-8" ? guessLanguageId(rel) : undefined;
     if (languageId !== undefined) out.language_id = languageId;
-    if (encoding === 'utf-8') out.line_count = countLines(content);
+    if (encoding === "utf-8") out.line_count = countLines(content);
     return out;
   }
 
@@ -318,7 +374,8 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
           results[p] = sub.items;
           if (sub.truncated) truncatedPaths.push(p);
         } catch (err) {
-          if (err instanceof Error2 && err.code === ErrorCodes.FS_PATH_ESCAPES) throw err;
+          if (err instanceof Error2 && err.code === ErrorCodes.FS_PATH_ESCAPES)
+            throw err;
           partialErrors[p] = toWireError(err);
         }
       }),
@@ -326,7 +383,8 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
 
     const out: FsListManyResponse = { results };
     if (truncatedPaths.length > 0) out.truncated_paths = truncatedPaths;
-    if (Object.keys(partialErrors).length > 0) out.partial_errors = partialErrors;
+    if (Object.keys(partialErrors).length > 0)
+      out.partial_errors = partialErrors;
     return out;
   }
 
@@ -339,7 +397,7 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
     } catch (err) {
       throw mapFsError(err, req.path);
     }
-    const name = rel === '.' ? basename(this.workDir) : basename(abs);
+    const name = rel === "." ? basename(this.workDir) : basename(abs);
     return buildFsEntry(rel, name, st, true);
   }
 
@@ -356,7 +414,7 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       resolved.map(async ({ raw, rel, abs }) => {
         try {
           const st = await this.hostFs.lstat(abs);
-          const name = rel === '.' ? basename(this.workDir) : basename(abs);
+          const name = rel === "." ? basename(this.workDir) : basename(abs);
           entries[raw] = buildFsEntry(rel, name, st, false);
         } catch {
           entries[raw] = null;
@@ -373,15 +431,23 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       await this.hostFs.mkdir(abs, { recursive: req.recursive });
     } catch (err) {
       const code = errnoCode(err);
-      if (code === 'EEXIST') {
-        throw new Error2(ErrorCodes.FS_ALREADY_EXISTS, `path already exists: ${req.path}`, {
-          details: { path: req.path },
-        });
+      if (code === "EEXIST") {
+        throw new Error2(
+          ErrorCodes.FS_ALREADY_EXISTS,
+          `path already exists: ${req.path}`,
+          {
+            details: { path: req.path },
+          },
+        );
       }
-      if (code === 'ENOENT' || code === 'ENOTDIR') {
-        throw new Error2(ErrorCodes.FS_PATH_NOT_FOUND, `parent not found: ${req.path}`, {
-          details: { path: req.path },
-        });
+      if (code === "ENOENT" || code === "ENOTDIR") {
+        throw new Error2(
+          ErrorCodes.FS_PATH_NOT_FOUND,
+          `parent not found: ${req.path}`,
+          {
+            details: { path: req.path },
+          },
+        );
       }
       throw err;
     }
@@ -411,13 +477,19 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       throw mapFsError(err, relPath);
     }
     if (st.isDirectory) {
-      throw new Error2(ErrorCodes.FS_IS_DIRECTORY, `path is a directory: ${relPath}`, {
-        details: { path: relPath },
-      });
+      throw new Error2(
+        ErrorCodes.FS_IS_DIRECTORY,
+        `path is a directory: ${relPath}`,
+        {
+          details: { path: relPath },
+        },
+      );
     }
     const sampleSize = Math.min(FS_BINARY_SAMPLE_BYTES, st.size);
     const sample =
-      sampleSize === 0 ? new Uint8Array() : await this.hostFs.readBytes(abs, sampleSize);
+      sampleSize === 0
+        ? new Uint8Array()
+        : await this.hostFs.readBytes(abs, sampleSize);
     const isBinary = detectBinary(sample);
     return {
       absolute: abs,
@@ -430,21 +502,22 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
   }
 
   async search(req: FsSearchRequest): Promise<FsSearchResponse> {
-    if (req.query === '') {
+    if (req.query === "") {
       const listed = await this.list({
-        path: '.',
+        path: ".",
         depth: 1,
         limit: req.limit,
         show_hidden: false,
         follow_gitignore: req.follow_gitignore,
         exclude_globs: req.exclude_globs,
-        sort: 'type_first',
+        sort: "type_first",
         include_git_status: false,
       });
       const items = listed.items
         .filter(
           (entry) =>
-            req.include_globs === undefined || matchesAnyGlob(entry.path, req.include_globs),
+            req.include_globs === undefined ||
+            matchesAnyGlob(entry.path, req.include_globs),
         )
         .map((entry) => ({
           path: entry.path,
@@ -460,7 +533,7 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
     const candidates: FsSearchHit[] = [];
     const queryLower = req.query.toLowerCase();
 
-    await this.walk('', matcher, async (relPath, name, kind) => {
+    await this.walk("", matcher, async (relPath, name, kind) => {
       const score = computeFuzzyScore(name, queryLower);
       if (score <= 0) return;
       if (req.include_globs && !matchesAnyGlob(relPath, req.include_globs)) {
@@ -493,12 +566,13 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
     const cached = this.gitignoreCache.get(cwd);
     if (cached !== undefined) return cached;
     const ig = ignore();
-    ig.add('.git/');
+    ig.add(".git/");
     try {
-      const contents = await this.hostFs.readText(join(this.workDir, '.gitignore'));
+      const contents = await this.hostFs.readText(
+        join(this.workDir, ".gitignore"),
+      );
       ig.add(contents);
-    } catch {
-    }
+    } catch {}
     this.gitignoreCache.set(cwd, ig);
     return ig;
   }
@@ -517,8 +591,11 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
   }
 
   private async realRoots(): Promise<readonly string[]> {
-    const dirs = [this.workDir, ...this.workspaceDirs.additionalDirs.map((d) => resolve(d))];
-    const key = dirs.join('\n');
+    const dirs = [
+      this.workDir,
+      ...this.workspaceDirs.additionalDirs.map((d) => resolve(d)),
+    ];
+    const key = dirs.join("\n");
     if (this.realRootsCache?.key === key) return this.realRootsCache.roots;
     const roots: string[] = [];
     for (const dir of dirs) {
@@ -551,27 +628,43 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
   }
 
   private async resolveWithin(inputPath: string): Promise<string> {
-    if (inputPath === '' || inputPath === '/') {
-      throw new Error2(ErrorCodes.FS_PATH_ESCAPES, `path "${inputPath}" rejected (empty)`, {
-        details: { path: inputPath, reason: 'empty' },
-      });
+    if (inputPath === "" || inputPath === "/") {
+      throw new Error2(
+        ErrorCodes.FS_PATH_ESCAPES,
+        `path "${inputPath}" rejected (empty)`,
+        {
+          details: { path: inputPath, reason: "empty" },
+        },
+      );
     }
     if (isAbsolute(inputPath)) {
-      throw new Error2(ErrorCodes.FS_PATH_ESCAPES, `path "${inputPath}" rejected (absolute)`, {
-        details: { path: inputPath, reason: 'absolute' },
-      });
+      throw new Error2(
+        ErrorCodes.FS_PATH_ESCAPES,
+        `path "${inputPath}" rejected (absolute)`,
+        {
+          details: { path: inputPath, reason: "absolute" },
+        },
+      );
     }
     const segments = inputPath.split(/[/\\]+/);
-    if (segments.some((s) => s === '..')) {
-      throw new Error2(ErrorCodes.FS_PATH_ESCAPES, `path "${inputPath}" rejected (dotdot segment)`, {
-        details: { path: inputPath, reason: 'dotdot_segment' },
-      });
+    if (segments.some((s) => s === "..")) {
+      throw new Error2(
+        ErrorCodes.FS_PATH_ESCAPES,
+        `path "${inputPath}" rejected (dotdot segment)`,
+        {
+          details: { path: inputPath, reason: "dotdot_segment" },
+        },
+      );
     }
     const abs = this.resolvePathInput(inputPath);
     if (!this.isWithinWorkspace(abs)) {
-      throw new Error2(ErrorCodes.FS_PATH_ESCAPES, `path "${inputPath}" escapes workspace`, {
-        details: { path: inputPath, reason: 'resolved_outside' },
-      });
+      throw new Error2(
+        ErrorCodes.FS_PATH_ESCAPES,
+        `path "${inputPath}" escapes workspace`,
+        {
+          details: { path: inputPath, reason: "resolved_outside" },
+        },
+      );
     }
     const resolved = await this.realpathExistingPrefix(abs);
     const roots = await this.realRoots();
@@ -579,7 +672,7 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
       throw new Error2(
         ErrorCodes.FS_PATH_ESCAPES,
         `path "${inputPath}" escapes workspace through a symlink`,
-        { details: { path: inputPath, reason: 'symlink_outside' } },
+        { details: { path: inputPath, reason: "symlink_outside" } },
       );
     }
     return abs;
@@ -587,9 +680,9 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
 
   private toRel(abs: string): string {
     const cwd = this.workDir;
-    if (abs === cwd) return '.';
+    if (abs === cwd) return ".";
     const rel = relative(cwd, abs);
-    if (rel === '') return '.';
-    return rel.split(sep).join('/');
+    if (rel === "") return ".";
+    return rel.split(sep).join("/");
   }
 }

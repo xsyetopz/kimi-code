@@ -8,9 +8,12 @@
  * (the current-goal read) live here. No business logic is duplicated here.
  */
 
-import type { GoalSnapshot } from '#/agent/goal/types';
+import type { GoalSnapshot } from "#/agent/goal/types";
 
-import type { SessionStatusResponse, UpdateSessionProfileRequest } from './sessionProtocol';
+import type {
+  SessionStatusResponse,
+  UpdateSessionProfileRequest,
+} from "./sessionProtocol";
 
 import {
   type IAgentScopeHandle,
@@ -18,32 +21,32 @@ import {
   LifecycleScope,
   ScopeActivation,
   registerScopedService,
-} from '#/_base/di/scope';
+} from "#/_base/di/scope";
 import {
   IInstantiationService,
   type ServicesAccessor,
-} from '#/_base/di/instantiation';
-import { IAgentTokenCountingService } from '#/agent/tokenCounting/tokenCounting';
-import { IAgentGoalService } from '#/agent/goal/goal';
-import { IAgentPermissionModeService } from '#/agent/permissionMode/permissionMode';
-import type { PermissionMode } from '#/agent/permissionPolicy/types';
-import { IAgentPlanService } from '#/agent/plan/plan';
-import { IAgentProfileService } from '#/agent/profile/profile';
-import { IAgentSwarmService } from '#/agent/swarm/swarm';
-import { IConfigService } from '#/app/config/config';
+} from "#/_base/di/instantiation";
+import { IAgentTokenCountingService } from "#/agent/tokenCounting/tokenCounting";
+import { IAgentGoalService } from "#/agent/goal/goal";
+import { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
+import type { PermissionMode } from "#/agent/permissionPolicy/types";
+import { IAgentPlanService } from "#/agent/plan/plan";
+import { IAgentProfileService } from "#/agent/profile/profile";
+import { IAgentSwarmService } from "#/agent/swarm/swarm";
+import { IConfigService } from "#/app/config/config";
 import {
   getLiveSessionById,
   resumeSessionById,
-} from '#/app/workspaceLifecycle/sessionLookup';
-import { IModelCatalog } from '#/kosong/model/catalog';
-import { ErrorCodes, Error2 } from '#/errors';
-import { ensureMainAgent } from '#/session/agentLifecycle/mainAgent';
-import { IAgentLifecycleService } from '#/session/agentLifecycle/agentLifecycle';
-import { IAgentActivityView } from '#/agent/activityView/activityView';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
+} from "#/app/workspaceLifecycle/sessionLookup";
+import { IModelCatalog } from "#/kosong/model/catalog";
+import { ErrorCodes, Error2 } from "#/errors";
+import { ensureMainAgent } from "#/session/agentLifecycle/mainAgent";
+import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
+import { IAgentActivityView } from "#/agent/activityView/activityView";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 
-import { ISessionLegacyService, type SessionWireFields } from './sessionLegacy';
+import { ISessionLegacyService, type SessionWireFields } from "./sessionLegacy";
 
 export class SessionLegacyService implements ISessionLegacyService {
   declare readonly _serviceBrand: undefined;
@@ -66,17 +69,22 @@ export class SessionLegacyService implements ISessionLegacyService {
   ): Promise<SessionWireFields> {
     const session = await this.resume(sessionId);
     if (session === undefined) {
-      throw new Error2(ErrorCodes.SESSION_NOT_FOUND, `session ${sessionId} does not exist`);
+      throw new Error2(
+        ErrorCodes.SESSION_NOT_FOUND,
+        `session ${sessionId} does not exist`,
+      );
     }
     const metadata = session.accessor.get(ISessionMetadata);
 
-    if (typeof body.title === 'string') {
+    if (typeof body.title === "string") {
       await metadata.setTitle(body.title);
     }
 
     const metadataPatch = body.metadata;
     if (metadataPatch !== undefined && Object.keys(metadataPatch).length > 0) {
-      await metadata.update({ custom: { ...(metadataPatch as Record<string, unknown>) } });
+      await metadata.update({
+        custom: { ...(metadataPatch as Record<string, unknown>) },
+      });
     }
 
     const agentConfig = body.agent_config;
@@ -100,13 +108,12 @@ export class SessionLegacyService implements ISessionLegacyService {
     };
   }
 
-
   private async applyAgentConfig(
     agent: IAgentScopeHandle,
-    agentConfig: NonNullable<UpdateSessionProfileRequest['agent_config']>,
+    agentConfig: NonNullable<UpdateSessionProfileRequest["agent_config"]>,
   ): Promise<void> {
     const profile = agent.accessor.get(IAgentProfileService);
-    if (agentConfig.model !== undefined && agentConfig.model !== '') {
+    if (agentConfig.model !== undefined && agentConfig.model !== "") {
       await profile.setModel(agentConfig.model);
     }
     if (agentConfig.thinking !== undefined) {
@@ -128,7 +135,7 @@ export class SessionLegacyService implements ISessionLegacyService {
     if (agentConfig.swarm_mode !== undefined) {
       const swarm = agent.accessor.get(IAgentSwarmService);
       if (swarm.isActive !== agentConfig.swarm_mode) {
-        if (agentConfig.swarm_mode) swarm.enter('manual');
+        if (agentConfig.swarm_mode) swarm.enter("manual");
         else swarm.exit();
       }
     }
@@ -140,23 +147,31 @@ export class SessionLegacyService implements ISessionLegacyService {
     if (agentConfig.goal_control !== undefined) {
       const goal = agent.accessor.get(IAgentGoalService);
       switch (agentConfig.goal_control) {
-        case 'pause':
+        case "pause":
           await goal.pauseGoal({});
           break;
-        case 'resume':
-          await goal.resumeGoal({ continueIfPaused: true, continueIfBlocked: true });
+        case "resume":
+          await goal.resumeGoal({
+            continueIfPaused: true,
+            continueIfBlocked: true,
+          });
           break;
-        case 'cancel':
+        case "cancel":
           await goal.cancelGoal({});
           break;
       }
     }
   }
 
-  private async resolveMainAgent(sessionId: string): Promise<IAgentScopeHandle> {
+  private async resolveMainAgent(
+    sessionId: string,
+  ): Promise<IAgentScopeHandle> {
     const session = await this.resume(sessionId);
     if (session === undefined) {
-      throw new Error2(ErrorCodes.SESSION_NOT_FOUND, `session ${sessionId} does not exist`);
+      throw new Error2(
+        ErrorCodes.SESSION_NOT_FOUND,
+        `session ${sessionId} does not exist`,
+      );
     }
     return ensureMainAgent(session);
   }
@@ -182,7 +197,7 @@ export class SessionLegacyService implements ISessionLegacyService {
       max_input_tokens?: number;
     };
     const maxTokens =
-      model === ''
+      model === ""
         ? resolveDefaultModelContextTokens(agent)
         : (caps.max_input_tokens ?? caps.max_context_tokens ?? 0);
     const tokens = tokenCounting.statusSize();
@@ -190,8 +205,8 @@ export class SessionLegacyService implements ISessionLegacyService {
 
     return {
       busy: this.readBusy(sessionId),
-      model: model === '' ? undefined : model,
-      thinking_level: model === '' ? '' : profile.getEffectiveThinkingLevel(),
+      model: model === "" ? undefined : model,
+      thinking_level: model === "" ? "" : profile.getEffectiveThinkingLevel(),
       permission: permission.mode,
       plan_mode: planData !== null,
       swarm_mode: swarm.isActive,
@@ -218,10 +233,14 @@ export class SessionLegacyService implements ISessionLegacyService {
 }
 
 function resolveDefaultModelContextTokens(agent: IAgentScopeHandle): number {
-  const defaultModel = agent.accessor.get(IConfigService).get<string>('defaultModel');
-  if (typeof defaultModel !== 'string' || defaultModel.length === 0) return 0;
+  const defaultModel = agent.accessor
+    .get(IConfigService)
+    .get<string>("defaultModel");
+  if (typeof defaultModel !== "string" || defaultModel.length === 0) return 0;
   try {
-    const capabilities = agent.accessor.get(IModelCatalog).get(defaultModel).capabilities;
+    const capabilities = agent.accessor
+      .get(IModelCatalog)
+      .get(defaultModel).capabilities;
     return capabilities.max_input_tokens ?? capabilities.max_context_tokens;
   } catch {
     return 0;
@@ -233,5 +252,5 @@ registerScopedService(
   ISessionLegacyService,
   SessionLegacyService,
   ScopeActivation.OnScopeCreated,
-  'sessionLegacy',
+  "sessionLegacy",
 );

@@ -7,13 +7,21 @@
  * `FileEditResult`; it owns no tool-facing message. Bound at App scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { unwrapErrorCause } from '#/_base/errors/errors';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { unwrapErrorCause } from "#/_base/errors/errors";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 
-import { EditService } from './editService';
-import { type FileEditInput, type FileEditResult, IFileEditService } from './fileEdit';
-import { TextModel } from './textModel';
+import { EditService } from "./editService";
+import {
+  type FileEditInput,
+  type FileEditResult,
+  IFileEditService,
+} from "./fileEdit";
+import { TextModel } from "./textModel";
 
 export class FileEditService implements IFileEditService {
   declare readonly _serviceBrand: undefined;
@@ -26,7 +34,7 @@ export class FileEditService implements IFileEditService {
 
   async edit(input: FileEditInput): Promise<FileEditResult> {
     try {
-      const raw = await this.fs.readText(input.path, { errors: 'strict' });
+      const raw = await this.fs.readText(input.path, { errors: "strict" });
       const model = new TextModel(raw);
       const result = this.editor.apply(model, {
         path: input.displayPath,
@@ -41,7 +49,7 @@ export class FileEditService implements IFileEditService {
       return { ok: true, count: result.count };
     } catch (error) {
       const code = (unwrapErrorCause(error) as { code?: unknown } | null)?.code;
-      if (code === 'EISDIR') {
+      if (code === "EISDIR") {
         return { ok: false, error: `${input.displayPath} is not a file.` };
       }
       return {
@@ -57,5 +65,5 @@ registerScopedService(
   IFileEditService,
   FileEditService,
   ScopeActivation.OnScopeCreated,
-  'edit',
+  "edit",
 );

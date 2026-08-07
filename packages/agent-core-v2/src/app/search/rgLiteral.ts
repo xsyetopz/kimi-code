@@ -77,8 +77,7 @@ export async function searchLiteralRipgrep(
 ): Promise<RgLiteralResult> {
   const pageSize = options.query.pageSize ?? 20;
   const candidateCap = options.candidateCap ?? LITERAL_CANDIDATE_CAP;
-  const deadlineAt =
-    Date.now() + (options.deadlineMs ?? QUERY_DEADLINE_MS);
+  const deadlineAt = Date.now() + (options.deadlineMs ?? QUERY_DEADLINE_MS);
 
   const rgPath = await resolveRgPath();
   if (rgPath === undefined) {
@@ -186,7 +185,10 @@ export async function searchLiteralRipgrep(
         break;
       }
 
-      if (options.query.role !== undefined && message.role !== options.query.role) {
+      if (
+        options.query.role !== undefined &&
+        message.role !== options.query.role
+      ) {
         continue;
       }
 
@@ -195,7 +197,10 @@ export async function searchLiteralRipgrep(
       if (at === -1) continue;
 
       const time = message.time ?? summary.updatedAt;
-      if (options.query.startTime !== undefined && time < options.query.startTime) {
+      if (
+        options.query.startTime !== undefined &&
+        time < options.query.startTime
+      ) {
         continue;
       }
       if (options.query.endTime !== undefined && time > options.query.endTime) {
@@ -226,7 +231,9 @@ export async function searchLiteralRipgrep(
     if (incomplete !== undefined) break;
   }
 
-  hits.sort((a, b) => b.time - a.time || a.sessionId.localeCompare(b.sessionId));
+  hits.sort(
+    (a, b) => b.time - a.time || a.sessionId.localeCompare(b.sessionId),
+  );
   const page = hits.slice(0, pageSize);
   const hasMore = hits.length > pageSize || incomplete === "candidate_cap";
 
@@ -262,7 +269,10 @@ function resolveSearchRoots(
   return [...roots];
 }
 
-function buildRgArgs(pattern: string, searchRoots: readonly string[]): string[] {
+function buildRgArgs(
+  pattern: string,
+  searchRoots: readonly string[],
+): string[] {
   return [
     "--json",
     "-F",

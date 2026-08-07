@@ -23,34 +23,41 @@
  * section read are deterministic. Bound at Workspace scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Emitter } from '#/_base/event';
-import { ILogService } from '#/_base/log/log';
-import { TimeoutTimer } from '#/_base/utils/timer';
-import { subtreeWatchFilter } from '#/_base/utils/paths';
-import { dirname } from 'pathe';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Emitter } from "#/_base/event";
+import { ILogService } from "#/_base/log/log";
+import { TimeoutTimer } from "#/_base/utils/timer";
+import { subtreeWatchFilter } from "#/_base/utils/paths";
+import { dirname } from "pathe";
 
-import type { McpServerConfig } from '#/mcpCore/config-schema';
-import { MCP_SECTION, type McpSection } from '#/app/mcpConfig/configSection';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
-import { IPluginService } from '#/app/plugin/plugin';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { IHostFsWatchService } from '#/os/interface/hostFsWatch';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
-import { IWorkspaceTrust } from '#/workspace/workspaceTrust/workspaceTrust';
+import type { McpServerConfig } from "#/mcpCore/config-schema";
+import { MCP_SECTION, type McpSection } from "#/app/mcpConfig/configSection";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
+import { IPluginService } from "#/app/plugin/plugin";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { IHostFsWatchService } from "#/os/interface/hostFsWatch";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
+import { IWorkspaceTrust } from "#/workspace/workspaceTrust/workspaceTrust";
 
-import { loadMcpServers, resolveMcpJsonPaths } from './internal/config-loader';
+import { loadMcpServers, resolveMcpJsonPaths } from "./internal/config-loader";
 import {
   IWorkspaceMcpConfigService,
   type McpServersChange,
   type McpTunables,
-} from './workspaceMcpConfig';
+} from "./workspaceMcpConfig";
 
 const WATCH_DEBOUNCE_MS = 200;
 
-export class WorkspaceMcpConfigService extends Disposable implements IWorkspaceMcpConfigService {
+export class WorkspaceMcpConfigService
+  extends Disposable
+  implements IWorkspaceMcpConfigService
+{
   declare readonly _serviceBrand: undefined;
 
   readonly ready: Promise<void>;
@@ -59,7 +66,9 @@ export class WorkspaceMcpConfigService extends Disposable implements IWorkspaceM
   private pluginServers = new Map<string, McpServerConfig>();
   private current: Readonly<Record<string, McpServerConfig>> = {};
   private readonly watchDebounce = this._register(new TimeoutTimer());
-  private readonly changeEmitter = this._register(new Emitter<McpServersChange>());
+  private readonly changeEmitter = this._register(
+    new Emitter<McpServersChange>(),
+  );
   readonly onDidChange = this.changeEmitter.event;
 
   constructor(
@@ -74,7 +83,7 @@ export class WorkspaceMcpConfigService extends Disposable implements IWorkspaceM
   ) {
     super();
     this.ready = this.initialize().catch((error: unknown) => {
-      this.log.error('mcp config initial load failed', { error });
+      this.log.error("mcp config initial load failed", { error });
     });
     this._register(
       this.plugins.onDidReload(() => {
@@ -129,7 +138,10 @@ export class WorkspaceMcpConfigService extends Disposable implements IWorkspaceM
   }
 
   private merged(): Record<string, McpServerConfig> {
-    return { ...Object.fromEntries(this.pluginServers), ...Object.fromEntries(this.fileServers) };
+    return {
+      ...Object.fromEntries(this.pluginServers),
+      ...Object.fromEntries(this.fileServers),
+    };
   }
 
   private async watchConfigFiles(): Promise<void> {
@@ -141,7 +153,10 @@ export class WorkspaceMcpConfigService extends Disposable implements IWorkspaceM
     this.watchPaths([paths.user]);
     const projectRoot = dirname(paths.projectRoot);
     const handle = this.fsWatch.watch(projectRoot, {
-      ignored: subtreeWatchFilter(projectRoot, [paths.projectRoot, paths.project]),
+      ignored: subtreeWatchFilter(projectRoot, [
+        paths.projectRoot,
+        paths.project,
+      ]),
     });
     this._register(handle);
     this._register(
@@ -200,7 +215,10 @@ export class WorkspaceMcpConfigService extends Disposable implements IWorkspaceM
     const remove: string[] = [];
     for (const [name, config] of Object.entries(next)) {
       const previous = this.current[name];
-      if (previous === undefined || fingerprintConfig(previous) !== fingerprintConfig(config)) {
+      if (
+        previous === undefined ||
+        fingerprintConfig(previous) !== fingerprintConfig(config)
+      ) {
         upsert[name] = config;
       }
     }
@@ -219,7 +237,7 @@ function fingerprintConfig(config: McpServerConfig): string {
 
 function sortKeysDeep(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortKeysDeep);
-  if (value !== null && typeof value === 'object') {
+  if (value !== null && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value)
         .toSorted(([a], [b]) => a.localeCompare(b))
@@ -234,5 +252,5 @@ registerScopedService(
   IWorkspaceMcpConfigService,
   WorkspaceMcpConfigService,
   ScopeActivation.OnScopeCreated,
-  'workspaceMcpConfig',
+  "workspaceMcpConfig",
 );

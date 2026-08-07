@@ -189,9 +189,7 @@ function resultFromExitCode(
   });
 }
 
-function structuredOutput(
-  stdout: string,
-):
+function structuredOutput(stdout: string):
   | {
       action?: "block";
       reason?: string;

@@ -176,7 +176,9 @@ export function getProviderAuthIntegration(
 ): ProviderAuthIntegration | undefined {
   const direct = integrations.get(providerId);
   if (direct !== undefined) return direct;
-  return providerType === undefined ? undefined : integrations.get(providerType);
+  return providerType === undefined
+    ? undefined
+    : integrations.get(providerType);
 }
 
 /**
@@ -204,7 +206,10 @@ export function getProviderAuthAdapter(
   providerId: string,
   providerType?: string,
 ): ProviderAuthAdapter | undefined {
-  const integration = getProviderAuthIntegration(providerId, providerType)?.integration;
+  const integration = getProviderAuthIntegration(
+    providerId,
+    providerType,
+  )?.integration;
   return integration === undefined ? undefined : adapters.get(integration);
 }
 

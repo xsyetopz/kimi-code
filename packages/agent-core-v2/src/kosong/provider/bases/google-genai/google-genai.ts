@@ -13,13 +13,9 @@
  * error conversion) is self-contained by design.
  */
 
-import {
-  GoogleGenAI as GenAIClient,
-} from "@google/genai";
+import { GoogleGenAI as GenAIClient } from "@google/genai";
 
-import type {
-  Message,
-} from "#/kosong/contract/message";
+import type { Message } from "#/kosong/contract/message";
 import type {
   ChatProvider,
   GenerateOptions,
@@ -49,7 +45,10 @@ import {
   createAbortError,
 } from "./google-genai-errors";
 
-export type { GoogleGenAIGenerationKwargs, GoogleGenAIOptions } from "./google-genai-convert";
+export type {
+  GoogleGenAIGenerationKwargs,
+  GoogleGenAIOptions,
+} from "./google-genai-convert";
 export { messagesToGoogleGenAIContents } from "./google-genai-convert";
 export { convertGoogleGenAIError } from "./google-genai-errors";
 

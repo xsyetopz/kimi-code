@@ -116,7 +116,25 @@ export interface TerminalApprovalPreviewView {
 }
 
 export interface TerminalDialogView {
-  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | "plugins-panel" | "start-permission-prompt" | "goal-queue-manager" | "goal-queue-edit" | "provider-manager" | "api-key-input" | "feedback-input" | "custom-registry-import" | null;
+  readonly active:
+    | "session-picker"
+    | "help"
+    | "trust-prompt"
+    | "choice-picker"
+    | "model-selector"
+    | "effort-selector"
+    | "undo-selector"
+    | "experiments-selector"
+    | "plugin-mcp-selector"
+    | "plugins-panel"
+    | "start-permission-prompt"
+    | "goal-queue-manager"
+    | "goal-queue-edit"
+    | "provider-manager"
+    | "api-key-input"
+    | "feedback-input"
+    | "custom-registry-import"
+    | null;
   readonly pendingApproval: PendingApproval | null;
   readonly pendingQuestion: PendingQuestion | null;
   readonly sessions: readonly TerminalSessionView[];

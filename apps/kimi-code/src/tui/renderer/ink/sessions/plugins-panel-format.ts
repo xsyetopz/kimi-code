@@ -91,7 +91,9 @@ export function marketplaceEntryStatus(
   }
 }
 
-export function marketplaceEntryDescription(entry: PluginMarketplaceEntry): string {
+export function marketplaceEntryDescription(
+  entry: PluginMarketplaceEntry,
+): string {
   const tier = marketplaceTierLabel(entry.tier);
   const description = entry.description ?? tier;
   const version = entry.version !== undefined ? ` · v${entry.version}` : "";

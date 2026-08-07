@@ -127,7 +127,9 @@ export class CodexAuthAdapter implements ProviderAuthAdapter {
 
   getFlow(provider: string): OAuthFlowSnapshot | undefined {
     const flow = this.flows.get(provider);
-    return flow === undefined ? undefined : toDeviceOAuthFlowSnapshot(flow, this.now);
+    return flow === undefined
+      ? undefined
+      : toDeviceOAuthFlowSnapshot(flow, this.now);
   }
 
   async cancelLogin(provider: string): Promise<OAuthLoginCancelResponse> {
@@ -278,7 +280,8 @@ export class CodexAuthAdapter implements ProviderAuthAdapter {
 
   private async requestHeaders(): Promise<Record<string, string> | undefined> {
     const token = await this.storage.load(STORAGE_NAME);
-    if (token?.accountId === undefined || token.accountId === "") return undefined;
+    if (token?.accountId === undefined || token.accountId === "")
+      return undefined;
     return { [CODEX_ACCOUNT_ID_HEADER]: token.accountId };
   }
 
@@ -287,8 +290,7 @@ export class CodexAuthAdapter implements ProviderAuthAdapter {
     existing?: TokenInfo,
   ): Promise<void> {
     const expiresIn = token.expires_in ?? DEFAULT_TOKEN_EXPIRES_SEC;
-    const accountId =
-      extractAccountIdFromTokens(token) ?? existing?.accountId;
+    const accountId = extractAccountIdFromTokens(token) ?? existing?.accountId;
     const stored: TokenInfo = {
       accessToken: token.access_token ?? existing?.accessToken ?? "",
       refreshToken: token.refresh_token ?? existing?.refreshToken ?? "",
@@ -341,7 +343,6 @@ export class CodexAuthAdapter implements ProviderAuthAdapter {
       throw new Error(`OpenAI Codex OAuth request failed: ${response.status}`);
     return response.json() as Promise<TokenResponse>;
   }
-
 }
 
 function isUserCodeResponse(value: unknown): value is UserCodeResponse {
@@ -373,4 +374,3 @@ function parseInterval(value: string | number): number {
   const parsed = Number.parseInt(value.trim(), 10);
   return parsed > 0 ? parsed : 5;
 }
-

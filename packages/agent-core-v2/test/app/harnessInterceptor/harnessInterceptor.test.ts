@@ -12,9 +12,7 @@ import { createServices } from "#/_base/di/test";
 import { Event } from "#/_base/event";
 import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
 import type { ContextMessage } from "#/agent/contextMemory/types";
-import {
-  AgentHarnessInterceptorService,
-} from "#/agent/harnessInterceptor/harnessInterceptorService";
+import { AgentHarnessInterceptorService } from "#/agent/harnessInterceptor/harnessInterceptorService";
 import { IAgentHarnessInterceptorService } from "#/agent/harnessInterceptor/harnessInterceptor";
 import { IAgentFullCompactionService } from "#/agent/fullCompaction/fullCompaction";
 import { IAgentLoopService } from "#/agent/loop/loop";
@@ -22,17 +20,13 @@ import { IAgentPromptService } from "#/agent/prompt/prompt";
 import { AgentPromptService } from "#/agent/prompt/promptService";
 import { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
 import { AgentSystemReminderService } from "#/agent/systemReminder/systemReminderService";
-import {
-  denyToolExecution,
-} from "#/agent/toolExecutor/beforeToolExecuteEvent";
+import { denyToolExecution } from "#/agent/toolExecutor/beforeToolExecuteEvent";
 import type { BeforeToolExecuteEvent } from "#/agent/toolExecutor/toolHooks";
 import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
 import { AgentToolExecutorService } from "#/agent/toolExecutor/toolExecutorService";
 import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
 import { AgentToolRegistryService } from "#/agent/toolRegistry/toolRegistryService";
-import {
-  HarnessInterceptorRegistryService,
-} from "#/app/harnessInterceptor/harnessInterceptorRegistryService";
+import { HarnessInterceptorRegistryService } from "#/app/harnessInterceptor/harnessInterceptorRegistryService";
 import { IHarnessInterceptorRegistry } from "#/app/harnessInterceptor/harnessInterceptorRegistry";
 import { IEventBus } from "#/app/event/eventBus";
 import { EventBusService } from "#/app/event/eventBusService";
@@ -89,17 +83,17 @@ function createPromptHarness(registry: IHarnessInterceptorRegistry) {
         seal: async () => {},
         hooks: createHooks(["onDidRestore"]),
       } as unknown as IWireService);
-      reg.defineInstance(
-        ITelemetryService,
-        recordingTelemetry([]),
-      );
+      reg.defineInstance(ITelemetryService, recordingTelemetry([]));
       reg.defineInstance(IAgentFullCompactionService, fullCompaction);
       reg.define(IEventBus, EventBusService);
       reg.define(IAgentSystemReminderService, AgentSystemReminderService);
       reg.define(IAgentToolRegistryService, AgentToolRegistryService);
       reg.define(IAgentToolExecutorService, AgentToolExecutorService);
       reg.define(IAgentPromptService, AgentPromptService);
-      reg.define(IAgentHarnessInterceptorService, AgentHarnessInterceptorService);
+      reg.define(
+        IAgentHarnessInterceptorService,
+        AgentHarnessInterceptorService,
+      );
     },
   });
   return {
@@ -206,7 +200,10 @@ describe("AgentHarnessInterceptorService", () => {
         reg.defineInstance(IHarnessInterceptorRegistry, registry);
         reg.defineInstance(IAgentToolRegistryService, AgentToolRegistryService);
         reg.defineInstance(IAgentToolExecutorService, events.executor);
-        reg.define(IAgentHarnessInterceptorService, AgentHarnessInterceptorService);
+        reg.define(
+          IAgentHarnessInterceptorService,
+          AgentHarnessInterceptorService,
+        );
       },
     });
     void ix.get(IAgentHarnessInterceptorService);

@@ -62,8 +62,18 @@ function makeView(
 describe("splitInkTranscript", () => {
   it("freezes the full transcript while idle", () => {
     const entries = [
-      { id: "u1", kind: "user" as const, renderMode: "plain" as const, content: "hi" },
-      { id: "a1", kind: "assistant" as const, renderMode: "markdown" as const, content: "hello" },
+      {
+        id: "u1",
+        kind: "user" as const,
+        renderMode: "plain" as const,
+        content: "hi",
+      },
+      {
+        id: "a1",
+        kind: "assistant" as const,
+        renderMode: "markdown" as const,
+        content: "hello",
+      },
     ];
     const split = splitInkTranscript(makeView(entries));
     expect(split.staticEntries.map((entry) => entry.id)).toEqual(["u1", "a1"]);
@@ -72,21 +82,50 @@ describe("splitInkTranscript", () => {
 
   it("keeps the current turn tail live while composing", () => {
     const entries = [
-      { id: "u1", kind: "user" as const, renderMode: "plain" as const, content: "first" },
-      { id: "a1", kind: "assistant" as const, renderMode: "markdown" as const, content: "done" },
-      { id: "u2", kind: "user" as const, renderMode: "plain" as const, content: "second" },
-      { id: "a2", kind: "assistant" as const, renderMode: "markdown" as const, content: "..." },
+      {
+        id: "u1",
+        kind: "user" as const,
+        renderMode: "plain" as const,
+        content: "first",
+      },
+      {
+        id: "a1",
+        kind: "assistant" as const,
+        renderMode: "markdown" as const,
+        content: "done",
+      },
+      {
+        id: "u2",
+        kind: "user" as const,
+        renderMode: "plain" as const,
+        content: "second",
+      },
+      {
+        id: "a2",
+        kind: "assistant" as const,
+        renderMode: "markdown" as const,
+        content: "...",
+      },
     ];
     const split = splitInkTranscript(
       makeView(entries, { streamingPhase: "composing" }),
     );
-    expect(split.staticEntries.map((entry) => entry.id)).toEqual(["u1", "a1", "u2"]);
+    expect(split.staticEntries.map((entry) => entry.id)).toEqual([
+      "u1",
+      "a1",
+      "u2",
+    ]);
     expect(split.liveEntries.map((entry) => entry.id)).toEqual(["a2"]);
   });
 
   it("keeps the whole transcript dynamic when tool output is expanded", () => {
     const entries = [
-      { id: "u1", kind: "user" as const, renderMode: "plain" as const, content: "hi" },
+      {
+        id: "u1",
+        kind: "user" as const,
+        renderMode: "plain" as const,
+        content: "hi",
+      },
     ];
     const view = makeView(entries);
     const split = splitInkTranscript({ ...view, toolOutputExpanded: true });

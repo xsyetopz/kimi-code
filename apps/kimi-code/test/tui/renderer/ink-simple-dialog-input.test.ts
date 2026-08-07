@@ -118,9 +118,7 @@ describe("Ink-owned simple dialog input", () => {
 
     (
       tui as unknown as {
-        mountSessionPicker: (options: {
-          onCancel: () => void;
-        }) => void;
+        mountSessionPicker: (options: { onCancel: () => void }) => void;
       }
     ).mountSessionPicker({ onCancel: () => {} });
 
@@ -302,10 +300,7 @@ describe("Ink-owned simple dialog input", () => {
           {
             question: "Pick one",
             multi_select: false,
-            options: [
-              { label: "First" },
-              { label: "Second" },
-            ],
+            options: [{ label: "First" }, { label: "Second" }],
           },
         ],
       },
@@ -400,9 +395,10 @@ describe("Ink-owned simple dialog input", () => {
           {
             type: "file_content",
             path: "src/example.ts",
-            content: Array.from({ length: 40 }, (_, i) => `line-${String(i + 1)}`).join(
-              "\n",
-            ),
+            content: Array.from(
+              { length: 40 },
+              (_, i) => `line-${String(i + 1)}`,
+            ).join("\n"),
           },
         ],
         choices: [{ label: "Allow", response: "approved" }],

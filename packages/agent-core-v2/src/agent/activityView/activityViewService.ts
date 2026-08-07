@@ -16,17 +16,21 @@
  * per-turn class. Bound at Agent scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { IEventBus } from '#/app/event/eventBus';
-import { IAgentLoopService } from '#/agent/loop/loop';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IAgentTaskService } from '#/agent/task/task';
-import { IAgentFullCompactionService } from '#/agent/fullCompaction/fullCompaction';
-import { USER_PROMPT_ORIGIN } from '#/agent/contextMemory/types';
-import type { PromptOrigin } from '#/agent/contextMemory/types';
-import type { TurnEndReason } from '#/agent/loop/turnEvents';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import { IEventBus } from "#/app/event/eventBus";
+import { IAgentLoopService } from "#/agent/loop/loop";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IAgentTaskService } from "#/agent/task/task";
+import { IAgentFullCompactionService } from "#/agent/fullCompaction/fullCompaction";
+import { USER_PROMPT_ORIGIN } from "#/agent/contextMemory/types";
+import type { PromptOrigin } from "#/agent/contextMemory/types";
+import type { TurnEndReason } from "#/agent/loop/turnEvents";
 
 import type {
   ActivityLastTurnState,
@@ -38,41 +42,49 @@ import type {
   BackgroundRef,
   ToolCallRef,
   TurnPhase,
-} from './activityView';
-import { IAgentActivityView } from './activityView';
+} from "./activityView";
+import { IAgentActivityView } from "./activityView";
 
-type EndingReason = NonNullable<ActivityTurnState['endingReason']>;
-const FULL_COMPACTION_BACKGROUND_ID = 'full-compaction';
+type EndingReason = NonNullable<ActivityTurnState["endingReason"]>;
+const FULL_COMPACTION_BACKGROUND_ID = "full-compaction";
 
 export const activityViewLifecycleKey = defineState<ActivityViewLifecycle>(
-  'activityView.lifecycle',
-  () => 'ready',
+  "activityView.lifecycle",
+  () => "ready",
 );
 export const activityViewTurnKey = defineState<MutableTurn | undefined>(
-  'activityView.turn',
+  "activityView.turn",
   () => undefined as MutableTurn | undefined,
 );
-export const activityViewLastTurnKey = defineState<ActivityLastTurnState | undefined>(
-  'activityView.lastTurn',
+export const activityViewLastTurnKey = defineState<
+  ActivityLastTurnState | undefined
+>(
+  "activityView.lastTurn",
   () => undefined as ActivityLastTurnState | undefined,
 );
-export const activityViewBackgroundKey = defineState<Map<string, BackgroundRef>>(
-  'activityView.background',
-  () => new Map(),
+export const activityViewBackgroundKey = defineState<
+  Map<string, BackgroundRef>
+>("activityView.background", () => new Map());
+export const activityViewCurrentKey = defineState<AgentActivityState>(
+  "activityView.current",
+  () => ({
+    lifecycle: "ready",
+    background: [],
+  }),
 );
-export const activityViewCurrentKey = defineState<AgentActivityState>('activityView.current', () => ({
-  lifecycle: 'ready',
-  background: [],
-}));
 
-export class AgentActivityView extends Disposable implements IAgentActivityView {
+export class AgentActivityView
+  extends Disposable
+  implements IAgentActivityView
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
     @IEventBus private readonly eventBus: IEventBus,
     @IAgentLoopService private readonly loop: IAgentLoopService,
     @IAgentTaskService private readonly tasks: IAgentTaskService,
-    @IAgentFullCompactionService private readonly fullCompaction: IAgentFullCompactionService,
+    @IAgentFullCompactionService
+    private readonly fullCompaction: IAgentFullCompactionService,
     @IAgentStateService private readonly states: IAgentStateService,
   ) {
     super();
@@ -85,19 +97,43 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
     this.seedFromTasks();
     this.seedFromFullCompaction();
 
-    this._register(this.eventBus.subscribe('turn.started', (e) => this.onTurnStarted(e.turnId, e.origin)));
-    this._register(this.eventBus.subscribe('turn.step.started', (e) => this.onStepStarted(e.step)));
-    this._register(this.eventBus.subscribe('assistant.delta', () => this.onDelta('assistant')));
-    this._register(this.eventBus.subscribe('thinking.delta', () => this.onDelta('thinking')));
-    this._register(this.eventBus.subscribe('tool.call.delta', () => this.onDelta('tool_call')));
     this._register(
-      this.eventBus.subscribe('tool.call.started', (e) => this.onToolCallStarted(e.toolCallId, e.name)),
+      this.eventBus.subscribe("turn.started", (e) =>
+        this.onTurnStarted(e.turnId, e.origin),
+      ),
     );
-    this._register(this.eventBus.subscribe('tool.result', (e) => this.onToolResult(e.toolCallId)));
     this._register(
-      this.eventBus.subscribe('turn.step.retrying', (e) => {
+      this.eventBus.subscribe("turn.step.started", (e) =>
+        this.onStepStarted(e.step),
+      ),
+    );
+    this._register(
+      this.eventBus.subscribe("assistant.delta", () =>
+        this.onDelta("assistant"),
+      ),
+    );
+    this._register(
+      this.eventBus.subscribe("thinking.delta", () => this.onDelta("thinking")),
+    );
+    this._register(
+      this.eventBus.subscribe("tool.call.delta", () =>
+        this.onDelta("tool_call"),
+      ),
+    );
+    this._register(
+      this.eventBus.subscribe("tool.call.started", (e) =>
+        this.onToolCallStarted(e.toolCallId, e.name),
+      ),
+    );
+    this._register(
+      this.eventBus.subscribe("tool.result", (e) =>
+        this.onToolResult(e.toolCallId),
+      ),
+    );
+    this._register(
+      this.eventBus.subscribe("turn.step.retrying", (e) => {
         this.mutateTurn((t) => {
-          t.phase = 'retrying';
+          t.phase = "retrying";
           t.stream = undefined;
           t.retry = {
             failedAttempt: e.failedAttempt,
@@ -111,32 +147,36 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
       }),
     );
     this._register(
-      this.eventBus.subscribe('turn.step.completed', () => {
+      this.eventBus.subscribe("turn.step.completed", () => {
         this.mutateTurn((t) => {
-          t.phase = 'running';
+          t.phase = "running";
           t.stream = undefined;
           t.retry = undefined;
         });
       }),
     );
     this._register(
-      this.eventBus.subscribe('turn.step.interrupted', (e) => this.onStepInterrupted(e.turnId, e.reason)),
+      this.eventBus.subscribe("turn.step.interrupted", (e) =>
+        this.onStepInterrupted(e.turnId, e.reason),
+      ),
     );
     this._register(
-      this.eventBus.subscribe('turn.ended', (e) => this.onTurnEnded(e.turnId, e.reason)),
+      this.eventBus.subscribe("turn.ended", (e) =>
+        this.onTurnEnded(e.turnId, e.reason),
+      ),
     );
     this._register(
-      this.eventBus.subscribe('permission.approval.requested', (e) =>
+      this.eventBus.subscribe("permission.approval.requested", (e) =>
         this.onApprovalRequested(e.toolCallId),
       ),
     );
     this._register(
-      this.eventBus.subscribe('permission.approval.resolved', (e) =>
+      this.eventBus.subscribe("permission.approval.resolved", (e) =>
         this.onApprovalResolved(e.toolCallId),
       ),
     );
     this._register(
-      this.eventBus.subscribe('task.started', (e) => {
+      this.eventBus.subscribe("task.started", (e) => {
         this.background.set(e.info.taskId, {
           kind: e.info.kind,
           id: e.info.taskId,
@@ -146,14 +186,14 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
       }),
     );
     this._register(
-      this.eventBus.subscribe('task.terminated', (e) => {
+      this.eventBus.subscribe("task.terminated", (e) => {
         if (this.background.delete(e.info.taskId)) this.publish();
       }),
     );
     this._register(
-      this.eventBus.subscribe('compaction.started', () => {
+      this.eventBus.subscribe("compaction.started", () => {
         this.background.set(FULL_COMPACTION_BACKGROUND_ID, {
-          kind: 'compaction',
+          kind: "compaction",
           id: FULL_COMPACTION_BACKGROUND_ID,
           since: Date.now(),
         });
@@ -161,12 +201,12 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
       }),
     );
     this._register(
-      this.eventBus.subscribe('compaction.completed', () => {
+      this.eventBus.subscribe("compaction.completed", () => {
         this.onFullCompactionEnded();
       }),
     );
     this._register(
-      this.eventBus.subscribe('compaction.cancelled', () => {
+      this.eventBus.subscribe("compaction.cancelled", () => {
         this.onFullCompactionEnded();
       }),
     );
@@ -213,21 +253,25 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
   }
 
   override dispose(): void {
-    this.lifecycle = 'disposed';
+    this.lifecycle = "disposed";
     this.publish();
     super.dispose();
   }
 
   private seedFromLoop(): void {
     const status = this.loop.status();
-    if (status.state !== 'running' || status.activeTurnId === undefined) return;
+    if (status.state !== "running" || status.activeTurnId === undefined) return;
     this.turn = new MutableTurn(status.activeTurnId, USER_PROMPT_ORIGIN);
     this.publish();
   }
 
   private seedFromTasks(): void {
     for (const info of this.tasks.list(true)) {
-      this.background.set(info.taskId, { kind: info.kind, id: info.taskId, since: info.startedAt });
+      this.background.set(info.taskId, {
+        kind: info.kind,
+        id: info.taskId,
+        since: info.startedAt,
+      });
     }
     if (this.background.size > 0) this.publish();
   }
@@ -235,7 +279,7 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
   private seedFromFullCompaction(): void {
     if (this.fullCompaction.compacting === null) return;
     this.background.set(FULL_COMPACTION_BACKGROUND_ID, {
-      kind: 'compaction',
+      kind: "compaction",
       id: FULL_COMPACTION_BACKGROUND_ID,
       since: Date.now(),
     });
@@ -258,7 +302,12 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
       this.publish();
       return;
     }
-    this.lastTurn = { turnId, reason, durationMs: Date.now() - this.turn.since, at: Date.now() };
+    this.lastTurn = {
+      turnId,
+      reason,
+      durationMs: Date.now() - this.turn.since,
+      at: Date.now(),
+    };
     this.turn = undefined;
     this.publish();
   }
@@ -266,14 +315,15 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
   private onStepStarted(step: number): void {
     this.mutateTurn((t) => {
       t.step = step;
-      t.phase = 'running';
+      t.phase = "running";
       t.stream = undefined;
       t.retry = undefined;
     });
   }
 
   private onStepInterrupted(turnId: number, reason: string): void {
-    if (reason !== 'aborted' && reason !== 'max_steps' && reason !== 'error') return;
+    if (reason !== "aborted" && reason !== "max_steps" && reason !== "error")
+      return;
     this.mutateTurn((t) => {
       if (t.turnId !== turnId) return;
       t.ending = true;
@@ -281,9 +331,9 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
     });
   }
 
-  private onDelta(stream: 'assistant' | 'thinking' | 'tool_call'): void {
+  private onDelta(stream: "assistant" | "thinking" | "tool_call"): void {
     this.mutateTurn((t) => {
-      t.phase = 'streaming';
+      t.phase = "streaming";
       t.stream = stream;
       t.retry = undefined;
     });
@@ -291,17 +341,21 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
 
   private onToolCallStarted(toolCallId: string, name: string): void {
     this.mutateTurn((t) => {
-      t.phase = 'tool_call';
+      t.phase = "tool_call";
       t.stream = undefined;
       t.retry = undefined;
-      t.activeToolCalls.set(toolCallId, { toolCallId, name, since: Date.now() });
+      t.activeToolCalls.set(toolCallId, {
+        toolCallId,
+        name,
+        since: Date.now(),
+      });
     });
   }
 
   private onToolResult(toolCallId: string): void {
     this.mutateTurn((t) => {
       t.activeToolCalls.delete(toolCallId);
-      t.phase = t.activeToolCalls.size === 0 ? 'running' : 'tool_call';
+      t.phase = t.activeToolCalls.size === 0 ? "running" : "tool_call";
       t.stream = undefined;
       t.retry = undefined;
     });
@@ -309,7 +363,11 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
 
   private onApprovalRequested(toolCallId: string): void {
     this.mutateTurn((t) => {
-      t.pendingApprovals.set(toolCallId, { approvalId: toolCallId, toolCallId, since: Date.now() });
+      t.pendingApprovals.set(toolCallId, {
+        approvalId: toolCallId,
+        toolCallId,
+        since: Date.now(),
+      });
     });
   }
 
@@ -335,13 +393,13 @@ export class AgentActivityView extends Disposable implements IAgentActivityView 
     };
     if (activityEqual(this.current, next)) return;
     this.current = next;
-    this.eventBus.publish({ type: 'agent.activity.updated', ...next });
+    this.eventBus.publish({ type: "agent.activity.updated", ...next });
   }
 }
 
 class MutableTurn {
-  phase: TurnPhase = 'running';
-  stream: ActivityTurnState['stream'];
+  phase: TurnPhase = "running";
+  stream: ActivityTurnState["stream"];
   step = 0;
   ending = false;
   endingReason: EndingReason | undefined;
@@ -394,13 +452,19 @@ function activityEqual(a: AgentActivityState, b: AgentActivityState): boolean {
   }
   if ((a.lastTurn === undefined) !== (b.lastTurn === undefined)) return false;
   if (a.lastTurn !== undefined && b.lastTurn !== undefined) {
-    if (a.lastTurn.turnId !== b.lastTurn.turnId || a.lastTurn.reason !== b.lastTurn.reason) {
+    if (
+      a.lastTurn.turnId !== b.lastTurn.turnId ||
+      a.lastTurn.reason !== b.lastTurn.reason
+    ) {
       return false;
     }
   }
   if (a.background.length !== b.background.length) return false;
   for (let i = 0; i < a.background.length; i++) {
-    if (a.background[i]!.id !== b.background[i]!.id || a.background[i]!.kind !== b.background[i]!.kind) {
+    if (
+      a.background[i]!.id !== b.background[i]!.id ||
+      a.background[i]!.kind !== b.background[i]!.kind
+    ) {
       return false;
     }
   }
@@ -412,5 +476,5 @@ registerScopedService(
   IAgentActivityView,
   AgentActivityView,
   ScopeActivation.OnScopeCreated,
-  'activityView',
+  "activityView",
 );

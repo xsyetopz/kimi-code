@@ -39,20 +39,31 @@ import {
   type CustomRegistryProviderEntry,
   type CustomRegistrySource,
   type ManagedKimiConfigShape,
-} from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/kimi-code-oauth";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Error2 } from '#/_base/errors/errors';
-import { IAgentIdentity } from '#/app/agentIdentity/agentIdentity';
-import { IConfigService } from '#/app/config/config';
-import { IModelCatalog } from '#/kosong/model/catalog';
-import { type ModelsSection } from '#/kosong/model/model';
-import { type ProviderConfig, type ProvidersSection } from '#/kosong/provider/provider';
-import { modelsDevProviderModels, resolveModelsDevImport } from './modelsDev';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Error2 } from "#/_base/errors/errors";
+import { IAgentIdentity } from "#/app/agentIdentity/agentIdentity";
+import { IConfigService } from "#/app/config/config";
+import { IModelCatalog } from "#/kosong/model/catalog";
+import { type ModelsSection } from "#/kosong/model/model";
+import {
+  type ProviderConfig,
+  type ProvidersSection,
+} from "#/kosong/provider/provider";
+import { modelsDevProviderModels, resolveModelsDevImport } from "./modelsDev";
 
-import { DEFAULT_MODEL_SECTION, MODELS_SECTION, PROVIDERS_SECTION } from './configSection';
-import { ModelsDevImportErrors } from './errors';
-import { IKosongConfigService } from './kosongConfig';
+import {
+  DEFAULT_MODEL_SECTION,
+  MODELS_SECTION,
+  PROVIDERS_SECTION,
+} from "./configSection";
+import { ModelsDevImportErrors } from "./errors";
+import { IKosongConfigService } from "./kosongConfig";
 import {
   IModelsDevImportService,
   PROVIDER_ID_PATTERN,
@@ -61,7 +72,7 @@ import {
   type ImportModelsDevProviderOptions,
   type ImportModelsDevProviderResult,
   type ModelsDevProviderItem,
-} from './modelsDevImport';
+} from "./modelsDevImport";
 import {
   getModelsDevCatalog,
   modelsDevEntry,
@@ -69,7 +80,7 @@ import {
   toModelsDevProviderItem,
   upstreamFetch,
   UPSTREAM_FETCH_TIMEOUT_MS,
-} from './modelsDevUpstream';
+} from "./modelsDevUpstream";
 
 const codes = ModelsDevImportErrors.codes;
 
@@ -91,10 +102,14 @@ export class ModelsDevImportService implements IModelsDevImportService {
 
   async listModelsDevProviders(): Promise<ModelsDevProviderItem[]> {
     const catalog = await getModelsDevCatalog(await this.outboundUserAgent());
-    return Object.entries(catalog).map(([id, entry]) => toModelsDevProviderItem(id, entry));
+    return Object.entries(catalog).map(([id, entry]) =>
+      toModelsDevProviderItem(id, entry),
+    );
   }
 
-  async getModelsDevProvider(catalogId: string): Promise<ModelsDevProviderItem> {
+  async getModelsDevProvider(
+    catalogId: string,
+  ): Promise<ModelsDevProviderItem> {
     const catalog = await getModelsDevCatalog(await this.outboundUserAgent());
     const entry = modelsDevEntry(catalog, catalogId);
     if (entry === undefined) {
@@ -147,13 +162,13 @@ export class ModelsDevImportService implements IModelsDevImportService {
     }
 
     const resolution = resolveModelsDevImport(entry, options.baseUrl);
-    if (resolution.kind === 'invalid') {
+    if (resolution.kind === "invalid") {
       throw new Error2(
         codes.CATALOG_IMPORT_INVALID,
         `catalog entry ${catalogId} cannot be imported: ${resolution.reason}`,
       );
     }
-    if (resolution.kind === 'needs-base-url') {
+    if (resolution.kind === "needs-base-url") {
       throw new Error2(
         codes.CATALOG_IMPORT_INVALID,
         `catalog entry ${catalogId} requires a base_url`,
@@ -177,7 +192,8 @@ export class ModelsDevImportService implements IModelsDevImportService {
     }
 
     const config = await this.readyConfig();
-    const providers = config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
+    const providers =
+      config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
     const existing = providers[targetId];
     if (existing?.oauth !== undefined) {
       throw new Error2(
@@ -189,16 +205,25 @@ export class ModelsDevImportService implements IModelsDevImportService {
     const provider: ProviderConfig = { type: resolution.wire };
     provider.baseUrl = resolution.baseUrl;
     provider.apiKey = options.apiKey ?? existing?.apiKey;
-    await config.replace(PROVIDERS_SECTION, { ...providers, [targetId]: provider });
+    await config.replace(PROVIDERS_SECTION, {
+      ...providers,
+      [targetId]: provider,
+    });
 
-    const records = config.inspect<ModelsSection>(MODELS_SECTION).userValue ?? {};
+    const records =
+      config.inspect<ModelsSection>(MODELS_SECTION).userValue ?? {};
     const withoutTarget = Object.fromEntries(
-      Object.entries(records).filter(([, record]) => record.provider !== targetId),
+      Object.entries(records).filter(
+        ([, record]) => record.provider !== targetId,
+      ),
     );
     await config.replace(MODELS_SECTION, withoutTarget);
     const nextModels = { ...withoutTarget };
     for (const model of models) {
-      nextModels[`${targetId}/${model.id}`] = modelsDevModelToRecord(targetId, model);
+      nextModels[`${targetId}/${model.id}`] = modelsDevModelToRecord(
+        targetId,
+        model,
+      );
     }
     await config.replace(MODELS_SECTION, nextModels);
 
@@ -216,11 +241,12 @@ export class ModelsDevImportService implements IModelsDevImportService {
   ): Promise<ImportCustomRegistryResult> {
     const { url } = options;
     const config = await this.readyConfig();
-    const providers = config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
+    const providers =
+      config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
     const source: CustomRegistrySource = {
-      kind: 'apiJson',
+      kind: "apiJson",
       url,
-      apiKey: options.apiKey ?? registryKeyFromExisting(providers, url) ?? '',
+      apiKey: options.apiKey ?? registryKeyFromExisting(providers, url) ?? "",
     };
 
     let entries: Record<string, CustomRegistryProviderEntry>;
@@ -262,12 +288,12 @@ export class ModelsDevImportService implements IModelsDevImportService {
     for (const [providerId, provider] of Object.entries(removed.providers)) {
       if (surviving.has(providerId)) continue;
       if (!isRecord(provider)) continue;
-      if (provider['oauth'] !== undefined) continue;
-      const existingSource = provider['source'];
+      if (provider["oauth"] !== undefined) continue;
+      const existingSource = provider["source"];
       if (
         isRecord(existingSource) &&
-        existingSource['kind'] === 'apiJson' &&
-        existingSource['url'] === url
+        existingSource["kind"] === "apiJson" &&
+        existingSource["url"] === url
       ) {
         removeCustomRegistryProvider(removed, providerId);
       }
@@ -277,8 +303,14 @@ export class ModelsDevImportService implements IModelsDevImportService {
         removeCustomRegistryProvider(removed, entry.id);
       }
     }
-    await config.replace(PROVIDERS_SECTION, removed.providers as ProvidersSection);
-    await config.replace(MODELS_SECTION, (removed.models ?? {}) as ModelsSection);
+    await config.replace(
+      PROVIDERS_SECTION,
+      removed.providers as ProvidersSection,
+    );
+    await config.replace(
+      MODELS_SECTION,
+      (removed.models ?? {}) as ModelsSection,
+    );
 
     const applied = {
       providers: removed.providers,
@@ -287,13 +319,23 @@ export class ModelsDevImportService implements IModelsDevImportService {
     for (const entry of Object.values(entries)) {
       applyCustomRegistryProvider(applied, entry, source);
     }
-    await config.replace(PROVIDERS_SECTION, applied.providers as ProvidersSection);
-    await config.replace(MODELS_SECTION, (applied.models ?? {}) as ModelsSection);
+    await config.replace(
+      PROVIDERS_SECTION,
+      applied.providers as ProvidersSection,
+    );
+    await config.replace(
+      MODELS_SECTION,
+      (applied.models ?? {}) as ModelsSection,
+    );
 
     const firstEntry = Object.values(entries)[0];
-    const firstModelKey = firstEntry === undefined ? undefined : Object.keys(firstEntry.models)[0];
+    const firstModelKey =
+      firstEntry === undefined ? undefined : Object.keys(firstEntry.models)[0];
     if (firstEntry !== undefined && firstModelKey !== undefined) {
-      await seedDefaultModelWhenUnset(config, `${firstEntry.id}/${firstModelKey}`);
+      await seedDefaultModelWhenUnset(
+        config,
+        `${firstEntry.id}/${firstModelKey}`,
+      );
     }
 
     const imported = [];
@@ -308,9 +350,12 @@ export class ModelsDevImportService implements IModelsDevImportService {
   }
 }
 
-async function seedDefaultModelWhenUnset(config: IConfigService, alias: string): Promise<void> {
+async function seedDefaultModelWhenUnset(
+  config: IConfigService,
+  alias: string,
+): Promise<void> {
   const current = config.inspect<string>(DEFAULT_MODEL_SECTION).userValue;
-  if (current !== undefined && current.trim() !== '') return;
+  if (current !== undefined && current.trim() !== "") return;
   await config.replace(DEFAULT_MODEL_SECTION, alias);
 }
 
@@ -320,17 +365,21 @@ function registryKeyFromExisting(
 ): string | undefined {
   for (const provider of Object.values(providers)) {
     if (!isRecord(provider)) continue;
-    const source = provider['source'];
-    if (isRecord(source) && source['kind'] === 'apiJson' && source['url'] === url) {
-      const key = source['apiKey'];
-      if (typeof key === 'string' && key.length > 0) return key;
+    const source = provider["source"];
+    if (
+      isRecord(source) &&
+      source["kind"] === "apiJson" &&
+      source["url"] === url
+    ) {
+      const key = source["apiKey"];
+      if (typeof key === "string" && key.length > 0) return key;
     }
   }
   return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function truncateUpstreamMessage(err: unknown, limit = 300): string {
@@ -343,5 +392,5 @@ registerScopedService(
   IModelsDevImportService,
   ModelsDevImportService,
   ScopeActivation.OnScopeCreated,
-  'kosongConfig',
+  "kosongConfig",
 );

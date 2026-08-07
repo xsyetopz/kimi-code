@@ -21,48 +21,48 @@
  * review. Bound at Agent scope.
  */
 
-import { createHash, randomUUID } from 'node:crypto';
-import { dirname, join } from 'pathe';
+import { createHash, randomUUID } from "node:crypto";
+import { dirname, join } from "pathe";
 
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { unwrapErrorCause } from '#/_base/errors/errors';
-import { Error2, ErrorCodes } from '#/errors';
-import { generateHeroSlug } from '#/_base/utils/hero-slug';
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { IAgentContextInjectorService } from '#/agent/contextInjector/contextInjector';
-import { IAgentPermissionModeService } from '#/agent/permissionMode/permissionMode';
-import { PlanModeInjection } from '#/agent/plan/injection/planModeInjection';
-import { IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IAgentToolApprovalService } from '#/agent/toolApproval/toolApproval';
-import { denyToolExecution } from '#/agent/toolExecutor/beforeToolExecuteEvent';
-import { IAgentToolExecutorService } from '#/agent/toolExecutor/toolExecutor';
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { unwrapErrorCause } from "#/_base/errors/errors";
+import { Error2, ErrorCodes } from "#/errors";
+import { generateHeroSlug } from "#/_base/utils/hero-slug";
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { IAgentContextInjectorService } from "#/agent/contextInjector/contextInjector";
+import { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
+import { PlanModeInjection } from "#/agent/plan/injection/planModeInjection";
+import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IAgentToolApprovalService } from "#/agent/toolApproval/toolApproval";
+import { denyToolExecution } from "#/agent/toolExecutor/beforeToolExecuteEvent";
+import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
 import type {
   BeforeToolExecuteEvent,
   ResolvedToolExecutionHookContext,
-} from '#/agent/toolExecutor/toolHooks';
-import { IEventBus } from '#/app/event/eventBus';
-import { IAgentTelemetryContextService } from '#/app/telemetry/agentTelemetryContext';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { IBlobStore } from '#/persistence/interface/blobStore';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { IWireService } from '#/wire/wire';
-import type { ToolFileAccess } from '#/tool/toolContract';
-import {
-  IAgentPlanService,
-  type PlanData,
-  type PlanFilePath,
-} from './plan';
-import { ExitPlanModeReview } from './exitPlanModeReview';
+} from "#/agent/toolExecutor/toolHooks";
+import { IEventBus } from "#/app/event/eventBus";
+import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { IBlobStore } from "#/persistence/interface/blobStore";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { IWireService } from "#/wire/wire";
+import type { ToolFileAccess } from "#/tool/toolContract";
+import { IAgentPlanService, type PlanData, type PlanFilePath } from "./plan";
+import { ExitPlanModeReview } from "./exitPlanModeReview";
 import {
   PlanModel,
   planModeCancel,
   planModeEnter,
   planModeExit,
   planRevision,
-} from './planOps';
+} from "./planOps";
 
 export class AgentPlanService extends Disposable implements IAgentPlanService {
   declare readonly _serviceBrand: undefined;
@@ -70,18 +70,22 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
   private readonly review: ExitPlanModeReview;
 
   constructor(
-    @IAgentContextMemoryService private readonly context: IAgentContextMemoryService,
+    @IAgentContextMemoryService
+    private readonly context: IAgentContextMemoryService,
     @IHostFileSystem private readonly hostFs: IHostFileSystem,
     @IBlobStore private readonly blobs: IBlobStore,
     @IAgentContextInjectorService dynamicInjector: IAgentContextInjectorService,
-    @IAgentTelemetryContextService private readonly telemetryContext: IAgentTelemetryContextService,
+    @IAgentTelemetryContextService
+    private readonly telemetryContext: IAgentTelemetryContextService,
     @IEventBus eventBus: IEventBus,
     @IWireService private readonly wire: IWireService,
     @ISessionContext private readonly sessionCtx: ISessionContext,
     @IAgentScopeContext private readonly agentCtx: IAgentScopeContext,
     @IAgentToolExecutorService toolExecutor: IAgentToolExecutorService,
-    @IAgentToolApprovalService private readonly toolApproval: IAgentToolApprovalService,
-    @IAgentPermissionModeService private readonly modeService: IAgentPermissionModeService,
+    @IAgentToolApprovalService
+    private readonly toolApproval: IAgentToolApprovalService,
+    @IAgentPermissionModeService
+    private readonly modeService: IAgentPermissionModeService,
     @ITelemetryService telemetry: ITelemetryService,
     @IAgentStateService states: IAgentStateService,
   ) {
@@ -90,35 +94,43 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
     this.review = new ExitPlanModeReview(this, this.toolApproval, telemetry);
 
     this._register(
-      this.wire.hooks.onDidRestore.register('plan', async (_ctx, next) => {
+      this.wire.hooks.onDidRestore.register("plan", async (_ctx, next) => {
         this.restoreTelemetryMode();
         await next();
       }),
     );
     this._register(
-      eventBus.subscribe('context.undone', () => {
+      eventBus.subscribe("context.undone", () => {
         this.restoreTelemetryMode();
         eventBus.publish({
-          type: 'agent.status.updated',
+          type: "agent.status.updated",
           planMode: this.isActive,
         });
       }),
     );
 
-    this._register(new PlanModeInjection(dynamicInjector, this, this.context, states));
+    this._register(
+      new PlanModeInjection(dynamicInjector, this, this.context, states),
+    );
     this._register(this.registerPlanGuard(toolExecutor));
   }
 
-  private registerPlanGuard(toolExecutor: IAgentToolExecutorService): IDisposable {
-    return toolExecutor.onBeforeExecuteTool((event) => this.guardToolExecution(event));
+  private registerPlanGuard(
+    toolExecutor: IAgentToolExecutorService,
+  ): IDisposable {
+    return toolExecutor.onBeforeExecuteTool((event) =>
+      this.guardToolExecution(event),
+    );
   }
 
-  private async guardToolExecution(event: BeforeToolExecuteEvent): Promise<void> {
+  private async guardToolExecution(
+    event: BeforeToolExecuteEvent,
+  ): Promise<void> {
     const toolName = event.toolCall.name;
     const plan = await this.status();
 
-    if (toolName === 'ExitPlanMode') {
-      if (plan !== null && this.modeService.mode !== 'auto') {
+    if (toolName === "ExitPlanMode") {
+      if (plan !== null && this.modeService.mode !== "auto") {
         event.waitUntil(() => this.review.requestApproval(event));
       }
       return;
@@ -128,29 +140,33 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
       return;
     }
 
-    if (toolName === 'Write' || toolName === 'Edit') {
+    if (toolName === "Write" || toolName === "Edit") {
       if (writesOnlyPlanFile(event, plan.path)) {
         event.allow();
         return;
       }
       event.veto(
-        denyToolExecution(this.toolApproval.formatDenyMessage(planModeWriteDeniedMessage(plan.path))),
-      );
-      return;
-    }
-
-    if (toolName === 'TaskStop') {
-      event.veto(
         denyToolExecution(
           this.toolApproval.formatDenyMessage(
-            'TaskStop is not available in plan mode. Call ExitPlanMode to exit plan mode before stopping a background task.',
+            planModeWriteDeniedMessage(plan.path),
           ),
         ),
       );
       return;
     }
 
-    if (toolName === 'CronCreate' || toolName === 'CronDelete') {
+    if (toolName === "TaskStop") {
+      event.veto(
+        denyToolExecution(
+          this.toolApproval.formatDenyMessage(
+            "TaskStop is not available in plan mode. Call ExitPlanMode to exit plan mode before stopping a background task.",
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (toolName === "CronCreate" || toolName === "CronDelete") {
       event.veto(
         denyToolExecution(
           this.toolApproval.formatDenyMessage(
@@ -173,7 +189,7 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
   }
 
   private restoreTelemetryMode(): void {
-    this.telemetryContext.set({ mode: this.isActive ? 'plan' : 'agent' });
+    this.telemetryContext.set({ mode: this.isActive ? "plan" : "agent" });
   }
 
   private createPlanId(): string {
@@ -182,7 +198,10 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
 
   async enter(id = this.createPlanId(), createFile = false): Promise<void> {
     if (this.isActive) {
-      throw new Error2(ErrorCodes.SESSION_PLAN_MODE_INVALID, 'Already in plan mode');
+      throw new Error2(
+        ErrorCodes.SESSION_PLAN_MODE_INVALID,
+        "Already in plan mode",
+      );
     }
 
     const planFilePath = this.planFilePathFor(id);
@@ -190,7 +209,7 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
     try {
       await this.ensurePlanDirectory(planFilePath);
       this.wire.dispatch(planModeEnter({ id }));
-      this.telemetryContext.set({ mode: 'plan' });
+      this.telemetryContext.set({ mode: "plan" });
       enterRecorded = true;
       if (createFile) {
         await this.writeEmptyPlanFile(planFilePath);
@@ -205,7 +224,7 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
 
   cancel(id?: string): void {
     this.wire.dispatch(planModeCancel({ id }));
-    this.telemetryContext.set({ mode: 'agent' });
+    this.telemetryContext.set({ mode: "agent" });
   }
 
   async clear(): Promise<void> {
@@ -216,7 +235,7 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
 
   exit(id?: string): void {
     this.wire.dispatch(planModeExit({ id }));
-    this.telemetryContext.set({ mode: 'agent' });
+    this.telemetryContext.set({ mode: "agent" });
   }
 
   async recordRevision(): Promise<void> {
@@ -224,7 +243,7 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
     if (!state.active || state.id === undefined) return;
     const id = state.id;
     const content = await this.hostFs.readText(this.planFilePathFor(id));
-    const bytes = Buffer.from(content, 'utf8');
+    const bytes = Buffer.from(content, "utf8");
     const version = (state.revisionCount?.[id] ?? 0) + 1;
     const scope = this.agentCtx.scope();
     const key = `plan/${id}/v${version}.md`;
@@ -234,7 +253,7 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
         id,
         version,
         path: `${scope}/${key}`,
-        sha256: createHash('sha256').update(bytes).digest('hex'),
+        sha256: createHash("sha256").update(bytes).digest("hex"),
         bytes: bytes.byteLength,
       }),
     );
@@ -244,7 +263,7 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
     const state = this.wire.getModel(PlanModel).current;
     if (!state.active || state.id === undefined) return null;
     const path = this.planFilePathFor(state.id);
-    let content = '';
+    let content = "";
     try {
       content = await this.hostFs.readText(path);
     } catch (error) {
@@ -258,12 +277,18 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
   }
 
   private planFilePathFor(id: string): string {
-    return join(this.sessionCtx.sessionDir, 'agents', this.agentCtx.agentId, 'plans', `${id}.md`);
+    return join(
+      this.sessionCtx.sessionDir,
+      "agents",
+      this.agentCtx.agentId,
+      "plans",
+      `${id}.md`,
+    );
   }
 
   private async writeEmptyPlanFile(path: string): Promise<void> {
     await this.ensurePlanDirectory(path);
-    await this.hostFs.writeText(path, '');
+    await this.hostFs.writeText(path, "");
   }
 
   private async ensurePlanDirectory(path: string): Promise<void> {
@@ -273,9 +298,9 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
 
 function isMissingFileError(error: unknown): boolean {
   const unwrapped = unwrapErrorCause(error);
-  if (unwrapped === null || typeof unwrapped !== 'object') return false;
+  if (unwrapped === null || typeof unwrapped !== "object") return false;
   const code = (unwrapped as { readonly code?: unknown }).code;
-  return code === 'ENOENT';
+  return code === "ENOENT";
 }
 
 function writesOnlyPlanFile(
@@ -284,8 +309,8 @@ function writesOnlyPlanFile(
 ): boolean {
   const writeAccesses = (context.execution.accesses ?? []).filter(
     (access): access is ToolFileAccess =>
-      access.kind === 'file' &&
-      (access.operation === 'write' || access.operation === 'readwrite'),
+      access.kind === "file" &&
+      (access.operation === "write" || access.operation === "readwrite"),
   );
   if (writeAccesses.length === 0) return false;
   return writeAccesses.every((access) => access.path === planFilePath);
@@ -293,8 +318,8 @@ function writesOnlyPlanFile(
 
 function planModeWriteDeniedMessage(planFilePath: string | null): string {
   return (
-    `Plan mode is active. You may only write to the current plan file: ${planFilePath ?? '(no plan file selected yet)'}. ` +
-    'Call ExitPlanMode to exit plan mode before editing other files.'
+    `Plan mode is active. You may only write to the current plan file: ${planFilePath ?? "(no plan file selected yet)"}. ` +
+    "Call ExitPlanMode to exit plan mode before editing other files."
   );
 }
 
@@ -305,5 +330,5 @@ registerScopedService(
   IAgentPlanService,
   AgentPlanService,
   ScopeActivation.OnScopeCreated,
-  'plan',
+  "plan",
 );

@@ -9,26 +9,30 @@
 
 import { IInstantiationService } from "#/_base/di/instantiation";
 import { Disposable } from "#/_base/di/lifecycle";
-import type { ResolvedToolExecutionHookContext } from '#/agent/toolExecutor/toolHooks';
-import { AutoModeApprovePermissionPolicyService } from '#/agent/permissionPolicy/policies/auto-mode-approve';
-import { AutoModeAskUserQuestionDenyPermissionPolicyService } from '#/agent/permissionPolicy/policies/auto-mode-ask-user-question-deny';
-import { DefaultToolApprovePermissionPolicyService } from '#/agent/permissionPolicy/policies/default-tool-approve';
-import { FallbackAskPermissionPolicyService } from '#/agent/permissionPolicy/policies/fallback-ask';
-import { GitControlPathAccessAskPermissionPolicyService } from '#/agent/permissionPolicy/policies/git-control-path-access-ask';
-import { GitCwdWriteApprovePermissionPolicyService } from '#/agent/permissionPolicy/policies/git-cwd-write-approve';
-import { SensitiveFileAccessAskPermissionPolicyService } from '#/agent/permissionPolicy/policies/sensitive-file-access-ask';
-import { SessionApprovalHistoryPermissionPolicyService } from '#/agent/permissionPolicy/policies/session-approval-history';
-import { UserConfiguredAllowPermissionPolicyService } from '#/agent/permissionPolicy/policies/user-configured-allow';
-import { UserConfiguredAskPermissionPolicyService } from '#/agent/permissionPolicy/policies/user-configured-ask';
-import { UserConfiguredDenyPermissionPolicyService } from '#/agent/permissionPolicy/policies/user-configured-deny';
-import { WorkspaceLeaseWriteDenyPermissionPolicyService } from '#/agent/permissionPolicy/policies/workspace-lease-write-deny';
-import { YoloModeApprovePermissionPolicyService } from '#/agent/permissionPolicy/policies/yolo-mode-approve';
+import type { ResolvedToolExecutionHookContext } from "#/agent/toolExecutor/toolHooks";
+import { AutoModeApprovePermissionPolicyService } from "#/agent/permissionPolicy/policies/auto-mode-approve";
+import { AutoModeAskUserQuestionDenyPermissionPolicyService } from "#/agent/permissionPolicy/policies/auto-mode-ask-user-question-deny";
+import { DefaultToolApprovePermissionPolicyService } from "#/agent/permissionPolicy/policies/default-tool-approve";
+import { FallbackAskPermissionPolicyService } from "#/agent/permissionPolicy/policies/fallback-ask";
+import { GitControlPathAccessAskPermissionPolicyService } from "#/agent/permissionPolicy/policies/git-control-path-access-ask";
+import { GitCwdWriteApprovePermissionPolicyService } from "#/agent/permissionPolicy/policies/git-cwd-write-approve";
+import { SensitiveFileAccessAskPermissionPolicyService } from "#/agent/permissionPolicy/policies/sensitive-file-access-ask";
+import { SessionApprovalHistoryPermissionPolicyService } from "#/agent/permissionPolicy/policies/session-approval-history";
+import { UserConfiguredAllowPermissionPolicyService } from "#/agent/permissionPolicy/policies/user-configured-allow";
+import { UserConfiguredAskPermissionPolicyService } from "#/agent/permissionPolicy/policies/user-configured-ask";
+import { UserConfiguredDenyPermissionPolicyService } from "#/agent/permissionPolicy/policies/user-configured-deny";
+import { WorkspaceLeaseWriteDenyPermissionPolicyService } from "#/agent/permissionPolicy/policies/workspace-lease-write-deny";
+import { YoloModeApprovePermissionPolicyService } from "#/agent/permissionPolicy/policies/yolo-mode-approve";
 import {
   IAgentPermissionPolicyService,
   type PermissionPolicyEvaluation,
-} from './permissionPolicy';
+} from "./permissionPolicy";
 import type { PermissionPolicy } from "./types";
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
 export class AgentPermissionPolicyService
   extends Disposable
@@ -39,22 +43,43 @@ export class AgentPermissionPolicyService
   private readonly policies: readonly PermissionPolicy[];
 
   constructor(
-    @IInstantiationService private readonly instantiation: IInstantiationService,
+    @IInstantiationService
+    private readonly instantiation: IInstantiationService,
   ) {
     super();
     this.policies = [
-      this.instantiation.createInstance(AutoModeAskUserQuestionDenyPermissionPolicyService),
-      this.instantiation.createInstance(UserConfiguredDenyPermissionPolicyService),
-      this.instantiation.createInstance(WorkspaceLeaseWriteDenyPermissionPolicyService),
+      this.instantiation.createInstance(
+        AutoModeAskUserQuestionDenyPermissionPolicyService,
+      ),
+      this.instantiation.createInstance(
+        UserConfiguredDenyPermissionPolicyService,
+      ),
+      this.instantiation.createInstance(
+        WorkspaceLeaseWriteDenyPermissionPolicyService,
+      ),
       this.instantiation.createInstance(AutoModeApprovePermissionPolicyService),
-      this.instantiation.createInstance(SessionApprovalHistoryPermissionPolicyService),
-      this.instantiation.createInstance(UserConfiguredAskPermissionPolicyService),
-      this.instantiation.createInstance(UserConfiguredAllowPermissionPolicyService),
-      this.instantiation.createInstance(SensitiveFileAccessAskPermissionPolicyService),
-      this.instantiation.createInstance(GitControlPathAccessAskPermissionPolicyService),
+      this.instantiation.createInstance(
+        SessionApprovalHistoryPermissionPolicyService,
+      ),
+      this.instantiation.createInstance(
+        UserConfiguredAskPermissionPolicyService,
+      ),
+      this.instantiation.createInstance(
+        UserConfiguredAllowPermissionPolicyService,
+      ),
+      this.instantiation.createInstance(
+        SensitiveFileAccessAskPermissionPolicyService,
+      ),
+      this.instantiation.createInstance(
+        GitControlPathAccessAskPermissionPolicyService,
+      ),
       this.instantiation.createInstance(YoloModeApprovePermissionPolicyService),
-      this.instantiation.createInstance(DefaultToolApprovePermissionPolicyService),
-      this.instantiation.createInstance(GitCwdWriteApprovePermissionPolicyService),
+      this.instantiation.createInstance(
+        DefaultToolApprovePermissionPolicyService,
+      ),
+      this.instantiation.createInstance(
+        GitCwdWriteApprovePermissionPolicyService,
+      ),
       this.instantiation.createInstance(FallbackAskPermissionPolicyService),
     ];
   }
@@ -75,5 +100,5 @@ registerScopedService(
   IAgentPermissionPolicyService,
   AgentPermissionPolicyService,
   ScopeActivation.OnScopeCreated,
-  'permissionPolicy',
+  "permissionPolicy",
 );

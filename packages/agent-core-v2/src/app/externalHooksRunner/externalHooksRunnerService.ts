@@ -14,24 +14,38 @@
  * merged under the caller's `inputData`. Bound at App scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Emitter, type Event } from '#/_base/event';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
-import { IPluginService } from '#/app/plugin/plugin';
-import { HOOKS_SECTION, type HookDefConfig } from '#/agent/externalHooks/configSection';
-import type { HookBlockDecision, HookDef, HookResult } from '#/agent/externalHooks/types';
-import { IHostProcessService } from '#/os/interface/hostProcess';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Emitter, type Event } from "#/_base/event";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
+import { IPluginService } from "#/app/plugin/plugin";
+import {
+  HOOKS_SECTION,
+  type HookDefConfig,
+} from "#/agent/externalHooks/configSection";
+import type {
+  HookBlockDecision,
+  HookDef,
+  HookResult,
+} from "#/agent/externalHooks/types";
+import { IHostProcessService } from "#/os/interface/hostProcess";
 
 import {
   IExternalHooksRunnerService,
   type ExternalHooksRunnerTriggerArgs,
-} from './externalHooksRunner';
-import { blockDecision, indexHooks, runMatchedHooks } from './runner';
-import type { HookRunCallbacks } from './runner';
+} from "./externalHooksRunner";
+import { blockDecision, indexHooks, runMatchedHooks } from "./runner";
+import type { HookRunCallbacks } from "./runner";
 
-export class ExternalHooksRunnerService extends Disposable implements IExternalHooksRunnerService {
+export class ExternalHooksRunnerService
+  extends Disposable
+  implements IExternalHooksRunnerService
+{
   declare readonly _serviceBrand: undefined;
 
   private byEvent = new Map<string, HookDef[]>();
@@ -64,7 +78,10 @@ export class ExternalHooksRunnerService extends Disposable implements IExternalH
     return result;
   }
 
-  trigger(event: string, args: ExternalHooksRunnerTriggerArgs = {}): Promise<HookResult[]> {
+  trigger(
+    event: string,
+    args: ExternalHooksRunnerTriggerArgs = {},
+  ): Promise<HookResult[]> {
     try {
       return this.triggerInner(event, args).catch((): HookResult[] => []);
     } catch {
@@ -129,7 +146,9 @@ export class ExternalHooksRunnerService extends Disposable implements IExternalH
 
   private async load(): Promise<void> {
     await this.config.ready;
-    const configured = this.config.get(HOOKS_SECTION) as readonly HookDefConfig[] | undefined;
+    const configured = this.config.get(HOOKS_SECTION) as
+      | readonly HookDefConfig[]
+      | undefined;
     const pluginHooks = await this.plugins.enabledHooks();
     this.byEvent = indexHooks([...(configured ?? []), ...pluginHooks]);
     this._onDidReload.fire();
@@ -141,5 +160,5 @@ registerScopedService(
   IExternalHooksRunnerService,
   ExternalHooksRunnerService,
   ScopeActivation.OnScopeCreated,
-  'externalHooksRunner',
+  "externalHooksRunner",
 );

@@ -81,9 +81,7 @@ export function renderAgentSwarmProgressLines(
   const outerWidth = Math.max(1, width);
   const innerWidth = Math.max(
     1,
-    outerWidth -
-      visibleWidth(AGENT_SWARM_LEFT_INDENT) -
-      AGENT_SWARM_RIGHT_GAP,
+    outerWidth - visibleWidth(AGENT_SWARM_LEFT_INDENT) - AGENT_SWARM_RIGHT_GAP,
   );
   if (state.members.length === 0) {
     const lines = [

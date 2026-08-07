@@ -17,33 +17,45 @@
  * Workspace scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { defineState } from '#/_base/state/stateRegistry';
-import { TimeoutTimer } from '#/_base/utils/timer';
-import { subtreeWatchFilter } from '#/_base/utils/paths';
-import { agentsMdWatchRoots, loadAgentsMdForRoots } from '#/agent/profile/context';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { IHostFsWatchService } from '#/os/interface/hostFsWatch';
-import type { ISessionInstructionsProvider } from '#/session/sessionInstructions/instructionsProvider';
-import { IWorkspaceStateService } from '#/workspace/state/workspaceState';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { defineState } from "#/_base/state/stateRegistry";
+import { TimeoutTimer } from "#/_base/utils/timer";
+import { subtreeWatchFilter } from "#/_base/utils/paths";
+import {
+  agentsMdWatchRoots,
+  loadAgentsMdForRoots,
+} from "#/agent/profile/context";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { IHostFsWatchService } from "#/os/interface/hostFsWatch";
+import type { ISessionInstructionsProvider } from "#/session/sessionInstructions/instructionsProvider";
+import { IWorkspaceStateService } from "#/workspace/state/workspaceState";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 
 import {
   IWorkspaceInstructionsService,
   type WorkspaceInstructionsSnapshot,
-} from './workspaceInstructions';
+} from "./workspaceInstructions";
 
 const WATCH_DEBOUNCE_MS = 200;
 
-export const workspaceInstructionsCurrentKey = defineState<WorkspaceInstructionsSnapshot>(
-  'workspaceInstructions.current',
-  () => ({ agentsMd: undefined, agentsMdWarning: undefined, agentsMdPaths: undefined }),
-);
+export const workspaceInstructionsCurrentKey =
+  defineState<WorkspaceInstructionsSnapshot>(
+    "workspaceInstructions.current",
+    () => ({
+      agentsMd: undefined,
+      agentsMdWarning: undefined,
+      agentsMdPaths: undefined,
+    }),
+  );
 
 export class WorkspaceInstructionsService
   extends Disposable
@@ -85,33 +97,37 @@ export class WorkspaceInstructionsService
   }
 
   reload(): Promise<void> {
-    const tail = this.reloadTail.catch(() => undefined).then(async () => {
-      const result = await loadAgentsMdForRoots(
-        { fs: this.fs, homeDir: this.env.homeDir },
-        this.bootstrap.homeDir,
-        [this.workspace.cwd],
-      );
-      const next: WorkspaceInstructionsSnapshot = {
-        agentsMd: result.content,
-        agentsMdWarning: result.warning,
-        agentsMdPaths: result.paths,
-      };
-      const changed =
-        next.agentsMd !== this.current.agentsMd ||
-        next.agentsMdWarning !== this.current.agentsMdWarning;
-      this.current = next;
-      if (changed) {
-        this.onDidChangeEmitter.fire();
-      }
-    });
+    const tail = this.reloadTail
+      .catch(() => undefined)
+      .then(async () => {
+        const result = await loadAgentsMdForRoots(
+          { fs: this.fs, homeDir: this.env.homeDir },
+          this.bootstrap.homeDir,
+          [this.workspace.cwd],
+        );
+        const next: WorkspaceInstructionsSnapshot = {
+          agentsMd: result.content,
+          agentsMdWarning: result.warning,
+          agentsMdPaths: result.paths,
+        };
+        const changed =
+          next.agentsMd !== this.current.agentsMd ||
+          next.agentsMdWarning !== this.current.agentsMdWarning;
+        this.current = next;
+        if (changed) {
+          this.onDidChangeEmitter.fire();
+        }
+      });
     this.reloadTail = tail;
     return tail;
   }
 
   sessionProvider(): ISessionInstructionsProvider {
     const currentAgentsMd = (): string | undefined => this.current.agentsMd;
-    const currentWarning = (): string | undefined => this.current.agentsMdWarning;
-    const currentPaths = (): readonly string[] | undefined => this.current.agentsMdPaths;
+    const currentWarning = (): string | undefined =>
+      this.current.agentsMdWarning;
+    const currentPaths = (): readonly string[] | undefined =>
+      this.current.agentsMdPaths;
     return {
       _serviceBrand: undefined,
       ready: this.ready,
@@ -150,7 +166,9 @@ export class WorkspaceInstructionsService
           }),
         );
       } catch (error) {
-        this.log.warn(`cannot watch instruction root ${root}: ${String(error)}`);
+        this.log.warn(
+          `cannot watch instruction root ${root}: ${String(error)}`,
+        );
       }
     }
   }
@@ -161,5 +179,5 @@ registerScopedService(
   IWorkspaceInstructionsService,
   WorkspaceInstructionsService,
   ScopeActivation.OnScopeCreated,
-  'workspaceInstructions',
+  "workspaceInstructions",
 );

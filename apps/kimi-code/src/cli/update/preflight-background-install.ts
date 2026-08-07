@@ -10,15 +10,8 @@ import {
   writeUpdateInstallState,
 } from "./install-state";
 import { CHANGELOG_URL } from "./prompt";
-import {
-  canAutoInstall,
-  spawnForSource,
-} from "./preflight-install-commands";
-import type {
-  InstallSource,
-  UpdateInstallState,
-  UpdateTarget,
-} from "./types";
+import { canAutoInstall, spawnForSource } from "./preflight-install-commands";
+import type { InstallSource, UpdateInstallState, UpdateTarget } from "./types";
 
 export const AUTO_INSTALL_FAILURE_PROMPT_THRESHOLD = 2;
 export const AUTO_INSTALL_ACTIVE_TTL_MS = 6 * 60 * 60 * 1000;

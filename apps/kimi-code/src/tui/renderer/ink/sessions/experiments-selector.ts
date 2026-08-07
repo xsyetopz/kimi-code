@@ -1,5 +1,10 @@
 import type { ExperimentalFeatureState } from "@moonshot-ai/kimi-code-sdk";
-import { Key, matchesKey, truncateToWidth, visibleWidth } from "@moonshot-ai/kimi-tui";
+import {
+  Key,
+  matchesKey,
+  truncateToWidth,
+  visibleWidth,
+} from "@moonshot-ai/kimi-tui";
 
 import {
   type ExperimentalFeatureDraftChange,

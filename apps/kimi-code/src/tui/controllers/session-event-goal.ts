@@ -82,9 +82,8 @@ export class SessionEventGoalHandler {
     if (change.kind === "lifecycle" && change.status === "blocked") {
       void this.notifyQueuedGoalWaitingOnBlocked();
       if (change.actor === "model" || change.reason === undefined) {
-        this.pendingModelBlockedFallback = this.deps.getCurrentTurnHasAssistantText()
-          ? undefined
-          : change;
+        this.pendingModelBlockedFallback =
+          this.deps.getCurrentTurnHasAssistantText() ? undefined : change;
         return;
       }
       this.pendingModelBlockedFallback = undefined;

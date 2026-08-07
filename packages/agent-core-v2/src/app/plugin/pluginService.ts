@@ -10,20 +10,24 @@
  * scope.
  */
 
-import { KIMI_CODE_PROVIDER_NAME } from '@moonshot-ai/kimi-code-oauth';
+import { KIMI_CODE_PROVIDER_NAME } from "@moonshot-ai/kimi-code-oauth";
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { BugIndicatingError, Error2, PluginErrors } from '#/errors';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IProviderService } from '#/kosong/provider/provider';
-import { ISkillDiscovery } from '#/app/skillCatalog/skillDiscovery';
-import type { HookDef } from '#/agent/externalHooks/types';
-import type { McpServerConfig } from '#/mcpCore/config-schema';
-import type { SkillRoot } from '#/app/skillCatalog/types';
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { BugIndicatingError, Error2, PluginErrors } from "#/errors";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IProviderService } from "#/kosong/provider/provider";
+import { ISkillDiscovery } from "#/app/skillCatalog/skillDiscovery";
+import type { HookDef } from "#/agent/externalHooks/types";
+import type { McpServerConfig } from "#/mcpCore/config-schema";
+import type { SkillRoot } from "#/app/skillCatalog/types";
 
-import { PluginManager } from './manager';
+import { PluginManager } from "./manager";
 import {
   type GetPluginInfoInput,
   type InstallPluginInput,
@@ -31,7 +35,7 @@ import {
   type RemovePluginInput,
   type SetPluginEnabledInput,
   type SetPluginMcpServerEnabledInput,
-} from './plugin';
+} from "./plugin";
 import type {
   EnabledPluginSessionStart,
   EnabledPluginSystemPrompt,
@@ -41,11 +45,11 @@ import type {
   PluginSummary,
   PluginUpdateStatus,
   ReloadSummary,
-} from './types';
+} from "./types";
 
-const KIMI_CODE_BASE_URL_ENV = 'KIMI_CODE_BASE_URL';
-const KIMI_CODE_OAUTH_HOST_ENV = 'KIMI_CODE_OAUTH_HOST';
-const KIMI_OAUTH_HOST_ENV = 'KIMI_OAUTH_HOST';
+const KIMI_CODE_BASE_URL_ENV = "KIMI_CODE_BASE_URL";
+const KIMI_CODE_OAUTH_HOST_ENV = "KIMI_CODE_OAUTH_HOST";
+const KIMI_OAUTH_HOST_ENV = "KIMI_OAUTH_HOST";
 
 export class PluginService extends Disposable implements IPluginService {
   declare readonly _serviceBrand: undefined;
@@ -58,7 +62,9 @@ export class PluginService extends Disposable implements IPluginService {
   private hasLoadedSnapshot = false;
   private loadError: Error | undefined;
   private mutationQueue: Promise<void> = Promise.resolve();
-  private readonly onDidReloadEmitter = this._register(new Emitter<ReloadSummary>());
+  private readonly onDidReloadEmitter = this._register(
+    new Emitter<ReloadSummary>(),
+  );
 
   readonly onDidReload: Event<ReloadSummary> = this.onDidReloadEmitter.event;
 
@@ -71,7 +77,8 @@ export class PluginService extends Disposable implements IPluginService {
     this.homeDir = bootstrap.homeDir;
     this.envBaseUrl = bootstrap.getEnv(KIMI_CODE_BASE_URL_ENV);
     this.envOAuthHost =
-      bootstrap.getEnv(KIMI_CODE_OAUTH_HOST_ENV) ?? bootstrap.getEnv(KIMI_OAUTH_HOST_ENV);
+      bootstrap.getEnv(KIMI_CODE_OAUTH_HOST_ENV) ??
+      bootstrap.getEnv(KIMI_OAUTH_HOST_ENV);
     this.manager = new PluginManager({
       kimiHomeDir: this.homeDir,
       discoverSkills: (roots) => discovery.discover(roots),
@@ -87,7 +94,9 @@ export class PluginService extends Disposable implements IPluginService {
       const record = await this.manager.install(input.source);
       const info = this.manager.info(record.id);
       if (info === undefined)
-        throw new BugIndicatingError(`Plugin "${record.id}" missing right after install`);
+        throw new BugIndicatingError(
+          `Plugin "${record.id}" missing right after install`,
+        );
       return info;
     });
   }
@@ -98,9 +107,15 @@ export class PluginService extends Disposable implements IPluginService {
     });
   }
 
-  setPluginMcpServerEnabled(input: SetPluginMcpServerEnabledInput): Promise<void> {
+  setPluginMcpServerEnabled(
+    input: SetPluginMcpServerEnabledInput,
+  ): Promise<void> {
     return this.runSerializedOperation(async () => {
-      await this.manager.setMcpServerEnabled(input.id, input.server, input.enabled);
+      await this.manager.setMcpServerEnabled(
+        input.id,
+        input.server,
+        input.enabled,
+      );
     });
   }
 
@@ -119,7 +134,8 @@ export class PluginService extends Disposable implements IPluginService {
         this.onDidReloadEmitter.fire(summary);
         return summary;
       } catch (error) {
-        this.loadError = error instanceof Error ? error : new Error(String(error));
+        this.loadError =
+          error instanceof Error ? error : new Error(String(error));
         throw new Error2(
           PluginErrors.codes.PLUGIN_LOAD_FAILED,
           `Failed to reload plugins: ${this.loadError.message}`,
@@ -149,7 +165,9 @@ export class PluginService extends Disposable implements IPluginService {
   }
 
   listPluginCommands(): Promise<readonly PluginCommandDef[]> {
-    return this.runSerializedOperation(async () => this.manager.enabledCommands());
+    return this.runSerializedOperation(async () =>
+      this.manager.enabledCommands(),
+    );
   }
 
   checkUpdates(): Promise<readonly PluginUpdateStatus[]> {
@@ -157,25 +175,37 @@ export class PluginService extends Disposable implements IPluginService {
   }
 
   pluginSkillRoots(): Promise<readonly SkillRoot[]> {
-    return this.runConsumptionRead([], async () => this.manager.pluginSkillRoots());
+    return this.runConsumptionRead([], async () =>
+      this.manager.pluginSkillRoots(),
+    );
   }
 
   pluginAgentRoots(): Promise<readonly PluginAgentRoot[]> {
-    return this.runConsumptionRead([], async () => this.manager.pluginAgentRoots());
+    return this.runConsumptionRead([], async () =>
+      this.manager.pluginAgentRoots(),
+    );
   }
 
   enabledSessionStarts(): Promise<readonly EnabledPluginSessionStart[]> {
-    return this.runConsumptionRead([], async () => this.manager.enabledSessionStarts());
+    return this.runConsumptionRead([], async () =>
+      this.manager.enabledSessionStarts(),
+    );
   }
 
   enabledSystemPrompts(): Promise<readonly EnabledPluginSystemPrompt[]> {
-    return this.runConsumptionRead([], async () => this.manager.enabledSystemPrompts());
+    return this.runConsumptionRead([], async () =>
+      this.manager.enabledSystemPrompts(),
+    );
   }
 
   enabledMcpServers(): Promise<Record<string, McpServerConfig>> {
     return this.runConsumptionRead({}, async () => {
       const pluginServers = this.manager.enabledMcpServers();
-      if (!Object.values(pluginServers).some((server) => server.transport === 'stdio')) {
+      if (
+        !Object.values(pluginServers).some(
+          (server) => server.transport === "stdio",
+        )
+      ) {
         return pluginServers;
       }
       const managedEnv = await this.managedKimiCodeEnvForPlugins();
@@ -201,7 +231,10 @@ export class PluginService extends Disposable implements IPluginService {
     return operation();
   }
 
-  private async runConsumptionRead<T>(fallback: T, operation: () => Promise<T>): Promise<T> {
+  private async runConsumptionRead<T>(
+    fallback: T,
+    operation: () => Promise<T>,
+  ): Promise<T> {
     await this.waitForPendingMutations();
     if (!this.hasLoadedSnapshot) return fallback;
     return operation();
@@ -225,7 +258,8 @@ export class PluginService extends Disposable implements IPluginService {
       this.hasLoadedSnapshot = true;
       this.loadError = undefined;
     } catch (error) {
-      this.loadError = error instanceof Error ? error : new Error(String(error));
+      this.loadError =
+        error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -248,15 +282,22 @@ export class PluginService extends Disposable implements IPluginService {
     );
   }
 
-  private async managedKimiCodeEnvForPlugins(): Promise<Record<string, string>> {
+  private async managedKimiCodeEnvForPlugins(): Promise<
+    Record<string, string>
+  > {
     await this.providers.ready;
     const provider = this.providers.get(KIMI_CODE_PROVIDER_NAME);
     const envBaseUrl = this.envBaseUrl;
     const envOAuthHost = this.envOAuthHost;
-    const hasEnvOverride = envBaseUrl !== undefined || envOAuthHost !== undefined;
+    const hasEnvOverride =
+      envBaseUrl !== undefined || envOAuthHost !== undefined;
     const baseUrl =
-      envBaseUrl !== undefined ? envBaseUrl.replace(/\/+$/, '') : provider?.baseUrl;
-    const oauthHost = hasEnvOverride ? envOAuthHost : provider?.oauth?.oauthHost;
+      envBaseUrl !== undefined
+        ? envBaseUrl.replace(/\/+$/, "")
+        : provider?.baseUrl;
+    const oauthHost = hasEnvOverride
+      ? envOAuthHost
+      : provider?.oauth?.oauthHost;
     const env: Record<string, string> = {};
     if (baseUrl !== undefined) env[KIMI_CODE_BASE_URL_ENV] = baseUrl;
     if (oauthHost !== undefined) env[KIMI_CODE_OAUTH_HOST_ENV] = oauthHost;
@@ -272,7 +313,7 @@ function withManagedKimiPluginEnv(
   const out: Record<string, McpServerConfig> = {};
   for (const [name, server] of Object.entries(pluginServers)) {
     out[name] =
-      server.transport === 'stdio'
+      server.transport === "stdio"
         ? { ...server, env: { ...server.env, ...managedEnv } }
         : server;
   }
@@ -284,5 +325,5 @@ registerScopedService(
   IPluginService,
   PluginService,
   ScopeActivation.OnScopeCreated,
-  'plugin',
+  "plugin",
 );

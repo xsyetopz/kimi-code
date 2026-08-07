@@ -5,25 +5,35 @@
  * pending state of its own (the kernel holds it). Bound at Session scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ISessionInteractionService } from '#/session/interaction/interaction';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ISessionInteractionService } from "#/session/interaction/interaction";
 
 import {
   type QuestionRequest,
   type QuestionResult,
   ISessionQuestionService,
-} from './question';
+} from "./question";
 
 export class SessionQuestionService implements ISessionQuestionService {
   declare readonly _serviceBrand: undefined;
 
-  constructor(@ISessionInteractionService private readonly interaction: ISessionInteractionService) {}
+  constructor(
+    @ISessionInteractionService
+    private readonly interaction: ISessionInteractionService,
+  ) {}
 
-  request(req: QuestionRequest, options?: { signal?: AbortSignal; agentId?: string }): Promise<QuestionResult> {
+  request(
+    req: QuestionRequest,
+    options?: { signal?: AbortSignal; agentId?: string },
+  ): Promise<QuestionResult> {
     const id = requestId(req);
     const pending = this.interaction.request<QuestionRequest, QuestionResult>({
       id,
-      kind: 'question',
+      kind: "question",
       payload: req,
       origin: { turnId: req.turnId, agentId: options?.agentId },
     });
@@ -36,9 +46,9 @@ export class SessionQuestionService implements ISessionQuestionService {
         const onAbort = (): void => {
           this.dismiss(id);
         };
-        signal.addEventListener('abort', onAbort, { once: true });
+        signal.addEventListener("abort", onAbort, { once: true });
         void pending.finally(() => {
-          signal.removeEventListener('abort', onAbort);
+          signal.removeEventListener("abort", onAbort);
         });
       }
     }
@@ -49,7 +59,7 @@ export class SessionQuestionService implements ISessionQuestionService {
     const id = requestId(req);
     this.interaction.enqueue<QuestionRequest>({
       id,
-      kind: 'question',
+      kind: "question",
       payload: req,
       origin: { turnId: req.turnId },
     });
@@ -66,7 +76,7 @@ export class SessionQuestionService implements ISessionQuestionService {
 
   listPending(): readonly QuestionRequest[] {
     return this.interaction
-      .listPending('question')
+      .listPending("question")
       .map((i) => i.payload as QuestionRequest);
   }
 }
@@ -75,4 +85,10 @@ function requestId(req: QuestionRequest): string {
   return req.id ?? req.toolCallId ?? `question:${String(Date.now())}`;
 }
 
-registerScopedService(LifecycleScope.Session, ISessionQuestionService, SessionQuestionService, ScopeActivation.OnScopeCreated, 'question');
+registerScopedService(
+  LifecycleScope.Session,
+  ISessionQuestionService,
+  SessionQuestionService,
+  ScopeActivation.OnScopeCreated,
+  "question",
+);

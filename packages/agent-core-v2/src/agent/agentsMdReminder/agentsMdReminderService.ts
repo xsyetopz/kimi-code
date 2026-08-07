@@ -60,21 +60,28 @@
  * through `telemetry`. Bound at Agent scope.
  */
 
-import { basename, dirname, isAbsolute, join, normalize } from 'pathe';
+import { basename, dirname, isAbsolute, join, normalize } from "pathe";
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { IBashParserService } from '#/app/bashParser/bashParser';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import type { AgentsMdReminderShownEvent } from '#/app/telemetry/events';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import type { ContentPart } from '#/kosong/contract/message';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import type { ExecutableToolOutput, ExecutableToolResult } from '#/tool/toolContract';
-import { normalizeUserPath } from '#/tool/path-access';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import { IBashParserService } from "#/app/bashParser/bashParser";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import type { AgentsMdReminderShownEvent } from "#/app/telemetry/events";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import type { ContentPart } from "#/kosong/contract/message";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import type {
+  ExecutableToolOutput,
+  ExecutableToolResult,
+} from "#/tool/toolContract";
+import { normalizeUserPath } from "#/tool/path-access";
 import {
   AGENTS_MD_PLAIN_NAMES,
   agentsMdCandidatePaths,
@@ -83,30 +90,32 @@ import {
   findProjectRoot,
   extractAgentsMdPathsFromSystemPrompt,
   loadAgentsMdDetailed,
-} from '#/agent/profile/context';
-import { ProfileModel } from '#/agent/profile/profileOps';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IAgentToolExecutorService } from '#/agent/toolExecutor/toolExecutor';
-import type { ToolDidExecuteContext } from '#/agent/toolExecutor/toolHooks';
-import { IWireService } from '#/wire/wire';
+} from "#/agent/profile/context";
+import { ProfileModel } from "#/agent/profile/profileOps";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
+import type { ToolDidExecuteContext } from "#/agent/toolExecutor/toolHooks";
+import { IWireService } from "#/wire/wire";
 
-import { IAgentAgentsMdReminderService } from './agentsMdReminder';
-import { extractBashTargetDirs } from './bashTargets';
+import { IAgentAgentsMdReminderService } from "./agentsMdReminder";
+import { extractBashTargetDirs } from "./bashTargets";
 
-const AGENTS_MD_BASENAMES: ReadonlySet<string> = new Set<string>(AGENTS_MD_PLAIN_NAMES);
+const AGENTS_MD_BASENAMES: ReadonlySet<string> = new Set<string>(
+  AGENTS_MD_PLAIN_NAMES,
+);
 
 const BASH_PARSE_OPTIONS = { timeoutMs: 20, maxNodes: 10_000 } as const;
 
 export const agentsMdReminderKnownKey = defineState<Set<string>>(
-  'agentsMdReminder.known',
+  "agentsMdReminder.known",
   () => new Set(),
 );
 export const agentsMdReminderCwdKey = defineState<string | undefined>(
-  'agentsMdReminder.cwd',
+  "agentsMdReminder.cwd",
   () => undefined as string | undefined,
 );
 export const agentsMdReminderSeededKey = defineState<boolean>(
-  'agentsMdReminder.seeded',
+  "agentsMdReminder.seeded",
   () => false,
 );
 
@@ -132,22 +141,40 @@ export class AgentAgentsMdReminderService
     this.states.register(agentsMdReminderCwdKey);
     this.states.register(agentsMdReminderSeededKey);
     this._register(
-      this.wire.hooks.onDidRestore.register('agentsMdReminder', async (_ctx, next) => {
-        const profile = this.wire.getModel(ProfileModel);
-        const paths =
-          profile.agentsMdPaths ?? extractAgentsMdPathsFromSystemPrompt(profile.systemPrompt);
-        this.seedInjected(paths, this.sessionContext.cwd);
-        await next();
-      }),
+      this.wire.hooks.onDidRestore.register(
+        "agentsMdReminder",
+        async (_ctx, next) => {
+          const profile = this.wire.getModel(ProfileModel);
+          const paths =
+            profile.agentsMdPaths ??
+            extractAgentsMdPathsFromSystemPrompt(profile.systemPrompt);
+          this.seedInjected(paths, this.sessionContext.cwd);
+          await next();
+        },
+      ),
     );
-    const handler = async (ctx: ToolDidExecuteContext, next: () => Promise<void>): Promise<void> => {
+    const handler = async (
+      ctx: ToolDidExecuteContext,
+      next: () => Promise<void>,
+    ): Promise<void> => {
       ctx.result = await this.augmentWithReminder(ctx);
       await next();
     };
     try {
-      this._register(toolExecutor.hooks.onDidExecuteTool.register('agentsMdReminder', handler, { before: 'toolDedupe' }));
+      this._register(
+        toolExecutor.hooks.onDidExecuteTool.register(
+          "agentsMdReminder",
+          handler,
+          { before: "toolDedupe" },
+        ),
+      );
     } catch {
-      this._register(toolExecutor.hooks.onDidExecuteTool.register('agentsMdReminder', handler));
+      this._register(
+        toolExecutor.hooks.onDidExecuteTool.register(
+          "agentsMdReminder",
+          handler,
+        ),
+      );
     }
   }
 
@@ -179,8 +206,10 @@ export class AgentAgentsMdReminderService
     this.seedInjected(paths, this.agentCwd);
   }
 
-  private async augmentWithReminder(ctx: ToolDidExecuteContext): Promise<ExecutableToolResult> {
-    if (ctx.outcome !== 'executed') return ctx.result;
+  private async augmentWithReminder(
+    ctx: ToolDidExecuteContext,
+  ): Promise<ExecutableToolResult> {
+    if (ctx.outcome !== "executed") return ctx.result;
     const discovered: string[] = [];
     try {
       await this.ensureSeeded();
@@ -188,7 +217,12 @@ export class AgentAgentsMdReminderService
       const selfKnownSet = new Set(selfKnown);
       for (const dir of dirs) {
         for (const path of await this.probeDir(dir)) {
-          if (this.known.has(path) || this.claimed.has(path) || selfKnownSet.has(path)) continue;
+          if (
+            this.known.has(path) ||
+            this.claimed.has(path) ||
+            selfKnownSet.has(path)
+          )
+            continue;
           this.claimed.add(path);
           discovered.push(path);
         }
@@ -204,7 +238,7 @@ export class AgentAgentsMdReminderService
         reminded_count: discovered.length,
         trace_id: ctx.trace?.traceId,
       };
-      this.telemetry.track2('agents_md_reminder_shown', properties);
+      this.telemetry.track2("agents_md_reminder_shown", properties);
       this.publishKnown([...selfKnown, ...discovered]);
       return result;
     } catch {
@@ -221,23 +255,28 @@ export class AgentAgentsMdReminderService
     this.states.set(agentsMdReminderKnownKey, merged);
   }
 
-  private targetDirs(ctx: ToolDidExecuteContext): { dirs: string[]; selfKnown: string[] } {
+  private targetDirs(ctx: ToolDidExecuteContext): {
+    dirs: string[];
+    selfKnown: string[];
+  } {
     const selfKnown: string[] = [];
     switch (ctx.toolCall.name) {
-      case 'Read':
-      case 'Edit':
-      case 'Write':
-      case 'Glob':
-      case 'Grep':
+      case "Read":
+      case "Edit":
+      case "Write":
+      case "Glob":
+      case "Grep":
         return this.targetDirsFromAccesses(ctx);
-      case 'Bash': {
+      case "Bash": {
         const args = ctx.args;
-        const command = stringArg(args, 'command');
+        const command = stringArg(args, "command");
         if (command === undefined) return { dirs: [], selfKnown };
-        const cwdArg = stringArg(args, 'cwd');
+        const cwdArg = stringArg(args, "cwd");
         const base = hostPath(this.sessionContext.cwd, this.env.pathClass);
         const normalizedCwdArg =
-          cwdArg === undefined ? undefined : normalizeUserPath(cwdArg, this.env.pathClass);
+          cwdArg === undefined
+            ? undefined
+            : normalizeUserPath(cwdArg, this.env.pathClass);
         const effectiveCwd =
           normalizedCwdArg === undefined
             ? base
@@ -274,11 +313,11 @@ export class AgentAgentsMdReminderService
     const dirs: string[] = [];
     const selfKnown: string[] = [];
     const targetsFiles =
-      ctx.toolCall.name === 'Read' ||
-      ctx.toolCall.name === 'Edit' ||
-      ctx.toolCall.name === 'Write';
+      ctx.toolCall.name === "Read" ||
+      ctx.toolCall.name === "Edit" ||
+      ctx.toolCall.name === "Write";
     for (const access of ctx.accesses ?? []) {
-      if (access.kind !== 'file') continue;
+      if (access.kind !== "file") continue;
       if (
         targetsFiles &&
         ctx.result.isError !== true &&
@@ -300,7 +339,8 @@ export class AgentAgentsMdReminderService
     const found: string[] = [];
     for (const chainDir of chain) {
       const candidates = agentsMdCandidatePaths(chainDir);
-      if (candidates.every((candidate) => this.known.has(normalize(candidate)))) continue;
+      if (candidates.every((candidate) => this.known.has(normalize(candidate))))
+        continue;
       for (const path of await findAgentsMdInDir(deps, chainDir)) {
         found.push(normalize(path));
       }
@@ -320,38 +360,41 @@ export class AgentAgentsMdReminderService
   }
 }
 
-function hostPath(path: string, pathClass: 'posix' | 'win32'): string {
+function hostPath(path: string, pathClass: "posix" | "win32"): string {
   return normalize(normalizeUserPath(path, pathClass));
 }
 
 function stringArg(args: unknown, key: string): string | undefined {
-  if (typeof args !== 'object' || args === null) return undefined;
+  if (typeof args !== "object" || args === null) return undefined;
   const value = (args as Record<string, unknown>)[key];
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
 function reminderText(paths: readonly string[]): string {
   return (
-    '<system-reminder>\n' +
-    'The path(s) touched by this call are covered by AGENTS.md instruction file(s) that were not part of the injected instructions:\n' +
-    paths.map((path) => `- ${path}`).join('\n') +
-    '\nRead them before making changes in those directories. Each file is suggested at most once per agent.' +
-    '\n</system-reminder>\n\n'
+    "<system-reminder>\n" +
+    "The path(s) touched by this call are covered by AGENTS.md instruction file(s) that were not part of the injected instructions:\n" +
+    paths.map((path) => `- ${path}`).join("\n") +
+    "\nRead them before making changes in those directories. Each file is suggested at most once per agent." +
+    "\n</system-reminder>\n\n"
   );
 }
 
-function prependReminder(result: ExecutableToolResult, text: string): ExecutableToolResult {
+function prependReminder(
+  result: ExecutableToolResult,
+  text: string,
+): ExecutableToolResult {
   const output = result.output;
   let newOutput: ExecutableToolOutput;
-  if (typeof output === 'string') {
+  if (typeof output === "string") {
     newOutput = text + output;
   } else {
     const parts: ContentPart[] = [...output];
     const first = parts[0];
-    if (first !== undefined && first.type === 'text') {
-      parts[0] = { type: 'text', text: text + first.text };
+    if (first !== undefined && first.type === "text") {
+      parts[0] = { type: "text", text: text + first.text };
     } else {
-      parts.unshift({ type: 'text', text });
+      parts.unshift({ type: "text", text });
     }
     newOutput = parts;
   }
@@ -365,5 +408,5 @@ registerScopedService(
   IAgentAgentsMdReminderService,
   AgentAgentsMdReminderService,
   ScopeActivation.OnScopeCreated,
-  'agentsMdReminder',
+  "agentsMdReminder",
 );

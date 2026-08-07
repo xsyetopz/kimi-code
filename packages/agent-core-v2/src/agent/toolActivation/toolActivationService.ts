@@ -23,31 +23,41 @@
  * resolution path.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { IInstantiationService } from '#/_base/di/instantiation';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IEventBus } from '#/app/event/eventBus';
-import { IAgentProfileService } from '#/agent/profile/profile';
-import { isToolActive } from '#/agent/toolPolicy/evaluate';
-import { IAgentToolRegistryService } from '#/agent/toolRegistry/toolRegistry';
-import { getAgentToolContributions } from '#/agent/toolRegistry/toolContribution';
-import { ISessionToolPolicyGate } from '#/session/sessionToolPolicyGate/sessionToolPolicyGate';
+import { Disposable } from "#/_base/di/lifecycle";
+import { IInstantiationService } from "#/_base/di/instantiation";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IEventBus } from "#/app/event/eventBus";
+import { IAgentProfileService } from "#/agent/profile/profile";
+import { isToolActive } from "#/agent/toolPolicy/evaluate";
+import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
+import { getAgentToolContributions } from "#/agent/toolRegistry/toolContribution";
+import { ISessionToolPolicyGate } from "#/session/sessionToolPolicyGate/sessionToolPolicyGate";
 
-import { IAgentToolActivationService } from './toolActivation';
+import { IAgentToolActivationService } from "./toolActivation";
 
-export class AgentToolActivationService extends Disposable implements IAgentToolActivationService {
+export class AgentToolActivationService
+  extends Disposable
+  implements IAgentToolActivationService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
-    @IInstantiationService private readonly instantiationService: IInstantiationService,
-    @IAgentToolRegistryService private readonly toolRegistry: IAgentToolRegistryService,
+    @IInstantiationService
+    private readonly instantiationService: IInstantiationService,
+    @IAgentToolRegistryService
+    private readonly toolRegistry: IAgentToolRegistryService,
     @IAgentProfileService private readonly profile: IAgentProfileService,
-    @ISessionToolPolicyGate private readonly toolPolicyGate: ISessionToolPolicyGate,
+    @ISessionToolPolicyGate
+    private readonly toolPolicyGate: ISessionToolPolicyGate,
     @IEventBus eventBus: IEventBus,
   ) {
     super();
     this._register(
-      eventBus.subscribe('agent.status.updated', () => {
+      eventBus.subscribe("agent.status.updated", () => {
         void this.activate();
       }),
     );
@@ -55,11 +65,16 @@ export class AgentToolActivationService extends Disposable implements IAgentTool
 
   activate(): Promise<void> {
     const data = this.profile.data();
-    const policy = { tools: data.activeToolNames, disallowedTools: data.disallowedTools };
-    const workspaceVeto = { disallowedTools: this.toolPolicyGate.disabledTools };
+    const policy = {
+      tools: data.activeToolNames,
+      disallowedTools: data.disallowedTools,
+    };
+    const workspaceVeto = {
+      disallowedTools: this.toolPolicyGate.disabledTools,
+    };
     this.instantiationService.invokeFunction((accessor) => {
       for (const { id, options } of getAgentToolContributions()) {
-        const source = options.source ?? 'builtin';
+        const source = options.source ?? "builtin";
         if (this.toolRegistry.resolve(options.name) !== undefined) continue;
         if (!isToolActive(workspaceVeto, options.name, source)) continue;
         if (!isToolActive(policy, options.name, source)) continue;
@@ -82,5 +97,5 @@ registerScopedService(
   IAgentToolActivationService,
   AgentToolActivationService,
   ScopeActivation.OnScopeCreated,
-  'toolActivation',
+  "toolActivation",
 );

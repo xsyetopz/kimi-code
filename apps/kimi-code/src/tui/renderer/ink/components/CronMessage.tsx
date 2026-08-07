@@ -15,7 +15,9 @@ export interface CronMessageProps {
 export function CronMessage({ entry }: CronMessageProps): ReactNode {
   const data = entry.cronData;
   const isMissed = data?.missedCount !== undefined && data.missedCount > 0;
-  const titleColor = isMissed ? currentTheme.color("warning") : currentTheme.color("text");
+  const titleColor = isMissed
+    ? currentTheme.color("warning")
+    : currentTheme.color("text");
 
   return (
     <Box flexDirection="column">

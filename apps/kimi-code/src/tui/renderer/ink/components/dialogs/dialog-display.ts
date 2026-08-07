@@ -1,8 +1,6 @@
 import type { DisplayBlock } from "../../../../reverse-rpc/types";
 
-export function summarizeDisplayBlock(
-  block: DisplayBlock,
-): string | undefined {
+export function summarizeDisplayBlock(block: DisplayBlock): string | undefined {
   switch (block.type) {
     case "brief":
       return block.text;

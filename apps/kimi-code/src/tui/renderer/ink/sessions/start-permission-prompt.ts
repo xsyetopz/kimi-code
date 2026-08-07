@@ -1,4 +1,9 @@
-import { Key, matchesKey, truncateToWidth, visibleWidth } from "@moonshot-ai/kimi-tui";
+import {
+  Key,
+  matchesKey,
+  truncateToWidth,
+  visibleWidth,
+} from "@moonshot-ai/kimi-tui";
 
 import type {
   StartPermissionOption,
@@ -23,9 +28,7 @@ export interface InkStartPermissionPromptView {
   readonly options: readonly InkStartPermissionOptionView[];
 }
 
-export class InkStartPermissionPromptSession<
-  TChoice extends string = string,
-> {
+export class InkStartPermissionPromptSession<TChoice extends string = string> {
   private readonly opts: StartPermissionPromptOptions<TChoice>;
   private selectedIndex = 0;
 
@@ -102,7 +105,9 @@ function wrapPlain(text: string, width: number): string[] {
 
 export function createInkStartPermissionPromptSession<
   TChoice extends string = string,
->(opts: StartPermissionPromptOptions<TChoice>): InkStartPermissionPromptSession<TChoice> {
+>(
+  opts: StartPermissionPromptOptions<TChoice>,
+): InkStartPermissionPromptSession<TChoice> {
   return new InkStartPermissionPromptSession(opts);
 }
 

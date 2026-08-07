@@ -486,13 +486,11 @@ describe("WriteTool", () => {
 
   it("still reports parent-directory ENOENT surfaced by writeText itself", async () => {
     const { tool } = makeTool({
-      writeText: vi
-        .fn()
-        .mockRejectedValue(
-          Object.assign(new Error("ENOENT: no such file or directory"), {
-            code: "ENOENT",
-          }),
-        ),
+      writeText: vi.fn().mockRejectedValue(
+        Object.assign(new Error("ENOENT: no such file or directory"), {
+          code: "ENOENT",
+        }),
+      ),
     });
 
     const result = await execute(tool, {

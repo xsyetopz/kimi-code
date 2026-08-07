@@ -364,7 +364,9 @@ async function waitForInkSessionPicker(driver: MessageDriver): Promise<void> {
 
 function sendInkDialogInput(driver: MessageDriver, data: string): void {
   (
-    driver as unknown as { handleInkSimpleDialogInput: (data: string) => boolean }
+    driver as unknown as {
+      handleInkSimpleDialogInput: (data: string) => boolean;
+    }
   ).handleInkSimpleDialogInput(data);
 }
 
@@ -5838,7 +5840,9 @@ command = "vim"
     await waitForInkPluginsPanel(driver);
     // Official loads its catalog lazily; wait for the entry to render before install.
     await vi.waitFor(() => {
-      expect(stripSgr(inkPluginsPanelText(driver))).toContain("Kimi Datasource");
+      expect(stripSgr(inkPluginsPanelText(driver))).toContain(
+        "Kimi Datasource",
+      );
     });
     // The pinned Kimi WebBridge row leads the Official tab, so move down to
     // the Kimi Datasource entry before installing.
@@ -5897,7 +5901,9 @@ command = "vim"
 
     await waitForInkPluginsPanel(driver);
     await vi.waitFor(() => {
-      expect(stripSgr(inkPluginsPanelText(driver))).toContain("Kimi Datasource");
+      expect(stripSgr(inkPluginsPanelText(driver))).toContain(
+        "Kimi Datasource",
+      );
     });
     sendInkPluginsPanelInput(driver, "\u001B[B");
     sendInkPluginsPanelInput(driver, "\r");

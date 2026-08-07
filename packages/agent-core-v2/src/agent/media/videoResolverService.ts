@@ -23,38 +23,46 @@
  * read/written through it. Bound at Agent scope.
  */
 
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IFileService } from '#/app/file/fileService';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import type { ContentPart, Message } from '#/kosong/contract/message';
-import type { ModelRequester } from '#/kosong/model/modelRequester';
-import { IBlobStore } from '#/persistence/interface/blobStore';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IFileService } from "#/app/file/fileService";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import type { ContentPart, Message } from "#/kosong/contract/message";
+import type { ModelRequester } from "#/kosong/model/modelRequester";
+import { IBlobStore } from "#/persistence/interface/blobStore";
 
-import { detectFileType, MEDIA_SNIFF_BYTES } from './file-type';
-import { type KimiFileRef, isKimiFileUrl, parseKimiFileUrl } from './kimiFileUrl';
-import { createVideoUploader } from './registerMediaTools';
+import { detectFileType, MEDIA_SNIFF_BYTES } from "./file-type";
+import {
+  type KimiFileRef,
+  isKimiFileUrl,
+  parseKimiFileUrl,
+} from "./kimiFileUrl";
+import { createVideoUploader } from "./registerMediaTools";
 import {
   inlineVideoPart,
   inlineVideoSupportedForProtocol,
   isVideoUploadAuthError,
   isVideoUploadUnsupportedError,
-} from './videoUpload';
-import { IAgentVideoResolverService } from './videoResolver';
+} from "./videoUpload";
+import { IAgentVideoResolverService } from "./videoResolver";
 
-const CACHE_SCOPE = 'video-upload-cache';
+const CACHE_SCOPE = "video-upload-cache";
 const PROVIDER_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const VIDEO_UNAVAILABLE_TEXT =
-  '[video omitted: the uploaded file is no longer available]';
+  "[video omitted: the uploaded file is no longer available]";
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
 export const mediaResolvedKey = defineState<Map<string, ContentPart>>(
-  'media.resolved',
+  "media.resolved",
   () => new Map(),
 );
 
@@ -91,8 +99,14 @@ export class AgentVideoResolverService implements IAgentVideoResolverService {
       const content: ContentPart[] = [];
       for (const part of message.content) {
         const ref =
-          part.type === 'video_url' ? parseKimiFileUrl(part.videoUrl.url) : undefined;
-        content.push(ref === undefined ? part : await this.resolvePart(ref, requester, signal));
+          part.type === "video_url"
+            ? parseKimiFileUrl(part.videoUrl.url)
+            : undefined;
+        content.push(
+          ref === undefined
+            ? part
+            : await this.resolvePart(ref, requester, signal),
+        );
       }
       out.push({ ...message, content });
       changed = true;
@@ -112,7 +126,12 @@ export class AgentVideoResolverService implements IAgentVideoResolverService {
     const memoed = this.resolved.get(cacheKey);
     if (memoed !== undefined) return memoed;
 
-    const { part, memoize } = await this.resolveUncached(ref, requester, cacheKey, signal);
+    const { part, memoize } = await this.resolveUncached(
+      ref,
+      requester,
+      cacheKey,
+      signal,
+    );
     if (memoize) this.resolved.set(cacheKey, part);
     return part;
   }
@@ -126,7 +145,10 @@ export class AgentVideoResolverService implements IAgentVideoResolverService {
     const cachedLlmFileId = await this.readCachedUpload(cacheKey);
     if (cachedLlmFileId !== undefined) {
       return {
-        part: { type: 'video_url', videoUrl: { url: `ms://${cachedLlmFileId}`, id: cachedLlmFileId } },
+        part: {
+          type: "video_url",
+          videoUrl: { url: `ms://${cachedLlmFileId}`, id: cachedLlmFileId },
+        },
         memoize: true,
       };
     }
@@ -141,8 +163,12 @@ export class AgentVideoResolverService implements IAgentVideoResolverService {
       return { part: tag(ref), memoize: true };
     }
 
-    const fileType = detectFileType(filename, bytes.subarray(0, MEDIA_SNIFF_BYTES), 'media');
-    if (fileType.kind !== 'video') return { part: tag(ref), memoize: true };
+    const fileType = detectFileType(
+      filename,
+      bytes.subarray(0, MEDIA_SNIFF_BYTES),
+      "media",
+    );
+    if (fileType.kind !== "video") return { part: tag(ref), memoize: true };
     const mimeType = fileType.mimeType;
 
     const model = requester.model;
@@ -165,9 +191,14 @@ export class AgentVideoResolverService implements IAgentVideoResolverService {
     }
 
     try {
-      const uploaded = await uploader({ data: bytes, mimeType, filename }, { signal });
-      const llmFileId = uploaded.videoUrl.id ?? msFileIdFromUrl(uploaded.videoUrl.url);
-      if (llmFileId !== undefined) await this.writeCachedUpload(cacheKey, llmFileId);
+      const uploaded = await uploader(
+        { data: bytes, mimeType, filename },
+        { signal },
+      );
+      const llmFileId =
+        uploaded.videoUrl.id ?? msFileIdFromUrl(uploaded.videoUrl.url);
+      if (llmFileId !== undefined)
+        await this.writeCachedUpload(cacheKey, llmFileId);
       return { part: uploaded, memoize: true };
     } catch (error) {
       if (signal?.aborted) throw error;
@@ -182,42 +213,52 @@ export class AgentVideoResolverService implements IAgentVideoResolverService {
     }
   }
 
-  private async readCachedUpload(cacheKey: string): Promise<string | undefined> {
-    const data = await this.blobs.get(CACHE_SCOPE, blobKey(cacheKey)).catch(() => undefined);
+  private async readCachedUpload(
+    cacheKey: string,
+  ): Promise<string | undefined> {
+    const data = await this.blobs
+      .get(CACHE_SCOPE, blobKey(cacheKey))
+      .catch(() => undefined);
     if (data === undefined) return undefined;
     const llmFileId = textDecoder.decode(data);
     return PROVIDER_ID_RE.test(llmFileId) ? llmFileId : undefined;
   }
 
-  private async writeCachedUpload(cacheKey: string, llmFileId: string): Promise<void> {
+  private async writeCachedUpload(
+    cacheKey: string,
+    llmFileId: string,
+  ): Promise<void> {
     if (!PROVIDER_ID_RE.test(llmFileId)) return;
-    await this.blobs.put(CACHE_SCOPE, blobKey(cacheKey), textEncoder.encode(llmFileId)).catch(
-      () => undefined,
-    );
+    await this.blobs
+      .put(CACHE_SCOPE, blobKey(cacheKey), textEncoder.encode(llmFileId))
+      .catch(() => undefined);
   }
 }
 
 function hasKimiFileVideoPart(message: Message): boolean {
   return message.content.some(
-    (part) => part.type === 'video_url' && isKimiFileUrl(part.videoUrl.url),
+    (part) => part.type === "video_url" && isKimiFileUrl(part.videoUrl.url),
   );
 }
 
 function tag(ref: KimiFileRef): ContentPart {
   if (ref.path === undefined || ref.path.length === 0) {
-    return { type: 'text', text: VIDEO_UNAVAILABLE_TEXT };
+    return { type: "text", text: VIDEO_UNAVAILABLE_TEXT };
   }
-  return { type: 'text', text: `<video path="${escapeAttribute(ref.path)}"></video>` };
+  return {
+    type: "text",
+    text: `<video path="${escapeAttribute(ref.path)}"></video>`,
+  };
 }
 
 function msFileIdFromUrl(url: string): string | undefined {
-  if (!url.startsWith('ms://')) return undefined;
-  const id = url.slice('ms://'.length);
+  if (!url.startsWith("ms://")) return undefined;
+  const id = url.slice("ms://".length);
   return id.length > 0 ? id : undefined;
 }
 
 function blobKey(cacheKey: string): string {
-  return createHash('sha256').update(cacheKey).digest('hex');
+  return createHash("sha256").update(cacheKey).digest("hex");
 }
 
 async function readStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
@@ -230,10 +271,10 @@ async function readStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
 
 function escapeAttribute(value: string): string {
   return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 registerScopedService(
@@ -241,5 +282,5 @@ registerScopedService(
   IAgentVideoResolverService,
   AgentVideoResolverService,
   ScopeActivation.OnScopeCreated,
-  'media',
+  "media",
 );

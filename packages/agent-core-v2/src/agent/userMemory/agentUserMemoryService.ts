@@ -7,7 +7,11 @@
  */
 
 import { Disposable } from "#/_base/di/lifecycle";
-import { LifecycleScope, ScopeActivation, registerScopedService } from "#/_base/di/scope";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import { IAgentContextInjectorService } from "#/agent/contextInjector/contextInjector";
 import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
 import { IUserMemoryService } from "#/app/userMemory/userMemory";
@@ -17,7 +21,10 @@ import { IAgentUserMemoryService } from "./agentUserMemory";
 const MAIN_AGENT_ID = "main";
 const USER_MEMORY_INJECTION_VARIANT = "user_memory_recall";
 
-export class AgentUserMemoryService extends Disposable implements IAgentUserMemoryService {
+export class AgentUserMemoryService
+  extends Disposable
+  implements IAgentUserMemoryService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
@@ -28,10 +35,13 @@ export class AgentUserMemoryService extends Disposable implements IAgentUserMemo
     super();
     if (scopeContext.agentId !== MAIN_AGENT_ID) return;
     this._register(
-      injector.register(USER_MEMORY_INJECTION_VARIANT, async ({ injectedPositions }) => {
-        if (injectedPositions.length > 0) return undefined;
-        return this.memory.formatRecallForInjection();
-      }),
+      injector.register(
+        USER_MEMORY_INJECTION_VARIANT,
+        async ({ injectedPositions }) => {
+          if (injectedPositions.length > 0) return undefined;
+          return this.memory.formatRecallForInjection();
+        },
+      ),
     );
   }
 }

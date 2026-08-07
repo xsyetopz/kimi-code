@@ -7,24 +7,32 @@
  * App scope.
  */
 
-import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 
-import { toDisposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Event } from '#/_base/event';
+import { toDisposable, type IDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Event } from "#/_base/event";
 
-import { IFileSystemStorageService, StorageError, StorageErrors } from '#/persistence/interface/storage';
+import {
+  IFileSystemStorageService,
+  StorageError,
+  StorageErrors,
+} from "#/persistence/interface/storage";
 import {
   IAtomicDocumentStore,
   IAtomicTomlDocumentStore,
   type DocumentCodec,
-} from '#/persistence/interface/atomicDocumentStore';
+} from "#/persistence/interface/atomicDocumentStore";
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
 export const jsonDocumentCodec: DocumentCodec = {
-  format: 'json',
+  format: "json",
   encode(value: unknown): Uint8Array {
     return textEncoder.encode(JSON.stringify(value));
   },
@@ -34,9 +42,11 @@ export const jsonDocumentCodec: DocumentCodec = {
 };
 
 export const tomlDocumentCodec: DocumentCodec = {
-  format: 'toml',
+  format: "toml",
   encode(value: unknown): Uint8Array {
-    return textEncoder.encode(`${stringifyToml(value as Record<string, unknown>)}\n`);
+    return textEncoder.encode(
+      `${stringifyToml(value as Record<string, unknown>)}\n`,
+    );
   },
   decode(bytes: Uint8Array): unknown {
     const text = textDecoder.decode(bytes);
@@ -71,7 +81,9 @@ class AtomicDocumentStoreBase implements IAtomicDocumentStore {
   }
 
   async set<T>(scope: string, key: string, value: T): Promise<void> {
-    await this.storage.write(scope, key, this.codec.encode(value), { atomic: true });
+    await this.storage.write(scope, key, this.codec.encode(value), {
+      atomic: true,
+    });
   }
 
   async delete(scope: string, key: string): Promise<void> {
@@ -108,7 +120,7 @@ registerScopedService(
   IAtomicDocumentStore,
   JsonAtomicDocumentStore,
   ScopeActivation.OnScopeCreated,
-  'storage',
+  "storage",
 );
 
 registerScopedService(
@@ -116,5 +128,5 @@ registerScopedService(
   IAtomicTomlDocumentStore,
   TomlAtomicDocumentStore,
   ScopeActivation.OnScopeCreated,
-  'storage',
+  "storage",
 );

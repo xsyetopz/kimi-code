@@ -1,27 +1,30 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import { CyclicDependencyError } from '#/_base/di/errors';
-import { IInstantiationService, createDecorator } from '#/_base/di/instantiation';
-import { InstantiationService } from '#/_base/di/instantiationService';
-import { ServiceCollection } from '#/_base/di/serviceCollection';
+import { SyncDescriptor } from "#/_base/di/descriptors";
+import { CyclicDependencyError } from "#/_base/di/errors";
+import {
+  IInstantiationService,
+  createDecorator,
+} from "#/_base/di/instantiation";
+import { InstantiationService } from "#/_base/di/instantiationService";
+import { ServiceCollection } from "#/_base/di/serviceCollection";
 
-describe('@IFoo auto-injection', () => {
-  it('pure-service ctor: both @IFoo params resolve from the container', () => {
+describe("@IFoo auto-injection", () => {
+  it("pure-service ctor: both @IFoo params resolve from the container", () => {
     interface IBar {
-      tag: 'bar';
+      tag: "bar";
     }
     interface IBaz {
-      tag: 'baz';
+      tag: "baz";
     }
-    const IBar = createDecorator<IBar>('p1.1-IBar-pure');
-    const IBaz = createDecorator<IBaz>('p1.1-IBaz-pure');
+    const IBar = createDecorator<IBar>("p1.1-IBar-pure");
+    const IBaz = createDecorator<IBaz>("p1.1-IBaz-pure");
 
     class Bar implements IBar {
-      tag = 'bar' as const;
+      tag = "bar" as const;
     }
     class Baz implements IBaz {
-      tag = 'baz' as const;
+      tag = "baz" as const;
     }
     class Foo {
       constructor(
@@ -29,7 +32,7 @@ describe('@IFoo auto-injection', () => {
         @IBaz public readonly baz: IBaz,
       ) {}
     }
-    const IFoo = createDecorator<Foo>('p1.1-IFoo-pure');
+    const IFoo = createDecorator<Foo>("p1.1-IFoo-pure");
 
     const ix = new InstantiationService(
       new ServiceCollection(
@@ -44,13 +47,13 @@ describe('@IFoo auto-injection', () => {
     expect(foo.baz).toBeInstanceOf(Baz);
   });
 
-  it('mixed static prefix + service suffix via createInstance(ctor, ...rest)', () => {
+  it("mixed static prefix + service suffix via createInstance(ctor, ...rest)", () => {
     interface IBaz {
-      tag: 'baz';
+      tag: "baz";
     }
-    const IBaz = createDecorator<IBaz>('p1.1-IBaz-mixed');
+    const IBaz = createDecorator<IBaz>("p1.1-IBaz-mixed");
     class Baz implements IBaz {
-      tag = 'baz' as const;
+      tag = "baz" as const;
     }
     class Bar {
       constructor(
@@ -61,23 +64,25 @@ describe('@IFoo auto-injection', () => {
     const ix = new InstantiationService(
       new ServiceCollection([IBaz, new SyncDescriptor(Baz)]),
     );
-    const bar = ix.createInstance(Bar as new (name: string) => Bar, 'hello');
-    expect(bar.name).toBe('hello');
+    const bar = ix.createInstance(Bar as new (name: string) => Bar, "hello");
+    expect(bar.name).toBe("hello");
     expect(bar.baz).toBeInstanceOf(Baz);
   });
 
-  it('@IInstantiationService self-injection resolves to the OWNING container', () => {
+  it("@IInstantiationService self-injection resolves to the OWNING container", () => {
     class Widget {
       constructor(public readonly label: string) {}
     }
     interface IFactoryHost {
       makeWidget(): Widget;
     }
-    const IFactoryHost = createDecorator<IFactoryHost>('p1.1-IFactoryHost');
+    const IFactoryHost = createDecorator<IFactoryHost>("p1.1-IFactoryHost");
     class FactoryHost implements IFactoryHost {
-      constructor(@IInstantiationService private readonly ix: IInstantiationService) {}
+      constructor(
+        @IInstantiationService private readonly ix: IInstantiationService,
+      ) {}
       makeWidget(): Widget {
-        return this.ix.createInstance(Widget, 'made-by-factory');
+        return this.ix.createInstance(Widget, "made-by-factory");
       }
     }
     const ix = new InstantiationService(
@@ -86,29 +91,29 @@ describe('@IFoo auto-injection', () => {
     const host = ix.invokeFunction((a) => a.get(IFactoryHost));
     const w = host.makeWidget();
     expect(w).toBeInstanceOf(Widget);
-    expect(w.label).toBe('made-by-factory');
+    expect(w.label).toBe("made-by-factory");
   });
 
-  it('Graph cycle: A.@IBar + B.@IA throws CyclicDependencyError before any ctor runs', () => {
+  it("Graph cycle: A.@IBar + B.@IA throws CyclicDependencyError before any ctor runs", () => {
     interface IA {
-      tag: 'A';
+      tag: "A";
     }
     interface IB {
-      tag: 'B';
+      tag: "B";
     }
-    const IA = createDecorator<IA>('p1.1-cycle-IA');
-    const IB = createDecorator<IB>('p1.1-cycle-IB');
+    const IA = createDecorator<IA>("p1.1-cycle-IA");
+    const IB = createDecorator<IB>("p1.1-cycle-IB");
 
     let aCtorRan = false;
     let bCtorRan = false;
     class AImpl implements IA {
-      tag = 'A' as const;
+      tag = "A" as const;
       constructor(@IB _b: IB) {
         aCtorRan = true;
       }
     }
     class BImpl implements IB {
-      tag = 'B' as const;
+      tag = "B" as const;
       constructor(@IA _a: IA) {
         bCtorRan = true;
       }
@@ -134,22 +139,22 @@ describe('@IFoo auto-injection', () => {
     expect(bCtorRan).toBe(false);
   });
 
-  it('cross-container Graph cycle: parent A→@IB, child B→@IA throws Cyclic', () => {
+  it("cross-container Graph cycle: parent A→@IB, child B→@IA throws Cyclic", () => {
     interface IA {
-      tag: 'A';
+      tag: "A";
     }
     interface IB {
-      tag: 'B';
+      tag: "B";
     }
-    const IA = createDecorator<IA>('p1.1-xcycle-IA');
-    const IB = createDecorator<IB>('p1.1-xcycle-IB');
+    const IA = createDecorator<IA>("p1.1-xcycle-IA");
+    const IB = createDecorator<IB>("p1.1-xcycle-IB");
 
     class AImpl implements IA {
-      tag = 'A' as const;
+      tag = "A" as const;
       constructor(@IB _b: IB) {}
     }
     class BImpl implements IB {
-      tag = 'B' as const;
+      tag = "B" as const;
       constructor(@IA _a: IA) {}
     }
     const parent = new InstantiationService(
@@ -158,8 +163,8 @@ describe('@IFoo auto-injection', () => {
     const child = parent.createChild(
       new ServiceCollection([IB, new SyncDescriptor(BImpl)]),
     );
-    expect(() =>
-      child.invokeFunction((a) => a.get(IA)),
-    ).toThrowError(CyclicDependencyError);
+    expect(() => child.invokeFunction((a) => a.get(IA))).toThrowError(
+      CyclicDependencyError,
+    );
   });
 });

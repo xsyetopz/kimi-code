@@ -6,11 +6,19 @@
  * Bound at Workspace scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { type FsDiffResponse, type FsGitStatusResponse, IGitService } from '#/app/git/git';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import {
+  type FsDiffResponse,
+  type FsGitStatusResponse,
+  IGitService,
+} from "#/app/git/git";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 
-import { IWorkspaceGitService } from './workspaceGit';
+import { IWorkspaceGitService } from "./workspaceGit";
 
 export class WorkspaceGitService implements IWorkspaceGitService {
   declare readonly _serviceBrand: undefined;
@@ -34,5 +42,5 @@ registerScopedService(
   IWorkspaceGitService,
   WorkspaceGitService,
   ScopeActivation.OnScopeCreated,
-  'workspaceGit',
+  "workspaceGit",
 );

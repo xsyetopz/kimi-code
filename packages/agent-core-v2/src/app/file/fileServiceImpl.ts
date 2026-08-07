@@ -10,24 +10,28 @@
  * scope.
  */
 
-import { randomUUID } from 'node:crypto';
-import { Readable } from 'node:stream';
+import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 
-import type { FileMeta } from './fileService';
+import type { FileMeta } from "./fileService";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IBlobStore } from '#/persistence/interface/blobStore';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IBlobStore } from "#/persistence/interface/blobStore";
 import {
   IFileService,
   fileNotFoundError,
   type FileReadRange,
   type GetResult,
   type SaveOptions,
-} from './fileService';
+} from "./fileService";
 
-const BLOB_SCOPE = 'files';
-const INDEX_SCOPE = 'file';
-const INDEX_KEY = 'index.json';
+const BLOB_SCOPE = "files";
+const INDEX_SCOPE = "file";
+const INDEX_KEY = "index.json";
 const FILE_ID_REGEX = /^f_[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
 const textEncoder = new TextEncoder();
@@ -43,18 +47,19 @@ function isFileId(value: string): boolean {
 }
 
 function isFileMeta(value: unknown): value is FileMeta {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
   const meta = value as Record<string, unknown>;
   return (
-    typeof meta['id'] === 'string' &&
-    isFileId(meta['id']) &&
-    typeof meta['name'] === 'string' &&
-    typeof meta['media_type'] === 'string' &&
-    typeof meta['size'] === 'number' &&
-    Number.isSafeInteger(meta['size']) &&
-    meta['size'] >= 0 &&
-    typeof meta['created_at'] === 'string' &&
-    (meta['expires_at'] === undefined || typeof meta['expires_at'] === 'string')
+    typeof meta["id"] === "string" &&
+    isFileId(meta["id"]) &&
+    typeof meta["name"] === "string" &&
+    typeof meta["media_type"] === "string" &&
+    typeof meta["size"] === "number" &&
+    Number.isSafeInteger(meta["size"]) &&
+    meta["size"] >= 0 &&
+    typeof meta["created_at"] === "string" &&
+    (meta["expires_at"] === undefined || typeof meta["expires_at"] === "string")
   );
 }
 
@@ -66,14 +71,20 @@ export class FileServiceImpl implements IFileService {
 
   constructor(@IBlobStore private readonly blobs: IBlobStore) {}
 
-  async save(source: Readable, filename: string, options: SaveOptions = {}): Promise<FileMeta> {
+  async save(
+    source: Readable,
+    filename: string,
+    options: SaveOptions = {},
+  ): Promise<FileMeta> {
     await this.ensureIndex();
 
     const id = `f_${randomUUID()}`;
     let size = 0;
     const counting = async function* (): AsyncIterable<Uint8Array> {
       for await (const chunk of source) {
-        const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
+        const buf = Buffer.isBuffer(chunk)
+          ? chunk
+          : Buffer.from(chunk as string);
         size += buf.length;
         yield buf;
       }
@@ -89,11 +100,15 @@ export class FileServiceImpl implements IFileService {
     const meta: FileMeta = {
       id,
       name: options.name ?? filename,
-      media_type: options.mimeType ?? 'application/octet-stream',
+      media_type: options.mimeType ?? "application/octet-stream",
       size,
       created_at: new Date(now).toISOString(),
       ...(options.expiresInSec !== undefined
-        ? { expires_at: new Date(now + options.expiresInSec * 1000).toISOString() }
+        ? {
+            expires_at: new Date(
+              now + options.expiresInSec * 1000,
+            ).toISOString(),
+          }
         : {}),
     };
 
@@ -173,8 +188,15 @@ export class FileServiceImpl implements IFileService {
   private async writeIndex(): Promise<void> {
     const cache = this.indexCache;
     if (cache === undefined) return;
-    const payload: IndexFile = { version: 1, files: Array.from(cache.values()) };
-    await this.blobs.put(INDEX_SCOPE, INDEX_KEY, textEncoder.encode(JSON.stringify(payload)));
+    const payload: IndexFile = {
+      version: 1,
+      files: Array.from(cache.values()),
+    };
+    await this.blobs.put(
+      INDEX_SCOPE,
+      INDEX_KEY,
+      textEncoder.encode(JSON.stringify(payload)),
+    );
   }
 }
 
@@ -183,5 +205,5 @@ registerScopedService(
   IFileService,
   FileServiceImpl,
   ScopeActivation.OnScopeCreated,
-  'file',
+  "file",
 );

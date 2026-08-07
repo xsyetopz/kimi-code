@@ -50,12 +50,15 @@ function buildDiffBody(block: DiffDisplayBlock): ApprovalPreviewBody {
   return { lines: rest, title: stripLeadingSpace(header) };
 }
 
-function buildFileContentBody(block: FileContentDisplayBlock): ApprovalPreviewBody {
+function buildFileContentBody(
+  block: FileContentDisplayBlock,
+): ApprovalPreviewBody {
   const lang = block.language ?? langFromPath(block.path);
   const highlighted = highlightLines(block.content, lang);
   const lines = highlighted.map(
     (line, index) =>
-      currentTheme.fg("diffGutter", String(index + 1).padStart(4) + "  ") + line,
+      currentTheme.fg("diffGutter", String(index + 1).padStart(4) + "  ") +
+      line,
   );
   const title = currentTheme.fg("textStrong", block.path);
   return { lines, title };

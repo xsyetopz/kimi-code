@@ -104,8 +104,7 @@ export class InkPluginMcpSelectorSession {
     const rows = this.items.map((item, index) => {
       const serverName = mcpItemServerName(item);
       const hint =
-        serverName !== undefined &&
-        this.opts.serverHint?.server === serverName
+        serverName !== undefined && this.opts.serverHint?.server === serverName
           ? this.opts.serverHint.text
           : undefined;
       return {

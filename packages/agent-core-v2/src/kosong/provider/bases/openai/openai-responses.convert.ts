@@ -357,4 +357,3 @@ export function convertHistoryMessages(
   flushPendingMedia();
   return input;
 }
-

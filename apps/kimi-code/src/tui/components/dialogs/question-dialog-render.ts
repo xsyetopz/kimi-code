@@ -159,7 +159,14 @@ function renderQuestionTab(
 
     if (host.isEditingOther() && isCursor && isOther) {
       lines.push(
-        renderEditingOtherLine(host, width, questionIdx, option, num, isSelected),
+        renderEditingOtherLine(
+          host,
+          width,
+          questionIdx,
+          option,
+          num,
+          isSelected,
+        ),
       );
       continue;
     }
@@ -333,10 +340,7 @@ function buildQuestionHint(
     return dim(`  ${parts.join("  ")}`);
   }
 
-  const optionCount = Math.min(
-    host.displayOptions(questionIdx).length,
-    9,
-  );
+  const optionCount = Math.min(host.displayOptions(questionIdx).length, 9);
   const numberHint = optionCount <= 1 ? "1" : `1-${String(optionCount)}`;
   const question = host.request.data.questions[questionIdx];
   if (question === undefined) return dim("  esc cancel");

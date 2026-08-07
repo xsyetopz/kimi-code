@@ -16,20 +16,27 @@
  * throws). The provider treats `undefined` as "not stored".
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
-import type { McpOAuthStore } from '#/mcpCore/oauth/store';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
+import type { McpOAuthStore } from "#/mcpCore/oauth/store";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
 
 export interface IMcpOAuthStore extends McpOAuthStore {
   readonly _serviceBrand: undefined;
 }
 
 export const IMcpOAuthStore: ServiceIdentifier<IMcpOAuthStore> =
-  createDecorator<IMcpOAuthStore>('mcpOAuthStore');
+  createDecorator<IMcpOAuthStore>("mcpOAuthStore");
 
-const CREDENTIALS_SCOPE = 'credentials/mcp';
+const CREDENTIALS_SCOPE = "credentials/mcp";
 
 export function createMcpOAuthStore(docs: IAtomicDocumentStore): McpOAuthStore {
   return {
@@ -76,5 +83,5 @@ registerScopedService(
   IMcpOAuthStore,
   McpOAuthStoreAdapter,
   ScopeActivation.OnDemand,
-  'mcpConfig',
+  "mcpConfig",
 );

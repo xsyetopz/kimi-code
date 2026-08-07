@@ -27,28 +27,41 @@
  * never rejected (the in-memory change stands either way).
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { retryBackoffDelays, sleepForRetry } from '#/_base/utils/retry';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { retryBackoffDelays, sleepForRetry } from "#/_base/utils/retry";
 
-import { type ConfigSectionChangedEvent, IConfigService } from '#/app/config/config';
-import { describeUnknownError } from '#/app/config/configPure';
-import { deepEqual } from '#/app/config/sectionDiff';
-import { IModelService, type ModelsSection } from '#/kosong/model/model';
-import { IProviderService, type ProvidersSection } from '#/kosong/provider/provider';
+import {
+  type ConfigSectionChangedEvent,
+  IConfigService,
+} from "#/app/config/config";
+import { describeUnknownError } from "#/app/config/configPure";
+import { deepEqual } from "#/app/config/sectionDiff";
+import { IModelService, type ModelsSection } from "#/kosong/model/model";
+import {
+  IProviderService,
+  type ProvidersSection,
+} from "#/kosong/provider/provider";
 
-import { IKosongConfigService } from './kosongConfig';
+import { IKosongConfigService } from "./kosongConfig";
 import {
   DEFAULT_MODEL_SECTION,
   DEFAULT_PROVIDER_SECTION,
   MODELS_SECTION,
   PROVIDERS_SECTION,
-} from './configSection';
+} from "./configSection";
 
 const PERSIST_MAX_ATTEMPTS = 3;
 
-export class KosongConfigService extends Disposable implements IKosongConfigService {
+export class KosongConfigService
+  extends Disposable
+  implements IKosongConfigService
+{
   declare readonly _serviceBrand: undefined;
 
   readonly ready: Promise<void>;
@@ -64,7 +77,7 @@ export class KosongConfigService extends Disposable implements IKosongConfigServ
     super();
     this.ready = this.initialize();
     void this.ready.catch((error) => {
-      this.log.warn('kosong config bridge initialization failed', {
+      this.log.warn("kosong config bridge initialization failed", {
         error: describeUnknownError(error),
       });
     });
@@ -80,11 +93,16 @@ export class KosongConfigService extends Disposable implements IKosongConfigServ
       this.config.get<ModelsSection>(MODELS_SECTION) ?? {},
       this.config.get<string>(DEFAULT_MODEL_SECTION),
     );
-    this._register(this.config.onDidSectionChange((e) => this.onConfigSectionChanged(e)));
+    this._register(
+      this.config.onDidSectionChange((e) => this.onConfigSectionChanged(e)),
+    );
     this._register(
       this.providers.onDidChangeProviders((e) => {
         if (
-          deepEqual(this.config.get<ProvidersSection>(PROVIDERS_SECTION) ?? {}, this.providers.list())
+          deepEqual(
+            this.config.get<ProvidersSection>(PROVIDERS_SECTION) ?? {},
+            this.providers.list(),
+          )
         ) {
           return;
         }
@@ -94,12 +112,19 @@ export class KosongConfigService extends Disposable implements IKosongConfigServ
     this._register(
       this.providers.onDidChangeDefaultProvider((e) => {
         if (this.config.get<string>(DEFAULT_PROVIDER_SECTION) === e.id) return;
-        e.waitUntil(this.enqueuePersistDefaultPointer(DEFAULT_PROVIDER_SECTION, e.id));
+        e.waitUntil(
+          this.enqueuePersistDefaultPointer(DEFAULT_PROVIDER_SECTION, e.id),
+        );
       }),
     );
     this._register(
       this.models.onDidChangeModels((e) => {
-        if (deepEqual(this.config.get<ModelsSection>(MODELS_SECTION) ?? {}, this.models.list())) {
+        if (
+          deepEqual(
+            this.config.get<ModelsSection>(MODELS_SECTION) ?? {},
+            this.models.list(),
+          )
+        ) {
           return;
         }
         e.waitUntil(this.enqueuePersistModels());
@@ -108,11 +133,12 @@ export class KosongConfigService extends Disposable implements IKosongConfigServ
     this._register(
       this.models.onDidChangeDefaultModel((e) => {
         if (this.config.get<string>(DEFAULT_MODEL_SECTION) === e.id) return;
-        e.waitUntil(this.enqueuePersistDefaultPointer(DEFAULT_MODEL_SECTION, e.id));
+        e.waitUntil(
+          this.enqueuePersistDefaultPointer(DEFAULT_MODEL_SECTION, e.id),
+        );
       }),
     );
   }
-
 
   private onConfigSectionChanged(e: ConfigSectionChangedEvent): void {
     switch (e.domain) {
@@ -141,11 +167,16 @@ export class KosongConfigService extends Disposable implements IKosongConfigServ
     }
   }
 
-
   private enqueuePersistProviders(): Promise<void> {
     return this.enqueue(async () => {
       const next = this.providers.list();
-      if (deepEqual(this.config.get<ProvidersSection>(PROVIDERS_SECTION) ?? {}, next)) return;
+      if (
+        deepEqual(
+          this.config.get<ProvidersSection>(PROVIDERS_SECTION) ?? {},
+          next,
+        )
+      )
+        return;
       await this.replaceWithRetry(PROVIDERS_SECTION, next);
     });
   }
@@ -153,12 +184,16 @@ export class KosongConfigService extends Disposable implements IKosongConfigServ
   private enqueuePersistModels(): Promise<void> {
     return this.enqueue(async () => {
       const next = this.models.list();
-      if (deepEqual(this.config.get<ModelsSection>(MODELS_SECTION) ?? {}, next)) return;
+      if (deepEqual(this.config.get<ModelsSection>(MODELS_SECTION) ?? {}, next))
+        return;
       await this.replaceWithRetry(MODELS_SECTION, next);
     });
   }
 
-  private enqueuePersistDefaultPointer(domain: string, value: string | undefined): Promise<void> {
+  private enqueuePersistDefaultPointer(
+    domain: string,
+    value: string | undefined,
+  ): Promise<void> {
     return this.enqueue(async () => {
       if (this.config.get<string>(domain) === value) return;
       await this.replaceWithRetry(domain, value);
@@ -176,7 +211,10 @@ export class KosongConfigService extends Disposable implements IKosongConfigServ
     });
   }
 
-  private async replaceWithRetry(domain: string, value: unknown): Promise<void> {
+  private async replaceWithRetry(
+    domain: string,
+    value: unknown,
+  ): Promise<void> {
     const delays = retryBackoffDelays(PERSIST_MAX_ATTEMPTS);
     for (let attempt = 0; ; attempt += 1) {
       try {
@@ -191,12 +229,16 @@ export class KosongConfigService extends Disposable implements IKosongConfigServ
   }
 
   private enqueue(task: () => Promise<void>): Promise<void> {
-    this.persistChain = this.persistChain.then(task).catch((error) => this.logPersistFailure(error));
+    this.persistChain = this.persistChain
+      .then(task)
+      .catch((error) => this.logPersistFailure(error));
     return this.persistChain;
   }
 
   private logPersistFailure(error: unknown): void {
-    this.log.warn('kosong config persist failed', { error: describeUnknownError(error) });
+    this.log.warn("kosong config persist failed", {
+      error: describeUnknownError(error),
+    });
   }
 }
 
@@ -205,5 +247,5 @@ registerScopedService(
   IKosongConfigService,
   KosongConfigService,
   ScopeActivation.OnScopeCreated,
-  'kosongConfig',
+  "kosongConfig",
 );

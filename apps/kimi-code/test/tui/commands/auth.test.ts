@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  handleLoginCommand,
-  handleLogoutCommand,
-} from "#/tui/commands/auth";
+import { handleLoginCommand, handleLogoutCommand } from "#/tui/commands/auth";
 import { setExperimentalFeatures } from "#/tui/commands/experimental-flags";
 import {
   promptLogoutProviderSelection,
@@ -288,7 +285,9 @@ describe("handleLogoutCommand external oauth", () => {
         },
       },
     });
-    vi.mocked(promptLogoutProviderSelection).mockResolvedValue("github-copilot");
+    vi.mocked(promptLogoutProviderSelection).mockResolvedValue(
+      "github-copilot",
+    );
 
     await handleLogoutCommand(host);
 

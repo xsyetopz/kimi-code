@@ -58,9 +58,7 @@ import {
   requireProviderApiKey,
   resolveAuthBackedClient,
 } from "../request-auth";
-import {
-  normalizeToolCallIdsForProvider,
-} from "../tool-call-id";
+import { normalizeToolCallIdsForProvider } from "../tool-call-id";
 
 import {
   appendToolResultMediaMessage,
@@ -406,7 +404,6 @@ export class OpenAILegacyChatProvider implements ChatProvider {
     return new OpenAI(clientOpts as ConstructorParameters<typeof OpenAI>[0]);
   }
 }
-
 
 export function getOpenAILegacyModelCapability(modelName: string) {
   const normalized = modelName.toLowerCase();

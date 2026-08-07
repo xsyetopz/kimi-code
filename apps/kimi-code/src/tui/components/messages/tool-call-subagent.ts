@@ -305,7 +305,8 @@ export class ToolCallSubagentFacet {
   }
 
   getGroupedBlockView(): ToolCallSubagentGroupedView | undefined {
-    if (!this.hasVisibleBlock() || this.isSingleSubagentView()) return undefined;
+    if (!this.hasVisibleBlock() || this.isSingleSubagentView())
+      return undefined;
     return {
       phaseChip: this.formatPhaseChip(),
       agentName: this.subagentAgentName,

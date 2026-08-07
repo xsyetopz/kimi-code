@@ -1,5 +1,8 @@
 import type { DeviceAuthorization } from "@moonshot-ai/kimi-code-oauth";
-import type { ApprovalRequest, ApprovalResponse } from "@moonshot-ai/kimi-code-sdk";
+import type {
+  ApprovalRequest,
+  ApprovalResponse,
+} from "@moonshot-ai/kimi-code-sdk";
 
 import type { ColorToken } from "./theme";
 import type { AgentGroupViewState } from "./projections/tool-call/agent-group";
@@ -19,10 +22,7 @@ export interface KimiTUITranscriptDelegates {
     toolCallId: string,
     data: ToolCallBlockData,
   ): void;
-  syncShellRunTranscriptEntry(
-    entryId: string,
-    data: ShellRunViewState,
-  ): void;
+  syncShellRunTranscriptEntry(entryId: string, data: ShellRunViewState): void;
   syncCompactionTranscriptEntry(
     entryId: string,
     data: CompactionTranscriptData,

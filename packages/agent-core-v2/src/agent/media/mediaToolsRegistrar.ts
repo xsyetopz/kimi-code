@@ -26,43 +26,56 @@
  * bind runs, so the first `agent.status.updated` is always observed.
  */
 
-import { Disposable, toDisposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IEventBus } from '#/app/event/eventBus';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { IModelCatalog, type Model } from '#/kosong/model/catalog';
-import { type ModelRequester } from '#/kosong/model/modelRequester';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { ISessionSkillCatalog } from '#/session/sessionSkillCatalog/skillCatalog';
-import { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
-import { IAgentProfileService } from '#/agent/profile/profile';
-import { IAgentToolRegistryService } from '#/agent/toolRegistry/toolRegistry';
-import { extendWorkspaceWithSkillRoots } from '#/tool/path-access';
+import {
+  Disposable,
+  toDisposable,
+  type IDisposable,
+} from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IEventBus } from "#/app/event/eventBus";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { IModelCatalog, type Model } from "#/kosong/model/catalog";
+import { type ModelRequester } from "#/kosong/model/modelRequester";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
+import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
+import { IAgentProfileService } from "#/agent/profile/profile";
+import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
+import { extendWorkspaceWithSkillRoots } from "#/tool/path-access";
 
-import { IAgentMediaToolsRegistrar } from './mediaTools';
-import { createVideoUploader, registerMediaTools } from './registerMediaTools';
+import { IAgentMediaToolsRegistrar } from "./mediaTools";
+import { createVideoUploader, registerMediaTools } from "./registerMediaTools";
 
 export const mediaRegisteredKeyKey = defineState<string | undefined>(
-  'media.registeredKey',
+  "media.registeredKey",
   () => undefined as string | undefined,
 );
 
-export class AgentMediaToolsRegistrar extends Disposable implements IAgentMediaToolsRegistrar {
+export class AgentMediaToolsRegistrar
+  extends Disposable
+  implements IAgentMediaToolsRegistrar
+{
   declare readonly _serviceBrand: undefined;
 
   private registration: IDisposable | undefined;
 
   constructor(
-    @IAgentToolRegistryService private readonly toolRegistry: IAgentToolRegistryService,
+    @IAgentToolRegistryService
+    private readonly toolRegistry: IAgentToolRegistryService,
     @IAgentProfileService private readonly profile: IAgentProfileService,
     @IModelCatalog private readonly modelCatalog: IModelCatalog,
     @IEventBus eventBus: IEventBus,
     @IHostFileSystem private readonly fs: IHostFileSystem,
     @IHostEnvironment private readonly env: IHostEnvironment,
-    @ISessionWorkspaceContext private readonly workspaceCtx: ISessionWorkspaceContext,
+    @ISessionWorkspaceContext
+    private readonly workspaceCtx: ISessionWorkspaceContext,
     @ITelemetryService private readonly telemetry: ITelemetryService,
     @IAgentStateService private readonly states: IAgentStateService,
     @ISessionSkillCatalog private readonly skillCatalog?: ISessionSkillCatalog,
@@ -70,7 +83,9 @@ export class AgentMediaToolsRegistrar extends Disposable implements IAgentMediaT
     super();
     this.states.register(mediaRegisteredKeyKey);
     this.refresh();
-    this._register(eventBus.subscribe('agent.status.updated', () => this.refresh()));
+    this._register(
+      eventBus.subscribe("agent.status.updated", () => this.refresh()),
+    );
     this._register(toDisposable(() => this.registration?.dispose()));
   }
 
@@ -88,7 +103,7 @@ export class AgentMediaToolsRegistrar extends Disposable implements IAgentMediaT
       this.profile.getModel(),
       String(capabilities.image_in),
       String(capabilities.video_in),
-    ].join('|');
+    ].join("|");
     if (key === this.registeredKey) return;
     this.registeredKey = key;
     this.registration?.dispose();
@@ -98,7 +113,7 @@ export class AgentMediaToolsRegistrar extends Disposable implements IAgentMediaT
     const modelAlias = this.profile.getModel();
     let requester: ModelRequester | undefined;
     let model: Model | undefined;
-    if (modelAlias !== '') {
+    if (modelAlias !== "") {
       requester = this.modelCatalog.getRequester(modelAlias);
       model = requester.model;
     }
@@ -111,7 +126,10 @@ export class AgentMediaToolsRegistrar extends Disposable implements IAgentMediaT
         },
         get additionalDirs() {
           return extendWorkspaceWithSkillRoots(
-            { workspaceDir: workspaceCtx.workDir, additionalDirs: workspaceCtx.additionalDirs },
+            {
+              workspaceDir: workspaceCtx.workDir,
+              additionalDirs: workspaceCtx.additionalDirs,
+            },
             skillCatalog?.catalog.getSkillRoots() ?? [],
             env.pathClass,
           ).additionalDirs;
@@ -126,7 +144,8 @@ export class AgentMediaToolsRegistrar extends Disposable implements IAgentMediaT
           protocol: model?.protocol,
         },
       }),
-      inlineVideoSupported: model?.protocol !== 'openai' && model?.protocol !== 'openai_responses',
+      inlineVideoSupported:
+        model?.protocol !== "openai" && model?.protocol !== "openai_responses",
       telemetry: this.telemetry,
     });
   }
@@ -137,5 +156,5 @@ registerScopedService(
   IAgentMediaToolsRegistrar,
   AgentMediaToolsRegistrar,
   ScopeActivation.OnScopeCreated,
-  'media',
+  "media",
 );

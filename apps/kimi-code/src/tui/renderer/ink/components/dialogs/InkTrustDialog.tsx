@@ -46,7 +46,9 @@ export function InkTrustDialog({
         selectedIndex={selectedIndex}
         numbered={false}
       />
-      <Text>{currentTheme.fg("textMuted", "↑↓ navigate · Enter select · Esc exit")}</Text>
+      <Text>
+        {currentTheme.fg("textMuted", "↑↓ navigate · Enter select · Esc exit")}
+      </Text>
     </Box>
   );
 }

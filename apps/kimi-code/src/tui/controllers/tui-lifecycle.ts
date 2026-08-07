@@ -398,7 +398,9 @@ export class TuiLifecycleController {
       return;
     }
     if (shouldReplayHistory) {
-      await this.host.sessionReplay.hydrateFromReplay(this.host.requireSession());
+      await this.host.sessionReplay.hydrateFromReplay(
+        this.host.requireSession(),
+      );
       this.host.applyStartupPermissionAndPlanToAppState();
     }
     const resumeState = this.host.session?.getResumeState();
@@ -516,7 +518,8 @@ export class TuiLifecycleController {
             });
             shouldReplayHistory = true;
           } else {
-            session = await this.host.harness.createSession(createSessionOptions);
+            session =
+              await this.host.harness.createSession(createSessionOptions);
             this.host.startupNotice = combineStartupNotice(
               this.host.startupNotice,
               `No sessions to continue under "${workDir}"; starting a fresh session.`,

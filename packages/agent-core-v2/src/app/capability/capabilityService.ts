@@ -9,25 +9,29 @@
  * list. Bound at App scope.
  */
 
-import { homedir } from 'node:os';
+import { homedir } from "node:os";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Error2 } from '#/errors';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IPluginService } from '#/app/plugin/plugin';
-import { IHostProcessService } from '#/os/interface/hostProcess';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Error2 } from "#/errors";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IPluginService } from "#/app/plugin/plugin";
+import { IHostProcessService } from "#/os/interface/hostProcess";
 
-import { ICapabilityService } from './capability';
-import { CapabilityErrors } from './errors';
-import { createKimiCuEntry } from './entries/kimiCu';
-import { createKimiWebbridgeEntry } from './entries/kimiWebbridge';
+import { ICapabilityService } from "./capability";
+import { CapabilityErrors } from "./errors";
+import { createKimiCuEntry } from "./entries/kimiCu";
+import { createKimiWebbridgeEntry } from "./entries/kimiWebbridge";
 import type {
   CapabilityEntry,
   CapabilityId,
   CapabilityInstallProgress,
   CapabilityReadiness,
   CapabilityStatus,
-} from './types';
+} from "./types";
 
 const IDLE_PROGRESS: CapabilityInstallProgress = { running: false };
 
@@ -35,7 +39,10 @@ export class CapabilityService implements ICapabilityService {
   declare readonly _serviceBrand: undefined;
 
   private readonly entries: ReadonlyMap<CapabilityId, CapabilityEntry>;
-  private readonly installProgress = new Map<CapabilityId, CapabilityInstallProgress>();
+  private readonly installProgress = new Map<
+    CapabilityId,
+    CapabilityInstallProgress
+  >();
   private readonly runningInstalls = new Set<CapabilityId>();
 
   constructor(
@@ -56,14 +63,16 @@ export class CapabilityService implements ICapabilityService {
         hostProcess,
       };
       this.entries = new Map<CapabilityId, CapabilityEntry>([
-        ['kimi-cu', createKimiCuEntry(ctx)],
-        ['kimi-webbridge', createKimiWebbridgeEntry(ctx)],
+        ["kimi-cu", createKimiCuEntry(ctx)],
+        ["kimi-webbridge", createKimiWebbridgeEntry(ctx)],
       ]);
     }
   }
 
   listCapabilities(): Promise<readonly CapabilityStatus[]> {
-    return Promise.all([...this.entries.values()].map((entry) => this.statusOfSafe(entry)));
+    return Promise.all(
+      [...this.entries.values()].map((entry) => this.statusOfSafe(entry)),
+    );
   }
 
   async getCapability(id: string): Promise<CapabilityStatus> {
@@ -83,7 +92,8 @@ export class CapabilityService implements ICapabilityService {
       throw new Error2(
         CapabilityErrors.codes.CAPABILITY_INSTALL_IN_PROGRESS,
         `Capability "${entry.id}" is already being installed`,
-        { details: { id: entry.id } });
+        { details: { id: entry.id } },
+      );
     }
 
     this.runningInstalls.add(entry.id);
@@ -93,7 +103,9 @@ export class CapabilityService implements ICapabilityService {
         await entry.install((step, percent) => {
           this.installProgress.set(
             entry.id,
-            percent === undefined ? { running: true, step } : { running: true, step, percent },
+            percent === undefined
+              ? { running: true, step }
+              : { running: true, step, percent },
           );
         });
         this.installProgress.set(entry.id, { running: false });
@@ -131,13 +143,18 @@ export class CapabilityService implements ICapabilityService {
       install,
     };
     if (!entry.supported) {
-      return { ...base, supported: false, state: 'unsupported', steps: [] };
+      return { ...base, supported: false, state: "unsupported", steps: [] };
     }
     const detected = await entry.detect();
     const required = detected.steps.filter((step) => step.optional !== true);
-    const requiredOk = required.length > 0 && required.every((step) => step.state === 'ok');
-    const anyOk = detected.steps.some((step) => step.state === 'ok');
-    const state: CapabilityReadiness = requiredOk ? 'ready' : anyOk ? 'partial' : 'not_installed';
+    const requiredOk =
+      required.length > 0 && required.every((step) => step.state === "ok");
+    const anyOk = detected.steps.some((step) => step.state === "ok");
+    const state: CapabilityReadiness = requiredOk
+      ? "ready"
+      : anyOk
+        ? "partial"
+        : "not_installed";
     return {
       ...base,
       supported: true,
@@ -147,7 +164,9 @@ export class CapabilityService implements ICapabilityService {
     };
   }
 
-  private async statusOfSafe(entry: CapabilityEntry): Promise<CapabilityStatus> {
+  private async statusOfSafe(
+    entry: CapabilityEntry,
+  ): Promise<CapabilityStatus> {
     try {
       return await this.statusOf(entry);
     } catch (error) {
@@ -160,13 +179,13 @@ export class CapabilityService implements ICapabilityService {
         install,
       };
       if (!entry.supported) {
-        return { ...base, supported: false, state: 'unsupported', steps: [] };
+        return { ...base, supported: false, state: "unsupported", steps: [] };
       }
       return {
         ...base,
         supported: true,
-        state: 'partial',
-        steps: [{ id: 'detect', state: 'failed' as const, detail }],
+        state: "partial",
+        steps: [{ id: "detect", state: "failed" as const, detail }],
       };
     }
   }
@@ -177,5 +196,5 @@ registerScopedService(
   ICapabilityService,
   CapabilityService,
   ScopeActivation.OnScopeCreated,
-  'capability',
+  "capability",
 );

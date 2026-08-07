@@ -61,8 +61,7 @@ export class InkGoalQueueEditSession {
     const innerWidth = Math.max(1, width - 4);
     return {
       title: "Edit upcoming goal",
-      subtitle:
-        this.error ?? "Update the queued objective.",
+      subtitle: this.error ?? "Update the queued objective.",
       subtitleIsError: this.error !== undefined,
       inputLines: this.input.render(innerWidth),
       footer: truncateToWidth(

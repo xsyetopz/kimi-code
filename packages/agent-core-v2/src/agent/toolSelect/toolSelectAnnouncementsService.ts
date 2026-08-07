@@ -11,29 +11,37 @@
  * (`IAgentStateService`) and read/written through it. Bound at Agent scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { defineState } from '#/_base/state/stateRegistry';
-import { IAgentLoopService } from '#/agent/loop/loop';
-import { IAgentStateService } from '#/agent/state/agentState';
-import { IAgentSystemReminderService } from '#/agent/systemReminder/systemReminder';
-import { IEventBus } from '#/app/event/eventBus';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { defineState } from "#/_base/state/stateRegistry";
+import { IAgentLoopService } from "#/agent/loop/loop";
+import { IAgentStateService } from "#/agent/state/agentState";
+import { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
+import { IEventBus } from "#/app/event/eventBus";
 
-import { LOADABLE_TOOLS_TRIGGER } from './dynamicTools';
-import { IAgentToolSelectService } from './toolSelect';
-import { IAgentToolSelectAnnouncementsService } from './toolSelectAnnouncements';
+import { LOADABLE_TOOLS_TRIGGER } from "./dynamicTools";
+import { IAgentToolSelectService } from "./toolSelect";
+import { IAgentToolSelectAnnouncementsService } from "./toolSelectAnnouncements";
 
 export const toolSelectNeedsBoundaryInjectionKey = defineState<boolean>(
-  'toolSelect.needsBoundaryInjection',
+  "toolSelect.needsBoundaryInjection",
   () => false,
 );
 
-export class AgentToolSelectAnnouncementsService extends Disposable implements IAgentToolSelectAnnouncementsService {
+export class AgentToolSelectAnnouncementsService
+  extends Disposable
+  implements IAgentToolSelectAnnouncementsService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
     @IAgentToolSelectService toolSelect: IAgentToolSelectService,
-    @IAgentSystemReminderService private readonly reminders: IAgentSystemReminderService,
+    @IAgentSystemReminderService
+    private readonly reminders: IAgentSystemReminderService,
     @IEventBus eventBus: IEventBus,
     @IAgentLoopService loopService: IAgentLoopService,
     @IAgentStateService private readonly states: IAgentStateService,
@@ -41,17 +49,20 @@ export class AgentToolSelectAnnouncementsService extends Disposable implements I
     super();
     this.states.register(toolSelectNeedsBoundaryInjectionKey);
     this._register(
-      eventBus.subscribe('compaction.completed', () => {
+      eventBus.subscribe("compaction.completed", () => {
         this.needsBoundaryInjection = true;
       }),
     );
     this._register(
-      loopService.hooks.onWillBeginStep.register('toolSelectAnnouncements', async (ctx, next) => {
-        await next();
-        if (ctx.step !== 1 && !this.needsBoundaryInjection) return;
-        this.needsBoundaryInjection = false;
-        this.inject(toolSelect);
-      }),
+      loopService.hooks.onWillBeginStep.register(
+        "toolSelectAnnouncements",
+        async (ctx, next) => {
+          await next();
+          if (ctx.step !== 1 && !this.needsBoundaryInjection) return;
+          this.needsBoundaryInjection = false;
+          this.inject(toolSelect);
+        },
+      ),
     );
   }
 
@@ -67,7 +78,7 @@ export class AgentToolSelectAnnouncementsService extends Disposable implements I
     const announcement = toolSelect.loadableToolsAnnouncement();
     if (announcement === undefined) return;
     this.reminders.appendSystemReminder(announcement, {
-      kind: 'system_trigger',
+      kind: "system_trigger",
       name: LOADABLE_TOOLS_TRIGGER,
     });
   }
@@ -78,5 +89,5 @@ registerScopedService(
   IAgentToolSelectAnnouncementsService,
   AgentToolSelectAnnouncementsService,
   ScopeActivation.OnScopeCreated,
-  'toolSelect',
+  "toolSelect",
 );

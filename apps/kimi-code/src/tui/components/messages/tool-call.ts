@@ -3,15 +3,9 @@
  * Supports expand/collapse via Ctrl+O.
  */
 
-import {
-  Container,
-  Spacer,
-  Text,
-} from "@moonshot-ai/kimi-tui";
+import { Container, Spacer, Text } from "@moonshot-ai/kimi-tui";
 import type { Component, TUI } from "@moonshot-ai/kimi-tui";
-import {
-  RESULT_PREVIEW_LINES,
-} from "#/tui/constant/rendering";
+import { RESULT_PREVIEW_LINES } from "#/tui/constant/rendering";
 import { currentTheme } from "#/tui/theme";
 import { createMarkdownTheme } from "#/tui/theme/kimi-tui-theme";
 import type { TokenUsage } from "@moonshot-ai/kimi-code-sdk";
@@ -26,9 +20,7 @@ import {
   makeWorkspaceRelativePath,
 } from "#/tui/projections/tool-call/key-argument";
 import { projectToolCallHeader } from "#/tui/projections/tool-call/header";
-import {
-  projectSingleSubagentBodyLines,
-} from "#/tui/projections/tool-call/subagent";
+import { projectSingleSubagentBodyLines } from "#/tui/projections/tool-call/subagent";
 import type { SubagentCardViewState } from "#/tui/types";
 
 import { ShellExecutionComponent } from "./shell-execution";
@@ -410,10 +402,7 @@ export class ToolCallComponent extends Container {
     return this.subagent.getAgentToolDescription();
   }
 
-  appendSubagentText(
-    text: string,
-    kind: "thinking" | "text" = "text",
-  ): void {
+  appendSubagentText(text: string, kind: "thinking" | "text" = "text"): void {
     this.subagent.appendText(text, kind);
   }
 
@@ -659,7 +648,9 @@ function createToolCallSubagentHost(
   };
 }
 
-function createToolCallResultHost(component: ToolCallComponent): ToolCallResultHost {
+function createToolCallResultHost(
+  component: ToolCallComponent,
+): ToolCallResultHost {
   return {
     get toolCall() {
       return component.toolCallView;
@@ -714,7 +705,11 @@ function renderGroupedSubagentBlock(
       ? `subagent ${view.agentName} (${view.agentId})`
       : `subagent (${view.agentId})`;
   addChild(
-    new Text(`  ${currentTheme.dim(`↳ ${headerLabel}`)}${view.phaseChip}`, 0, 0),
+    new Text(
+      `  ${currentTheme.dim(`↳ ${headerLabel}`)}${view.phaseChip}`,
+      0,
+      0,
+    ),
   );
 
   if (view.hiddenSubCallCount > 0) {
@@ -747,11 +742,7 @@ function renderGroupedSubagentBlock(
     const nameCol = currentTheme.fg("primary", call.name);
     const argCol = keyArg ? currentTheme.dim(` (${keyArg})`) : "";
     addChild(
-      new Text(
-        `    ${currentTheme.dim("…")} Using ${nameCol}${argCol}`,
-        0,
-        0,
-      ),
+      new Text(`    ${currentTheme.dim("…")} Using ${nameCol}${argCol}`, 0, 0),
     );
   }
 
@@ -762,7 +753,10 @@ function renderGroupedSubagentBlock(
     }
   }
 
-  if (view.subagentPhase === "done" && view.subagentResultSummary !== undefined) {
+  if (
+    view.subagentPhase === "done" &&
+    view.subagentResultSummary !== undefined
+  ) {
     const summaryLines = view.subagentResultSummary.split("\n").slice(0, 2);
     for (const line of summaryLines) {
       addChild(new Text(`    ${currentTheme.dim("└")} ${line}`, 0, 0));
@@ -772,9 +766,7 @@ function renderGroupedSubagentBlock(
   if (view.subagentPhase === "failed" && view.subagentError !== undefined) {
     const errLines = view.subagentError.split("\n");
     for (const line of errLines) {
-      addChild(
-        new Text(`    ${currentTheme.fg("error", "└")} ${line}`, 0, 0),
-      );
+      addChild(new Text(`    ${currentTheme.fg("error", "└")} ${line}`, 0, 0));
     }
   }
 }

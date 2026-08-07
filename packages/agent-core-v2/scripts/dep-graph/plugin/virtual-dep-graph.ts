@@ -107,15 +107,17 @@ export function depGraphPlugin(options: PluginOptions = {}): Plugin {
     },
     configureServer(dev) {
       server = dev;
-      watcher = watch(SRC_ROOT, { recursive: true, persistent: true }, (event, file) => {
-        if (file === undefined) return;
-        if (!isSrcFile(file)) return;
-        const evt = event === "change" ? "change" : "add";
-        scheduleRefresh(`${evt} ${relative(SRC_ROOT, file)}`);
-      }) as unknown as NodeFSWatcher;
-      console.log(
-        `[dep-graph] watching ${relative(process.cwd(), SRC_ROOT)}`,
-      );
+      watcher = watch(
+        SRC_ROOT,
+        { recursive: true, persistent: true },
+        (event, file) => {
+          if (file === undefined) return;
+          if (!isSrcFile(file)) return;
+          const evt = event === "change" ? "change" : "add";
+          scheduleRefresh(`${evt} ${relative(SRC_ROOT, file)}`);
+        },
+      ) as unknown as NodeFSWatcher;
+      console.log(`[dep-graph] watching ${relative(process.cwd(), SRC_ROOT)}`);
     },
     async closeBundle() {
       if (debounceTimer) clearTimeout(debounceTimer);

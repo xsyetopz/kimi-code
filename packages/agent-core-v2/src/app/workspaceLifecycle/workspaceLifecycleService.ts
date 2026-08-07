@@ -16,40 +16,46 @@
  * die with the App scope's disposal cascade. Bound at App scope.
  */
 
-import { IInstantiationService } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
+import { IInstantiationService } from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
 import {
   createScopedChildHandle,
   type IWorkspaceScopeHandle,
   LifecycleScope,
   ScopeActivation,
   registerScopedService,
-} from '#/_base/di/scope';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IWorkspaceService, type Workspace } from '#/app/workspace/workspace';
-import { ErrorCodes, Error2 } from '#/errors';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
+} from "#/_base/di/scope";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IWorkspaceService, type Workspace } from "#/app/workspace/workspace";
+import { ErrorCodes, Error2 } from "#/errors";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
 import {
   LOCAL_OS_BACKEND_ID,
   LOCAL_PERSISTENCE_BACKEND_ID,
   workspaceContextSeed,
   type IWorkspaceContext,
-} from '#/workspace/workspaceContext/workspaceContext';
-import { ISessionLifecycleService } from '#/workspace/sessionLifecycle/sessionLifecycle';
-import { workspacePersistenceScope } from '#/workspace/sessionLifecycle/internal/addressing';
+} from "#/workspace/workspaceContext/workspaceContext";
+import { ISessionLifecycleService } from "#/workspace/sessionLifecycle/sessionLifecycle";
+import { workspacePersistenceScope } from "#/workspace/sessionLifecycle/internal/addressing";
 
 import {
   IWorkspaceLifecycleService,
   type WorkspaceHandlerRegistry,
   type WorkspaceRef,
   type WorkspaceSessionRegistry,
-} from './workspaceLifecycle';
+} from "./workspaceLifecycle";
 
-export class WorkspaceLifecycleService extends Disposable implements IWorkspaceLifecycleService {
+export class WorkspaceLifecycleService
+  extends Disposable
+  implements IWorkspaceLifecycleService
+{
   declare readonly _serviceBrand: undefined;
   private readonly live = new Map<string, IWorkspaceScopeHandle>();
-  private readonly materializing = new Map<string, Promise<IWorkspaceScopeHandle>>();
+  private readonly materializing = new Map<
+    string,
+    Promise<IWorkspaceScopeHandle>
+  >();
   private readonly _onDidMaterializeHandler = this._register(
     new Emitter<IWorkspaceScopeHandle>(),
   );
@@ -72,7 +78,8 @@ export class WorkspaceLifecycleService extends Disposable implements IWorkspaceL
   };
 
   constructor(
-    @IInstantiationService private readonly instantiation: IInstantiationService,
+    @IInstantiationService
+    private readonly instantiation: IInstantiationService,
     @IBootstrapService private readonly bootstrap: IBootstrapService,
     @IWorkspaceService private readonly workspaces: IWorkspaceService,
     @IHostEnvironment private readonly hostEnv: IHostEnvironment,
@@ -81,10 +88,11 @@ export class WorkspaceLifecycleService extends Disposable implements IWorkspaceL
   }
 
   async handlerFor(ref: WorkspaceRef): Promise<IWorkspaceScopeHandle> {
-    if ('workspaceId' in ref) {
+    if ("workspaceId" in ref) {
       const existing = this.live.get(ref.workspaceId);
       if (existing !== undefined) return existing;
-      const root = ref.root ?? (await this.workspaces.get(ref.workspaceId))?.root;
+      const root =
+        ref.root ?? (await this.workspaces.get(ref.workspaceId))?.root;
       if (root === undefined) {
         throw new Error2(
           ErrorCodes.WORKSPACE_NOT_FOUND,
@@ -123,9 +131,12 @@ export class WorkspaceLifecycleService extends Disposable implements IWorkspaceL
       _serviceBrand: undefined,
       workspaceId,
       cwd: workspace.root,
-      source: 'local',
+      source: "local",
       meta: workspace,
-      persistenceScope: workspacePersistenceScope(this.bootstrap.scope('sessions'), workspaceId),
+      persistenceScope: workspacePersistenceScope(
+        this.bootstrap.scope("sessions"),
+        workspaceId,
+      ),
       osBackendId: LOCAL_OS_BACKEND_ID,
       persistenceBackendId: LOCAL_PERSISTENCE_BACKEND_ID,
     };
@@ -147,5 +158,5 @@ registerScopedService(
   IWorkspaceLifecycleService,
   WorkspaceLifecycleService,
   ScopeActivation.OnScopeCreated,
-  'workspaceLifecycle',
+  "workspaceLifecycle",
 );

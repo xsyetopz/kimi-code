@@ -2,7 +2,6 @@
  * `plugin` domain — plugin manager install and record helpers.
  */
 
-
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -347,7 +346,10 @@ function pluginMcpServerInfo(
   };
 }
 
-export function pluginMcpRuntimeName(pluginId: string, serverName: string): string {
+export function pluginMcpRuntimeName(
+  pluginId: string,
+  serverName: string,
+): string {
   return `plugin-${pluginId}:${serverName}`;
 }
 

@@ -65,9 +65,7 @@ import { Error2 } from "#/_base/errors/errors";
 import { ConfigErrors } from "#/app/config/errors";
 import { IConfigService } from "#/app/config/config";
 import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
-import {
-  IWorkspaceLeaseService,
-} from "#/workspace/workspaceLease/workspaceLease";
+import { IWorkspaceLeaseService } from "#/workspace/workspaceLease/workspaceLease";
 import { WorkspaceLeaseService } from "#/workspace/workspaceLease/workspaceLeaseService";
 import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 import {
@@ -467,9 +465,7 @@ describe("AgentRunBatch scheduling contract", () => {
     }
   });
 
-  it(
-    "requeues spawn-time 429 concurrent-limit errors instead of failing immediately",
-    async () => {
+  it("requeues spawn-time 429 concurrent-limit errors instead of failing immediately", async () => {
     const onSuspended = vi.fn();
     let spawnCount = 0;
     const launcher: AgentRunBatchLauncher = {
@@ -514,9 +510,7 @@ describe("AgentRunBatch scheduling contract", () => {
       { task: { data: 1 }, status: "completed", result: "ok" },
       { task: { data: 2 }, status: "completed", result: "ok" },
     ]);
-    },
-    20_000,
-  );
+  }, 20_000);
 
   it("fails the only unfinished task on provider rate limit instead of suspending forever", async () => {
     vi.useFakeTimers();
@@ -1810,13 +1804,14 @@ describe("SessionSwarmService orchestrator pool", () => {
   });
 });
 
-function sessionWorkspaceContextStub(workDir: string): ISessionWorkspaceContext {
+function sessionWorkspaceContextStub(
+  workDir: string,
+): ISessionWorkspaceContext {
   return {
     _serviceBrand: undefined,
     workDir,
     additionalDirs: [],
-    resolve: (rel: string) =>
-      rel.startsWith("/") ? rel : `${workDir}/${rel}`,
+    resolve: (rel: string) => (rel.startsWith("/") ? rel : `${workDir}/${rel}`),
     isWithin: () => true,
     assertAllowed: (path: string) => path,
   };

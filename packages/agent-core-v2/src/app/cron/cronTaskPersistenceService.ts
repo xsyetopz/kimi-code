@@ -6,41 +6,53 @@
  * Pure CRUD — no scheduling logic. Bound at App scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
 
-import { ICronTaskPersistence, type CronTaskQuery } from './cronTaskPersistence';
-import type { CronTask } from './cronTask';
+import {
+  ICronTaskPersistence,
+  type CronTaskQuery,
+} from "./cronTaskPersistence";
+import type { CronTask } from "./cronTask";
 
-export const CRON_ID_REGEX: RegExp = /^(?:[0-9a-f]{8}|[0-9A-HJKMNP-TV-Z]{26})$/i;
-const JSON_SUFFIX = '.json';
+export const CRON_ID_REGEX: RegExp =
+  /^(?:[0-9a-f]{8}|[0-9A-HJKMNP-TV-Z]{26})$/i;
+const JSON_SUFFIX = ".json";
 
 export function isValidCronTask(obj: unknown): obj is CronTask {
-  if (typeof obj !== 'object' || obj === null) return false;
+  if (typeof obj !== "object" || obj === null) return false;
   const o = obj as Record<string, unknown>;
-  if (typeof o['id'] !== 'string' || !CRON_ID_REGEX.test(o['id'])) return false;
-  if (typeof o['cron'] !== 'string') return false;
-  if (typeof o['prompt'] !== 'string') return false;
-  if (typeof o['createdAt'] !== 'number') return false;
-  if (o['recurring'] !== undefined && typeof o['recurring'] !== 'boolean') return false;
+  if (typeof o["id"] !== "string" || !CRON_ID_REGEX.test(o["id"])) return false;
+  if (typeof o["cron"] !== "string") return false;
+  if (typeof o["prompt"] !== "string") return false;
+  if (typeof o["createdAt"] !== "number") return false;
+  if (o["recurring"] !== undefined && typeof o["recurring"] !== "boolean")
+    return false;
   if (
-    o['lastFiredAt'] !== undefined &&
-    (typeof o['lastFiredAt'] !== 'number' || !Number.isFinite(o['lastFiredAt']))
+    o["lastFiredAt"] !== undefined &&
+    (typeof o["lastFiredAt"] !== "number" || !Number.isFinite(o["lastFiredAt"]))
   ) {
     return false;
   }
-  if (o['tags'] !== undefined) {
-    if (typeof o['tags'] !== 'object' || o['tags'] === null) return false;
-    for (const v of Object.values(o['tags'] as Record<string, unknown>)) {
-      if (typeof v !== 'string') return false;
+  if (o["tags"] !== undefined) {
+    if (typeof o["tags"] !== "object" || o["tags"] === null) return false;
+    for (const v of Object.values(o["tags"] as Record<string, unknown>)) {
+      if (typeof v !== "string") return false;
     }
   }
   return true;
 }
 
-export class CronTaskPersistenceService extends Disposable implements ICronTaskPersistence {
+export class CronTaskPersistenceService
+  extends Disposable
+  implements ICronTaskPersistence
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly cronScope: string;
@@ -50,16 +62,22 @@ export class CronTaskPersistenceService extends Disposable implements ICronTaskP
     @IAtomicDocumentStore private readonly atomicDocs: IAtomicDocumentStore,
   ) {
     super();
-    this.cronScope = this.bootstrap.scope('cron');
+    this.cronScope = this.bootstrap.scope("cron");
   }
 
   private workspaceScope(workspaceId: string): string {
     return `${this.cronScope}/${workspaceId}`;
   }
 
-  async get(workspaceId: string, taskId: string): Promise<CronTask | undefined> {
+  async get(
+    workspaceId: string,
+    taskId: string,
+  ): Promise<CronTask | undefined> {
     const scope = this.workspaceScope(workspaceId);
-    const value = await this.atomicDocs.get<CronTask>(scope, `${taskId}${JSON_SUFFIX}`);
+    const value = await this.atomicDocs.get<CronTask>(
+      scope,
+      `${taskId}${JSON_SUFFIX}`,
+    );
     if (value === undefined || !isValidCronTask(value)) return undefined;
     return value;
   }
@@ -95,5 +113,5 @@ registerScopedService(
   ICronTaskPersistence,
   CronTaskPersistenceService,
   ScopeActivation.OnScopeCreated,
-  'cron',
+  "cron",
 );

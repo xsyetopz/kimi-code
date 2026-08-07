@@ -1023,9 +1023,9 @@ describe("projector tool-exchange normalization", () => {
         [user("go"), assistant("one"), assistant("two")],
         { protocolProfile: KIMI_K2_PROTOCOL_PROFILE },
       );
-      expect(projected.filter((message) => message.role === "assistant")).toHaveLength(
-        2,
-      );
+      expect(
+        projected.filter((message) => message.role === "assistant"),
+      ).toHaveLength(2);
     });
 
     it("keeps assistant think blocks after duplicate tool-call dedupe when replayWithToolCalls is set", () => {

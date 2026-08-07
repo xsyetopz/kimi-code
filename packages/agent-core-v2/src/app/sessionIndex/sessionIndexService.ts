@@ -16,12 +16,16 @@
  * scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import type { Page } from '#/persistence/interface/queryStore';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import type { Page } from "#/persistence/interface/queryStore";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
 
 import {
   ISessionIndex,
@@ -29,13 +33,13 @@ import {
   type SessionIndexStatus,
   type SessionListQuery,
   type SessionSummary,
-} from './sessionIndex';
+} from "./sessionIndex";
 import {
   listSessionIds,
   listWorkspaceIds,
   readSessionSummary,
   summaryMatchesChildOf,
-} from './sessionIndexSource';
+} from "./sessionIndexSource";
 
 function canonicalOrder(a: SessionSummary, b: SessionSummary): number {
   if (a.updatedAt !== b.updatedAt) return b.updatedAt - a.updatedAt;
@@ -47,7 +51,8 @@ export class FileSessionIndex extends Disposable implements ISessionIndex {
 
   constructor(
     @IBootstrapService private readonly bootstrap: IBootstrapService,
-    @IFileSystemStorageService private readonly storage: IFileSystemStorageService,
+    @IFileSystemStorageService
+    private readonly storage: IFileSystemStorageService,
     @IAtomicDocumentStore private readonly docs: IAtomicDocumentStore,
   ) {
     super();
@@ -58,14 +63,26 @@ export class FileSessionIndex extends Disposable implements ISessionIndex {
   }
 
   status(): SessionIndexStatus {
-    return { state: 'uninitialized', degradedCount: 0 };
+    return { state: "uninitialized", degradedCount: 0 };
   }
 
   async get(id: string): Promise<SessionSummary | undefined> {
-    for (const workspaceId of await listWorkspaceIds(this.storage, this.sessionsScope)) {
-      const sessionIds = await listSessionIds(this.storage, this.sessionsScope, workspaceId);
+    for (const workspaceId of await listWorkspaceIds(
+      this.storage,
+      this.sessionsScope,
+    )) {
+      const sessionIds = await listSessionIds(
+        this.storage,
+        this.sessionsScope,
+        workspaceId,
+      );
       if (!sessionIds.includes(id)) continue;
-      const summary = await readSessionSummary(this.docs, this.sessionsScope, workspaceId, id);
+      const summary = await readSessionSummary(
+        this.docs,
+        this.sessionsScope,
+        workspaceId,
+        id,
+      );
       if (summary !== undefined) return summary;
     }
     return undefined;
@@ -75,17 +92,31 @@ export class FileSessionIndex extends Disposable implements ISessionIndex {
     if (query.sessionId !== undefined) {
       const summary = await this.get(query.sessionId);
       const items =
-        summary !== undefined && (!summary.archived || query.includeArchived === true)
+        summary !== undefined &&
+        (!summary.archived || query.includeArchived === true)
           ? [summary]
           : [];
-      return { items: query.limit !== undefined ? items.slice(0, query.limit) : items };
+      return {
+        items: query.limit !== undefined ? items.slice(0, query.limit) : items,
+      };
     }
 
-    const workspaceIds = query.workspaceIds ?? (await listWorkspaceIds(this.storage, this.sessionsScope));
+    const workspaceIds =
+      query.workspaceIds ??
+      (await listWorkspaceIds(this.storage, this.sessionsScope));
     const collected: SessionSummary[] = [];
     for (const workspaceId of workspaceIds) {
-      for (const sessionId of await listSessionIds(this.storage, this.sessionsScope, workspaceId)) {
-        const summary = await readSessionSummary(this.docs, this.sessionsScope, workspaceId, sessionId);
+      for (const sessionId of await listSessionIds(
+        this.storage,
+        this.sessionsScope,
+        workspaceId,
+      )) {
+        const summary = await readSessionSummary(
+          this.docs,
+          this.sessionsScope,
+          workspaceId,
+          sessionId,
+        );
         if (summary === undefined) continue;
         if (summary.archived && query.includeArchived !== true) continue;
         if (!summaryMatchesChildOf(summary, query.childOf)) continue;
@@ -115,10 +146,20 @@ export class FileSessionIndex extends Disposable implements ISessionIndex {
   async count(query: SessionCountQuery): Promise<number> {
     let count = 0;
     const workspaceIds =
-      query.workspaceIds ?? (await listWorkspaceIds(this.storage, this.sessionsScope));
+      query.workspaceIds ??
+      (await listWorkspaceIds(this.storage, this.sessionsScope));
     for (const workspaceId of workspaceIds) {
-      for (const sessionId of await listSessionIds(this.storage, this.sessionsScope, workspaceId)) {
-        const summary = await readSessionSummary(this.docs, this.sessionsScope, workspaceId, sessionId);
+      for (const sessionId of await listSessionIds(
+        this.storage,
+        this.sessionsScope,
+        workspaceId,
+      )) {
+        const summary = await readSessionSummary(
+          this.docs,
+          this.sessionsScope,
+          workspaceId,
+          sessionId,
+        );
         if (summary === undefined) continue;
         if (query.includeArchived === true || !summary.archived) count += 1;
       }
@@ -129,7 +170,7 @@ export class FileSessionIndex extends Disposable implements ISessionIndex {
   async remove(_id: string): Promise<void> {}
 
   private get sessionsScope(): string {
-    return this.bootstrap.scope('sessions');
+    return this.bootstrap.scope("sessions");
   }
 }
 
@@ -138,5 +179,5 @@ registerScopedService(
   ISessionIndex,
   FileSessionIndex,
   ScopeActivation.OnScopeCreated,
-  'sessionIndex',
+  "sessionIndex",
 );

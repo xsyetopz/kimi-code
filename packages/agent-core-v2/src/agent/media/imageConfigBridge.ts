@@ -17,25 +17,35 @@
  * are harmless.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IConfigService } from '#/app/config/config';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IConfigService } from "#/app/config/config";
 import {
   setConfiguredMaxImageEdgePx,
   setConfiguredReadImageByteBudget,
-} from '#/agent/media/image-compress';
+} from "#/agent/media/image-compress";
 
-import { IMAGE_SECTION, type ImageConfig } from './configSection';
+import { IMAGE_SECTION, type ImageConfig } from "./configSection";
 
 export interface IImageConfigBridge {
   readonly _serviceBrand: undefined;
 }
 
 export const IImageConfigBridge: ServiceIdentifier<IImageConfigBridge> =
-  createDecorator<IImageConfigBridge>('imageConfigBridge');
+  createDecorator<IImageConfigBridge>("imageConfigBridge");
 
-export class ImageConfigBridge extends Disposable implements IImageConfigBridge {
+export class ImageConfigBridge
+  extends Disposable
+  implements IImageConfigBridge
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(@IConfigService private readonly config: IConfigService) {
@@ -61,5 +71,5 @@ registerScopedService(
   IImageConfigBridge,
   ImageConfigBridge,
   ScopeActivation.OnScopeCreated,
-  'media',
+  "media",
 );

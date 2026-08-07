@@ -10,23 +10,32 @@
  * the capability set here and fires `onDidChange`. Bound at Workspace scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import type { ISessionToolPolicyGate } from '#/session/sessionToolPolicyGate/sessionToolPolicyGate';
+import { Disposable } from "#/_base/di/lifecycle";
+import { Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import type { ISessionToolPolicyGate } from "#/session/sessionToolPolicyGate/sessionToolPolicyGate";
 import {
   IWorkspaceContext,
   LOCAL_OS_BACKEND_ID,
-} from '#/workspace/workspaceContext/workspaceContext';
+} from "#/workspace/workspaceContext/workspaceContext";
 
-import { IWorkspaceToolPolicy } from './workspaceToolPolicy';
+import { IWorkspaceToolPolicy } from "./workspaceToolPolicy";
 
-export function computeCapabilityDisabledTools(osBackendId: string): readonly string[] {
+export function computeCapabilityDisabledTools(
+  osBackendId: string,
+): readonly string[] {
   if (osBackendId === LOCAL_OS_BACKEND_ID) return [];
   return [];
 }
 
-export class WorkspaceToolPolicyService extends Disposable implements IWorkspaceToolPolicy {
+export class WorkspaceToolPolicyService
+  extends Disposable
+  implements IWorkspaceToolPolicy
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly disabled: readonly string[];
@@ -58,5 +67,5 @@ registerScopedService(
   IWorkspaceToolPolicy,
   WorkspaceToolPolicyService,
   ScopeActivation.OnScopeCreated,
-  'workspaceToolPolicy',
+  "workspaceToolPolicy",
 );

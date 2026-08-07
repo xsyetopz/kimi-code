@@ -10,35 +10,44 @@
  * through `log`. Bound at Agent scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { escapeXmlAttr } from '#/_base/utils/xml-escape';
-import { IAgentContextInjectorService } from '#/agent/contextInjector/contextInjector';
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { IAgentSystemReminderService } from '#/agent/systemReminder/systemReminder';
-import { IPluginService } from '#/app/plugin/plugin';
-import type { EnabledPluginSessionStart } from '#/app/plugin/types';
-import { PLUGIN_SKILL_SOURCE_ID } from '#/app/skillCatalog/skillSource';
-import type { SkillCatalog, SkillDefinition } from '#/app/skillCatalog/types';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { ISessionSkillCatalog } from '#/session/sessionSkillCatalog/skillCatalog';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { escapeXmlAttr } from "#/_base/utils/xml-escape";
+import { IAgentContextInjectorService } from "#/agent/contextInjector/contextInjector";
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
+import { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
+import { IPluginService } from "#/app/plugin/plugin";
+import type { EnabledPluginSessionStart } from "#/app/plugin/types";
+import { PLUGIN_SKILL_SOURCE_ID } from "#/app/skillCatalog/skillSource";
+import type { SkillCatalog, SkillDefinition } from "#/app/skillCatalog/types";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
 
-import { IAgentPluginService } from './agentPlugin';
+import { IAgentPluginService } from "./agentPlugin";
 
-const SESSION_START_INJECTION_VARIANT = 'plugin_session_start';
+const SESSION_START_INJECTION_VARIANT = "plugin_session_start";
 
-const MAIN_AGENT_ID = 'main';
+const MAIN_AGENT_ID = "main";
 
-export class AgentPluginService extends Disposable implements IAgentPluginService {
+export class AgentPluginService
+  extends Disposable
+  implements IAgentPluginService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
     @IAgentScopeContext scopeContext: IAgentScopeContext,
     @IAgentContextInjectorService injector: IAgentContextInjectorService,
-    @IAgentSystemReminderService private readonly reminders: IAgentSystemReminderService,
-    @IAgentContextMemoryService private readonly context: IAgentContextMemoryService,
+    @IAgentSystemReminderService
+    private readonly reminders: IAgentSystemReminderService,
+    @IAgentContextMemoryService
+    private readonly context: IAgentContextMemoryService,
     @IPluginService private readonly plugins: IPluginService,
     @ISessionSkillCatalog private readonly skillCatalog: ISessionSkillCatalog,
     @ISessionContext private readonly sessionContext: ISessionContext,
@@ -81,13 +90,13 @@ export class AgentPluginService extends Disposable implements IAgentPluginServic
     if (reminder !== undefined) {
       this.reminders.appendSystemReminder(
         `${reminder}\n\nThis supersedes any earlier plugin_session_start reminder in this session.`,
-        { kind: 'injection', variant: SESSION_START_INJECTION_VARIANT },
+        { kind: "injection", variant: SESSION_START_INJECTION_VARIANT },
       );
     } else if (shouldNeutralizePluginSessionStart(this.context.get())) {
       this.reminders.appendSystemReminder(
-        'There are currently no active plugin session starts. ' +
-          'This supersedes any earlier plugin_session_start reminder in this session.',
-        { kind: 'injection', variant: SESSION_START_INJECTION_VARIANT },
+        "There are currently no active plugin session starts. " +
+          "This supersedes any earlier plugin_session_start reminder in this session.",
+        { kind: "injection", variant: SESSION_START_INJECTION_VARIANT },
       );
     }
   }
@@ -108,30 +117,39 @@ function renderPluginSessionStartReminder(
   if (catalog === undefined) return undefined;
   const blocks: string[] = [];
   for (const sessionStart of sessionStarts) {
-    const skill = catalog.getPluginSkill(sessionStart.pluginId, sessionStart.skillName);
+    const skill = catalog.getPluginSkill(
+      sessionStart.pluginId,
+      sessionStart.skillName,
+    );
     if (skill === undefined) {
-      log?.warn('plugin sessionStart skill not found', {
+      log?.warn("plugin sessionStart skill not found", {
         pluginId: sessionStart.pluginId,
         skillName: sessionStart.skillName,
       });
       continue;
     }
     blocks.push(
-      renderSessionStartBlock(sessionStart, skill, catalog.renderSkillPrompt(skill, '', { sessionId })),
+      renderSessionStartBlock(
+        sessionStart,
+        skill,
+        catalog.renderSkillPrompt(skill, "", { sessionId }),
+      ),
     );
   }
-  return blocks.length > 0 ? blocks.join('\n') : undefined;
+  return blocks.length > 0 ? blocks.join("\n") : undefined;
 }
 
 function shouldNeutralizePluginSessionStart(
-  history: readonly { readonly origin?: { readonly kind: string; readonly variant?: string } }[],
+  history: readonly {
+    readonly origin?: { readonly kind: string; readonly variant?: string };
+  }[],
 ): boolean {
   return history.some((message) => {
     const kind = message.origin?.kind;
-    if (kind === 'injection') {
+    if (kind === "injection") {
       return message.origin?.variant === SESSION_START_INJECTION_VARIANT;
     }
-    return kind === 'compaction_summary';
+    return kind === "compaction_summary";
   });
 }
 
@@ -151,5 +169,5 @@ registerScopedService(
   IAgentPluginService,
   AgentPluginService,
   ScopeActivation.OnScopeCreated,
-  'agentPlugin',
+  "agentPlugin",
 );

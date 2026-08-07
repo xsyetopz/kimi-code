@@ -10,7 +10,11 @@
 import { TextDecoder, TextEncoder } from "node:util";
 
 import { Disposable } from "#/_base/di/lifecycle";
-import { LifecycleScope, ScopeActivation, registerScopedService } from "#/_base/di/scope";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import { IBootstrapService } from "#/app/bootstrap/bootstrap";
 import { IFileSystemStorageService } from "#/persistence/interface/storage";
 
@@ -34,14 +38,18 @@ const MAX_TOPIC_DOCS = 3;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-export class UserMemoryService extends Disposable implements IUserMemoryService {
+export class UserMemoryService
+  extends Disposable
+  implements IUserMemoryService
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly memoryScope: string;
 
   constructor(
     @IBootstrapService bootstrap: IBootstrapService,
-    @IFileSystemStorageService private readonly storage: IFileSystemStorageService,
+    @IFileSystemStorageService
+    private readonly storage: IFileSystemStorageService,
   ) {
     super();
     this.memoryScope = bootstrap.scope("memory");
@@ -52,9 +60,14 @@ export class UserMemoryService extends Disposable implements IUserMemoryService 
     if (text.length === 0) return;
     const source = input.source ?? "manual";
     const line = `- [${new Date().toISOString()}] (source=${source}) ${text}\n`;
-    await this.storage.append(this.memoryScope, USER_MEMORY_CURRENT_KEY, encoder.encode(line), {
-      durable: true,
-    });
+    await this.storage.append(
+      this.memoryScope,
+      USER_MEMORY_CURRENT_KEY,
+      encoder.encode(line),
+      {
+        durable: true,
+      },
+    );
   }
 
   async appendTopic(topic: string, text: string): Promise<void> {
@@ -70,9 +83,15 @@ export class UserMemoryService extends Disposable implements IUserMemoryService 
     );
   }
 
-  async readRecall(maxTokens = DEFAULT_USER_MEMORY_RECALL_MAX_TOKENS): Promise<UserMemoryRecall> {
-    const currentBytes = await this.storage.read(this.memoryScope, USER_MEMORY_CURRENT_KEY);
-    const current = currentBytes === undefined ? "" : decoder.decode(currentBytes);
+  async readRecall(
+    maxTokens = DEFAULT_USER_MEMORY_RECALL_MAX_TOKENS,
+  ): Promise<UserMemoryRecall> {
+    const currentBytes = await this.storage.read(
+      this.memoryScope,
+      USER_MEMORY_CURRENT_KEY,
+    );
+    const current =
+      currentBytes === undefined ? "" : decoder.decode(currentBytes);
     const topicKeys = (await this.storage.list(USER_MEMORY_TOPICS_SCOPE))
       .filter((key) => key.endsWith(TOPIC_SUFFIX))
       .toSorted();
@@ -89,7 +108,11 @@ export class UserMemoryService extends Disposable implements IUserMemoryService 
     }
     const currentBudget = Math.max(
       0,
-      maxTokens - topics.reduce((sum, topic) => sum + Math.ceil(topic.text.length / 4), 0),
+      maxTokens -
+        topics.reduce(
+          (sum, topic) => sum + Math.ceil(topic.text.length / 4),
+          0,
+        ),
     );
     return {
       current: truncateToTokenBudget(current, currentBudget),

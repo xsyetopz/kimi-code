@@ -10,10 +10,17 @@
  * engine implementation.
  */
 
-import type { GoalActor, GoalBudgetLimits, GoalStatus } from "#/agent/goal/types";
+import type {
+  GoalActor,
+  GoalBudgetLimits,
+  GoalStatus,
+} from "#/agent/goal/types";
 import type { LoopRecordedEvent } from "#/agent/contextMemory/loopEventFold";
 import type { ContextMessage, PromptOrigin } from "#/agent/contextMemory/types";
-import type { CompactionBeginData, CompactionResult } from "#/agent/fullCompaction/types";
+import type {
+  CompactionBeginData,
+  CompactionResult,
+} from "#/agent/fullCompaction/types";
 import type { PermissionApprovalResultRecord } from "#/agent/permissionRules/permissionRules";
 import type { AgentTaskInfoBase } from "#/agent/task/types";
 import type { PermissionMode } from "#/agent/permissionPolicy/types";

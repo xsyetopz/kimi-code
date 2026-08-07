@@ -7,21 +7,21 @@
  * `../contextMemory/stubs`).
  */
 
-import type { ServiceRegistration } from '#/_base/di/test';
-import { buildContextCompactionShape } from '#/agent/contextMemory/compactionHandoff';
+import type { ServiceRegistration } from "#/_base/di/test";
+import { buildContextCompactionShape } from "#/agent/contextMemory/compactionHandoff";
 import {
   IAgentContextMemoryService,
   type ContextCompactionInput,
   type ContextCompactionResult,
-} from '#/agent/contextMemory/contextMemory';
-import { computeUndoCut, type UndoCut } from '#/agent/contextMemory/contextOps';
-import type { LoopRecordedEvent } from '#/agent/contextMemory/loopEventFold';
-import type { ContextMessage } from '#/agent/contextMemory/types';
-import { IEventBus } from '#/app/event/eventBus';
-import { EventBusService } from '#/app/event/eventBusService';
-import { IWireService } from '#/wire/wire';
+} from "#/agent/contextMemory/contextMemory";
+import { computeUndoCut, type UndoCut } from "#/agent/contextMemory/contextOps";
+import type { LoopRecordedEvent } from "#/agent/contextMemory/loopEventFold";
+import type { ContextMessage } from "#/agent/contextMemory/types";
+import { IEventBus } from "#/app/event/eventBus";
+import { EventBusService } from "#/app/event/eventBusService";
+import { IWireService } from "#/wire/wire";
 
-import { stubAgentWire } from '../../wire/stubs';
+import { stubAgentWire } from "../../wire/stubs";
 
 export interface StubContextMemory extends IAgentContextMemoryService {
   readonly messages: readonly ContextMessage[];
@@ -36,7 +36,7 @@ function publishSplice(
     tokens?: number;
   },
 ): void {
-  eventBus?.publish({ type: 'context.spliced', ...input });
+  eventBus?.publish({ type: "context.spliced", ...input });
 }
 
 export function stubContextMemory(eventBus?: IEventBus): StubContextMemory {
@@ -50,7 +50,11 @@ export function stubContextMemory(eventBus?: IEventBus): StubContextMemory {
     append: (...inserted) => {
       const start = messages.length;
       messages.push(...inserted);
-      publishSplice(eventBus, { start, deleteCount: 0, messages: [...inserted] });
+      publishSplice(eventBus, {
+        start,
+        deleteCount: 0,
+        messages: [...inserted],
+      });
     },
     appendLoopEvent: () => {},
     clear: () => {
@@ -64,11 +68,17 @@ export function stubContextMemory(eventBus?: IEventBus): StubContextMemory {
       if (cut.cutIndex >= 0 && cut.removedCount >= count) {
         const deleteCount = messages.length - cut.cutIndex;
         messages.splice(cut.cutIndex, deleteCount);
-        publishSplice(eventBus, { start: cut.cutIndex, deleteCount, messages: [] });
+        publishSplice(eventBus, {
+          start: cut.cutIndex,
+          deleteCount,
+          messages: [],
+        });
       }
       return cut;
     },
-    applyCompaction: (input: ContextCompactionInput): ContextCompactionResult => {
+    applyCompaction: (
+      input: ContextCompactionInput,
+    ): ContextCompactionResult => {
       const shape = buildContextCompactionShape(messages, input);
       const previousLength = messages.length;
       messages.splice(0, previousLength, ...shape.messages);

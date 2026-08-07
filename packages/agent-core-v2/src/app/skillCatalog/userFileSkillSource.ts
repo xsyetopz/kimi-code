@@ -6,32 +6,46 @@
  * builtin, below workspace). Bound at App scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
 
 import {
   MERGE_ALL_AVAILABLE_SKILLS_SECTION,
   type MergeAllAvailableSkillsConfig,
-} from './configSection';
-import { ISkillDiscovery } from './skillDiscovery';
-import { userRoots } from './skillRoots';
-import { SKILL_SOURCE_PRIORITY, type ISkillSource, type SkillContribution } from './skillSource';
+} from "./configSection";
+import { ISkillDiscovery } from "./skillDiscovery";
+import { userRoots } from "./skillRoots";
+import {
+  SKILL_SOURCE_PRIORITY,
+  type ISkillSource,
+  type SkillContribution,
+} from "./skillSource";
 
 export interface IUserFileSkillSource extends ISkillSource {
   readonly _serviceBrand: undefined;
 }
 
 export const IUserFileSkillSource: ServiceIdentifier<IUserFileSkillSource> =
-  createDecorator<IUserFileSkillSource>('userFileSkillSource');
+  createDecorator<IUserFileSkillSource>("userFileSkillSource");
 
-export class UserFileSkillSource extends Disposable implements IUserFileSkillSource {
+export class UserFileSkillSource
+  extends Disposable
+  implements IUserFileSkillSource
+{
   declare readonly _serviceBrand: undefined;
 
-  readonly id = 'user';
+  readonly id = "user";
   readonly priority = SKILL_SOURCE_PRIORITY.user;
   private readonly onDidChangeEmitter = this._register(new Emitter<void>());
   readonly onDidChange: Event<void> = this.onDidChangeEmitter.event;
@@ -44,7 +58,8 @@ export class UserFileSkillSource extends Disposable implements IUserFileSkillSou
     super();
     this._register(
       this.config.onDidSectionChange((event) => {
-        if (event.domain === MERGE_ALL_AVAILABLE_SKILLS_SECTION) this.onDidChangeEmitter.fire();
+        if (event.domain === MERGE_ALL_AVAILABLE_SKILLS_SECTION)
+          this.onDidChangeEmitter.fire();
       }),
     );
   }
@@ -55,9 +70,13 @@ export class UserFileSkillSource extends Disposable implements IUserFileSkillSou
     }
     await this.config.ready;
     const mergeAllAvailableSkills =
-      this.config.get<MergeAllAvailableSkillsConfig>(MERGE_ALL_AVAILABLE_SKILLS_SECTION) ?? true;
+      this.config.get<MergeAllAvailableSkillsConfig>(
+        MERGE_ALL_AVAILABLE_SKILLS_SECTION,
+      ) ?? true;
     return this.discovery.discover(
-      await userRoots(this.bootstrap.homeDir, this.bootstrap.osHomeDir, { mergeAllAvailableSkills }),
+      await userRoots(this.bootstrap.homeDir, this.bootstrap.osHomeDir, {
+        mergeAllAvailableSkills,
+      }),
     );
   }
 }
@@ -67,5 +86,5 @@ registerScopedService(
   IUserFileSkillSource,
   UserFileSkillSource,
   ScopeActivation.OnScopeCreated,
-  'skillCatalog',
+  "skillCatalog",
 );

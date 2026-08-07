@@ -96,10 +96,7 @@ function getCurrentSubToolActivity(
       latestSeq = index;
       latest = activity;
     }
-    if (
-      activity.phase === "ongoing" &&
-      index > latestOngoingSeq
-    ) {
+    if (activity.phase === "ongoing" && index > latestOngoingSeq) {
       latestOngoingSeq = index;
       latestOngoing = activity;
     }
@@ -180,7 +177,7 @@ function formatSingleSubagentStatsText(card: SubagentCardViewState): string {
   const tokens =
     card.contextTokens && card.contextTokens > 0
       ? card.contextTokens
-      : card.usageTokens ?? 0;
+      : (card.usageTokens ?? 0);
   if (tokens > 0) parts.push(formatTokens(tokens));
   return ` · ${parts.join(" · ")}`;
 }
@@ -226,14 +223,13 @@ function wrapPrefixedLines(
 ): string[] {
   const safeWidth = Math.max(0, width);
   if (safeWidth <= 0) return [firstPrefix.trimEnd()];
-  const prefixWidth = Math.max(
-    firstPrefix.length,
-    continuationPrefix.length,
-  );
+  const prefixWidth = Math.max(firstPrefix.length, continuationPrefix.length);
   const contentWidth = Math.max(1, safeWidth - prefixWidth);
   const wrapped = new Text(text, 0, 0).render(contentWidth);
   const lines =
-    wrapped.length > tailLines ? wrapped.slice(wrapped.length - tailLines) : wrapped;
+    wrapped.length > tailLines
+      ? wrapped.slice(wrapped.length - tailLines)
+      : wrapped;
   while (lines.length < minLines) lines.push("");
   return lines.map((line, index) =>
     truncateToWidth(
@@ -279,7 +275,9 @@ export function projectSingleSubagentBodyLines(
 ): string[] {
   const { card, result, workspaceDir, width = 100 } = options;
   const phase = deriveSubagentPhase({ card, result });
-  const lines: string[] = [projectSingleSubagentSummaryLine(card, workspaceDir)];
+  const lines: string[] = [
+    projectSingleSubagentSummaryLine(card, workspaceDir),
+  ];
   const gutter = currentTheme.dim("│");
 
   if (phase === "failed") {
@@ -303,9 +301,10 @@ export function projectSingleSubagentBodyLines(
   }
 
   if (phase === "done" || phase === "backgrounded") {
-    const text = tailNonEmptyLines(card.subagentText, THINKING_PREVIEW_LINES).join(
-      "\n",
-    );
+    const text = tailNonEmptyLines(
+      card.subagentText,
+      THINKING_PREVIEW_LINES,
+    ).join("\n");
     lines.push(
       ...wrapPrefixedLines(
         `  ${gutter} `,

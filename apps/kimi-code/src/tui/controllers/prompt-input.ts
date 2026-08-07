@@ -64,10 +64,7 @@ export interface PromptInputHost extends SlashCommandHost {
   ensureSession(): Promise<Session | undefined>;
   showError(message: string): void;
   setAppState(patch: Partial<AppState>): void;
-  syncShellRunTranscriptEntry(
-    entryId: string,
-    data: ShellRunViewState,
-  ): void;
+  syncShellRunTranscriptEntry(entryId: string, data: ShellRunViewState): void;
   persistInputHistory(text: string): Promise<void>;
 }
 
@@ -151,7 +148,9 @@ export class PromptInputController {
   }
 
   syncLegacyPromptEditor(): void {
-    if (this.host.state.appState.inputMode !== this.promptEditorState.inputMode) {
+    if (
+      this.host.state.appState.inputMode !== this.promptEditorState.inputMode
+    ) {
       this.host.setAppState({ inputMode: this.promptEditorState.inputMode });
     }
   }
@@ -229,7 +228,9 @@ export class PromptInputController {
     }
     if (text.trim().length === 0) return;
     if (this.host.state.appState.isReplaying) {
-      this.host.showError("Cannot send input while session history is replaying.");
+      this.host.showError(
+        "Cannot send input while session history is replaying.",
+      );
       return;
     }
     // Shell commands are stored with a leading `!` so ↑ recall can tell them

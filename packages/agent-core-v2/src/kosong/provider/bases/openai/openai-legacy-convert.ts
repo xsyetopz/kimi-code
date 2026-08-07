@@ -362,4 +362,3 @@ export function convertHistoryMessages(
   appendToolResultMediaMessage(messages, pendingToolResultMedia);
   return messages;
 }
-

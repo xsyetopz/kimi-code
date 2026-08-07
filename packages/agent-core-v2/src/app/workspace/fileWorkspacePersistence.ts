@@ -10,25 +10,31 @@
  * scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
 
-import type { Workspace } from './workspace';
+import type { Workspace } from "./workspace";
 import {
   IWorkspacePersistence,
   type PersistedWorkspaceEntry,
   type PersistedWorkspaceFile,
   type WorkspaceCatalog,
-} from './workspacePersistence';
+} from "./workspacePersistence";
 
 const WORKSPACE_CATALOG_VERSION = 1;
-const WORKSPACE_CATALOG_SCOPE = '';
-const WORKSPACE_CATALOG_KEY = 'workspaces.json';
+const WORKSPACE_CATALOG_SCOPE = "";
+const WORKSPACE_CATALOG_KEY = "workspaces.json";
 
 export class FileWorkspacePersistence implements IWorkspacePersistence {
   declare readonly _serviceBrand: undefined;
 
-  constructor(@IAtomicDocumentStore private readonly docs: IAtomicDocumentStore) {}
+  constructor(
+    @IAtomicDocumentStore private readonly docs: IAtomicDocumentStore,
+  ) {}
 
   async load(): Promise<WorkspaceCatalog | undefined> {
     const file = await this.docs.get<PersistedWorkspaceFile>(
@@ -37,9 +43,9 @@ export class FileWorkspacePersistence implements IWorkspacePersistence {
     );
     if (file === undefined) return undefined;
     if (
-      typeof file !== 'object' ||
+      typeof file !== "object" ||
       file === null ||
-      typeof (file as { workspaces?: unknown }).workspaces !== 'object' ||
+      typeof (file as { workspaces?: unknown }).workspaces !== "object" ||
       (file as { workspaces?: unknown }).workspaces === null
     ) {
       return undefined;
@@ -57,9 +63,10 @@ export class FileWorkspacePersistence implements IWorkspacePersistence {
         lastOpenedAt: parseTime(entry.last_opened_at, now),
       });
     }
-    const rawDeleted = (file as { deleted_workspace_ids?: unknown }).deleted_workspace_ids;
+    const rawDeleted = (file as { deleted_workspace_ids?: unknown })
+      .deleted_workspace_ids;
     const deletedIds = Array.isArray(rawDeleted)
-      ? rawDeleted.filter((id): id is string => typeof id === 'string')
+      ? rawDeleted.filter((id): id is string => typeof id === "string")
       : [];
     return { workspaces, deletedIds };
   }
@@ -84,13 +91,13 @@ export class FileWorkspacePersistence implements IWorkspacePersistence {
 }
 
 function sanitizeEntry(value: unknown): PersistedWorkspaceEntry | null {
-  if (typeof value !== 'object' || value === null) return null;
+  if (typeof value !== "object" || value === null) return null;
   const v = value as Partial<PersistedWorkspaceEntry>;
   if (
-    typeof v.root !== 'string' ||
-    typeof v.name !== 'string' ||
-    typeof v.created_at !== 'string' ||
-    typeof v.last_opened_at !== 'string'
+    typeof v.root !== "string" ||
+    typeof v.name !== "string" ||
+    typeof v.created_at !== "string" ||
+    typeof v.last_opened_at !== "string"
   ) {
     return null;
   }
@@ -112,5 +119,5 @@ registerScopedService(
   IWorkspacePersistence,
   FileWorkspacePersistence,
   ScopeActivation.OnScopeCreated,
-  'workspace',
+  "workspace",
 );

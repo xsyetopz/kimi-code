@@ -9,19 +9,25 @@ import {
   DeviceCodeTimeoutError,
   OAuthError,
   type ManagedKimiConfigShape,
-} from '@moonshot-ai/kimi-code-oauth';
-import type { OAuthFlowStatus } from './oauthProtocol';
-import { deriveProviderId, effectiveModelConfig, nonEmpty } from '#/kosong/model/modelAuth';
-import type { ModelRecord } from '#/kosong/model/model';
-import type { OAuthRef, ProviderConfig } from '#/kosong/provider/provider';
-import { isOAuthCatalogVendor } from '#/kosong/provider/providerDefinition';
+} from "@moonshot-ai/kimi-code-oauth";
+import type { OAuthFlowStatus } from "./oauthProtocol";
+import {
+  deriveProviderId,
+  effectiveModelConfig,
+  nonEmpty,
+} from "#/kosong/model/modelAuth";
+import type { ModelRecord } from "#/kosong/model/model";
+import type { OAuthRef, ProviderConfig } from "#/kosong/provider/provider";
+import { isOAuthCatalogVendor } from "#/kosong/provider/providerDefinition";
 
 export function classifyFailure(err: unknown): OAuthFlowStatus {
-  if (err instanceof DeviceCodeTimeoutError) return 'expired';
+  if (err instanceof DeviceCodeTimeoutError) return "expired";
   if (err instanceof OAuthError) {
-    return err.message.toLowerCase().includes('aborted') ? 'cancelled' : 'denied';
+    return err.message.toLowerCase().includes("aborted")
+      ? "cancelled"
+      : "denied";
   }
-  return 'denied';
+  return "denied";
 }
 
 export function isProviderlessModel(model: ModelRecord | undefined): boolean {
@@ -34,7 +40,9 @@ export function isProviderlessModel(model: ModelRecord | undefined): boolean {
   );
 }
 
-export function providerNameFromFlatModel(model: ModelRecord): string | undefined {
+export function providerNameFromFlatModel(
+  model: ModelRecord,
+): string | undefined {
   const baseUrl = nonEmpty(model.baseUrl);
   return baseUrl === undefined ? undefined : deriveProviderId(baseUrl);
 }
@@ -70,7 +78,10 @@ export function collectModelIdsForAliases(
   return ids;
 }
 
-export function providerAliasKeys(config: ManagedKimiConfigShape, providerId: string): Set<string> {
+export function providerAliasKeys(
+  config: ManagedKimiConfigShape,
+  providerId: string,
+): Set<string> {
   const keys = new Set<string>();
   for (const [alias, model] of Object.entries(config.models ?? {})) {
     if ((model as ManagedModel).provider === providerId) keys.add(alias);
@@ -85,7 +96,10 @@ export function generatedProviderAliasKeys(
 ): Set<string> {
   const keys = new Set<string>();
   for (const [alias, model] of Object.entries(config.models ?? {})) {
-    if ((model as ManagedModel).provider === providerId && alias.startsWith(aliasPrefix)) {
+    if (
+      (model as ManagedModel).provider === providerId &&
+      alias.startsWith(aliasPrefix)
+    ) {
       keys.add(alias);
     }
   }
@@ -133,7 +147,9 @@ export function providerModelSnapshot(
       model: {
         ...model,
         capabilities:
-          model.capabilities === undefined ? undefined : model.capabilities.toSorted(),
+          model.capabilities === undefined
+            ? undefined
+            : model.capabilities.toSorted(),
       },
     });
   }
@@ -160,7 +176,8 @@ export function preserveUserProviderAliases(
   const preserved: Record<string, ManagedModel> = {};
   for (const [alias, model] of Object.entries(config.models ?? {})) {
     const entry = model as ManagedModel;
-    if (entry.provider !== providerId || refreshedAliasKeys.has(alias)) continue;
+    if (entry.provider !== providerId || refreshedAliasKeys.has(alias))
+      continue;
     preserved[alias] = structuredClone(entry);
   }
   return preserved;
@@ -174,7 +191,7 @@ export function restoreProviderAliases(
   config.models = {
     ...config.models,
     ...aliases,
-  } as ManagedKimiConfigShape['models'];
+  } as ManagedKimiConfigShape["models"];
 }
 
 export function restoreDefaultSelection(
@@ -182,17 +199,23 @@ export function restoreDefaultSelection(
   defaultModel: string | undefined,
   defaultEnabled: boolean | undefined,
 ): void {
-  if (defaultModel === undefined || config.models?.[defaultModel] === undefined) return;
+  if (defaultModel === undefined || config.models?.[defaultModel] === undefined)
+    return;
   config.defaultModel = defaultModel;
   const capabilities = managedModel(config, defaultModel)?.capabilities ?? [];
-  const enabled = capabilities.includes('always_thinking') ? true : defaultEnabled;
+  const enabled = capabilities.includes("always_thinking")
+    ? true
+    : defaultEnabled;
   if (enabled !== undefined) {
     config.thinking = { ...config.thinking, enabled };
   }
 }
 
 export function clampDanglingDefault(config: ManagedKimiConfigShape): void {
-  if (config.defaultModel !== undefined && config.models?.[config.defaultModel] === undefined) {
+  if (
+    config.defaultModel !== undefined &&
+    config.models?.[config.defaultModel] === undefined
+  ) {
     config.defaultModel = undefined;
     config.thinking = undefined;
   }

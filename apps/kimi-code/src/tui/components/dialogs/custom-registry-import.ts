@@ -258,7 +258,10 @@ export class CustomRegistryImportDialogComponent
     }
 
     this.done = true;
-    this.opts.onDone({ kind: "ok", value: { url: urlValue, apiKey: tokenValue } });
+    this.opts.onDone({
+      kind: "ok",
+      value: { url: urlValue, apiKey: tokenValue },
+    });
   }
 
   private cancel(): void {

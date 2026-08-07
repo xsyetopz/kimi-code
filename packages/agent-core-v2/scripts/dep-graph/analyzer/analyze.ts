@@ -18,10 +18,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  createSourceFile,
-  SyntaxKind,
-} from "typescript/unstable/ast";
+import { createSourceFile, SyntaxKind } from "typescript/unstable/ast";
 
 import type {
   Edge,
@@ -256,7 +253,10 @@ function collectInterfaces(
 }
 
 function getInterfaces(sf: ts.SourceFile): ts.InterfaceDeclaration[] {
-  return getDescendantsOfKind(sf, ts.SyntaxKind.InterfaceDeclaration) as ts.InterfaceDeclaration[];
+  return getDescendantsOfKind(
+    sf,
+    ts.SyntaxKind.InterfaceDeclaration,
+  ) as ts.InterfaceDeclaration[];
 }
 
 function collectInterfaceMembers(iface: ts.InterfaceDeclaration): string[] {
@@ -335,7 +335,10 @@ function domainOf(absPath: string): string {
 // ---------------------------------------------------------------------------
 
 function getClasses(sf: ts.SourceFile): ts.ClassDeclaration[] {
-  return getDescendantsOfKind(sf, ts.SyntaxKind.ClassDeclaration) as ts.ClassDeclaration[];
+  return getDescendantsOfKind(
+    sf,
+    ts.SyntaxKind.ClassDeclaration,
+  ) as ts.ClassDeclaration[];
 }
 
 function collectServices(sourceFiles: ts.SourceFile[]): {
@@ -355,10 +358,14 @@ function collectServices(sourceFiles: ts.SourceFile[]): {
   }
 
   for (const file of sourceFiles) {
-    for (const call of getDescendantsOfKind(file, ts.SyntaxKind.CallExpression)) {
+    for (const call of getDescendantsOfKind(
+      file,
+      ts.SyntaxKind.CallExpression,
+    )) {
       const c = call as ts.CallExpression;
       const expr = c.expression;
-      if (!ts.isIdentifier(expr) || expr.text !== "registerScopedService") continue;
+      if (!ts.isIdentifier(expr) || expr.text !== "registerScopedService")
+        continue;
       const reg = readRegistration(c, file);
       if (!reg) continue;
       const domain =
@@ -410,16 +417,17 @@ function readCtor(cls: ts.ClassDeclaration): {
       let decName: string | undefined;
       if (ts.isIdentifier(decExpr)) {
         decName = decExpr.text;
-      } else if (
-        decExpr.kind === ts.SyntaxKind.CallExpression
-      ) {
+      } else if (decExpr.kind === ts.SyntaxKind.CallExpression) {
         const call = decExpr as ts.CallExpression;
         if (ts.isIdentifier(call.expression)) {
           decName = call.expression.text;
         }
       }
       if (decName && decName.startsWith("I")) {
-        ctorDeps.push({ token: decName, line: getStartLine(param.getSourceFile!, dec) });
+        ctorDeps.push({
+          token: decName,
+          line: getStartLine(param.getSourceFile!, dec),
+        });
         // Use the parameter's source file (the class's source file)
         const sf = cls.getSourceFile();
         ctorDeps[ctorDeps.length - 1].line = getStartLine(sf, dec);
@@ -432,7 +440,10 @@ function readCtor(cls: ts.ClassDeclaration): {
   return { ctorDeps, injectedFields };
 }
 
-function fieldNameOf(param: ts.ParameterDeclaration, sf: ts.SourceFile): string | undefined {
+function fieldNameOf(
+  param: ts.ParameterDeclaration,
+  sf: ts.SourceFile,
+): string | undefined {
   const modifiers = param.modifiers;
   if (modifiers) {
     for (const m of modifiers) {
@@ -452,7 +463,10 @@ function fieldNameOf(param: ts.ParameterDeclaration, sf: ts.SourceFile): string 
 // Enclosing method name
 // ---------------------------------------------------------------------------
 
-function enclosingMethodName(node: ts.Node, sf: ts.SourceFile): string | undefined {
+function enclosingMethodName(
+  node: ts.Node,
+  sf: ts.SourceFile,
+): string | undefined {
   for (const parent of walkUp(node)) {
     if (parent.kind === ts.SyntaxKind.MethodDeclaration) {
       const m = parent as ts.MethodDeclaration;
@@ -614,7 +628,10 @@ function inferExprTypeText(
     return inferExprTypeText(inner, cls, ifaceMethods, fn, depth + 1);
   }
 
-  if (kind === ts.SyntaxKind.AsExpression || kind === ts.SyntaxKind.NonNullExpression) {
+  if (
+    kind === ts.SyntaxKind.AsExpression ||
+    kind === ts.SyntaxKind.NonNullExpression
+  ) {
     const inner = (expr as ts.AsExpression | ts.NonNullExpression).expression;
     return inferExprTypeText(inner, cls, ifaceMethods, fn, depth + 1);
   }
@@ -678,15 +695,18 @@ function inferExprTypeText(
   return undefined;
 }
 
-function findMethod(cls: ts.ClassDeclaration, name: string): ts.MethodDeclaration | undefined {
-  return cls.members.filter(
-    (m) => m.kind === ts.SyntaxKind.MethodDeclaration,
-  ).find(
-    (m) => {
+function findMethod(
+  cls: ts.ClassDeclaration,
+  name: string,
+): ts.MethodDeclaration | undefined {
+  return cls.members
+    .filter((m) => m.kind === ts.SyntaxKind.MethodDeclaration)
+    .find((m) => {
       const method = m as ts.MethodDeclaration;
-      return method.name && ts.isIdentifier(method.name) && method.name.text === name;
-    },
-  ) as ts.MethodDeclaration | undefined;
+      return (
+        method.name && ts.isIdentifier(method.name) && method.name.text === name
+      );
+    }) as ts.MethodDeclaration | undefined;
 }
 
 function thisFieldTypeText(
@@ -707,7 +727,11 @@ function thisFieldTypeText(
   for (const member of cls.members) {
     if (member.kind === ts.SyntaxKind.PropertyDeclaration) {
       const prop = member as ts.PropertyDeclaration;
-      if (prop.name && ts.isIdentifier(prop.name) && prop.name.text === fieldName) {
+      if (
+        prop.name &&
+        ts.isIdentifier(prop.name) &&
+        prop.name.text === fieldName
+      ) {
         return prop.type?.getFullText(sf)?.trim();
       }
     }
@@ -761,8 +785,7 @@ function inferAccessorScope(
   ifaceMethods: Map<string, Map<string, string>>,
 ): ServiceScope | undefined {
   const getExpr = getCall.expression;
-  if (getExpr.kind !== ts.SyntaxKind.PropertyAccessExpression)
-    return undefined;
+  if (getExpr.kind !== ts.SyntaxKind.PropertyAccessExpression) return undefined;
   const receiver = (getExpr as ts.PropertyAccessExpression).expression;
   if (!isAccessorReceiver(receiver)) return undefined;
   const obj = (receiver as ts.PropertyAccessExpression).expression;
@@ -908,12 +931,8 @@ export function analyze(
   for (const override of PRODUCTION_OVERRIDES) {
     const id = nodeId(override.scope, override.token);
     const cls = implClasses.get(override.impl);
-    const file = cls
-      ? relFromRepo(cls.getSourceFile().fileName)
-      : SRC_ROOT;
-    const domain = cls
-      ? domainOf(cls.getSourceFile().fileName)
-      : "unknown";
+    const file = cls ? relFromRepo(cls.getSourceFile().fileName) : SRC_ROOT;
+    const domain = cls ? domainOf(cls.getSourceFile().fileName) : "unknown";
     const line = cls ? getStartLine(cls.getSourceFile(), cls) : 0;
     const node: ServiceNode = {
       id,

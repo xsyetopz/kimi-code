@@ -94,7 +94,10 @@ export class TuiAccessorsController {
   }
 
   appendStartupNotice(extra: string): void {
-    this.host.startupNotice = combineStartupNotice(this.host.startupNotice, extra);
+    this.host.startupNotice = combineStartupNotice(
+      this.host.startupNotice,
+      extra,
+    );
   }
 
   get backgroundTasks(): ReadonlyMap<string, BackgroundTaskInfo> {

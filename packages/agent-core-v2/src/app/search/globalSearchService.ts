@@ -9,10 +9,17 @@
 
 import { join } from "node:path";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from "#/_base/di/scope";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import { IBootstrapService } from "#/app/bootstrap/bootstrap";
 import { IFlagService } from "#/app/flag/flag";
-import { ISessionIndex, type SessionSummary } from "#/app/sessionIndex/sessionIndex";
+import {
+  ISessionIndex,
+  type SessionSummary,
+} from "#/app/sessionIndex/sessionIndex";
 import { tokenize, normalizeLiteral } from "./tokenize";
 
 import type {
@@ -22,10 +29,7 @@ import type {
   GlobalSearchQuery,
 } from "./contract";
 import { BUN_SQLITE_SEARCH_FLAG_ID } from "./flag";
-import {
-  GlobalSearchError,
-  IGlobalSearchService,
-} from "./globalSearch";
+import { GlobalSearchError, IGlobalSearchService } from "./globalSearch";
 import { searchLiteralRipgrep } from "./rgLiteral";
 import {
   STATS_KEY,
@@ -176,7 +180,10 @@ export class GlobalSearchService implements IGlobalSearchService {
     const mode = query.mode ?? "terms";
     const q = mode === "literal" ? query.query : query.query.trim();
     if (q.length === 0) {
-      throw new GlobalSearchError("invalid_query", "query must be a non-empty string");
+      throw new GlobalSearchError(
+        "invalid_query",
+        "query must be a non-empty string",
+      );
     }
     const pageSize = query.pageSize ?? 20;
     if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 50) {
@@ -189,19 +196,14 @@ export class GlobalSearchService implements IGlobalSearchService {
     await this.syncSessions();
     const index = this.openIndex();
     const stats = index.get(STATS_KEY);
-    const indexed =
-      stats?.kind === "stats" ? stats.sessions : 0;
+    const indexed = stats?.kind === "stats" ? stats.sessions : 0;
     const documents = stats?.kind === "stats" ? stats.documents : 0;
     const stale = !this.fullSyncDone || index.readOnly;
     const indexStateBase = emptyIndexState(
       indexed,
       indexed,
       documents,
-      index.readOnly
-        ? "readonly"
-        : this.fullSyncDone
-          ? "ready"
-          : "building",
+      index.readOnly ? "readonly" : this.fullSyncDone ? "ready" : "building",
       stale ? { stale: true } : undefined,
     );
 
@@ -338,8 +340,7 @@ export class GlobalSearchService implements IGlobalSearchService {
     return {
       sessions: stats?.kind === "stats" ? stats.sessions : 0,
       documents: stats?.kind === "stats" ? stats.documents : 0,
-      lastIndexedAt:
-        stats?.kind === "stats" ? stats.lastIndexedAt : null,
+      lastIndexedAt: stats?.kind === "stats" ? stats.lastIndexedAt : null,
       generation: this.generation,
     };
   }

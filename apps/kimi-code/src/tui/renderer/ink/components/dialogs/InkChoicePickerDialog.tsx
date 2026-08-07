@@ -19,7 +19,10 @@ export function InkChoicePickerDialog({
       ? currentTheme.fg("textMuted", "  (type to search)")
       : "";
   const visibleOptions = picker.options.slice(picker.pageStart, picker.pageEnd);
-  const pageSelectedIndex = Math.max(0, picker.selectedIndex - picker.pageStart);
+  const pageSelectedIndex = Math.max(
+    0,
+    picker.selectedIndex - picker.pageStart,
+  );
 
   return (
     <Box flexDirection="column">

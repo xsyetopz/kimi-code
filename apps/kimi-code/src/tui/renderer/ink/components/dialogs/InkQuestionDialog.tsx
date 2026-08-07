@@ -22,7 +22,10 @@ export interface InkQuestionDialogProps {
   readonly wizard: InkQuestionWizardView;
 }
 
-function isSubmitTab(request: PendingQuestion, wizard: InkQuestionWizardView): boolean {
+function isSubmitTab(
+  request: PendingQuestion,
+  wizard: InkQuestionWizardView,
+): boolean {
   return wizard.tab === request.data.questions.length;
 }
 
@@ -45,7 +48,10 @@ function renderTabs(
     if (i === wizard.tab) {
       parts.push(
         <Text key={`tab-${String(i)}`}>
-          {currentTheme.bg("primary", currentTheme.boldFg("text", ` ${label} `))}
+          {currentTheme.bg(
+            "primary",
+            currentTheme.boldFg("text", ` ${label} `),
+          )}
         </Text>,
       );
     } else if (answered) {
@@ -67,12 +73,17 @@ function renderTabs(
   if (isSubmitTab(request, wizard)) {
     parts.push(
       <Text key="tab-submit">
-        {currentTheme.bg("primary", currentTheme.boldFg("text", ` ${submitLabel} `))}
+        {currentTheme.bg(
+          "primary",
+          currentTheme.boldFg("text", ` ${submitLabel} `),
+        )}
       </Text>,
     );
   } else {
     parts.push(
-      <Text key="tab-submit">{currentTheme.fg("textDim", ` ${submitLabel} `)}</Text>,
+      <Text key="tab-submit">
+        {currentTheme.fg("textDim", ` ${submitLabel} `)}
+      </Text>,
     );
   }
   return <Text>{parts}</Text>;
@@ -93,7 +104,9 @@ function renderQuestionTab(
   return (
     <Box flexDirection="column">
       {renderTabs(request, wizard)}
-      <Text>{currentTheme.boldFg("primary", question.header ?? "Question")}</Text>
+      <Text>
+        {currentTheme.boldFg("primary", question.header ?? "Question")}
+      </Text>
       <Text>{question.question}</Text>
       {question.body === undefined ? null : (
         <Text>{currentTheme.fg("textDim", question.body)}</Text>
@@ -111,7 +124,9 @@ function renderQuestionTab(
               ? multiSet.has(index)
               : singleSelection === index;
             const prefix =
-              question.multi_select && isSelected ? `${choice.label} ✓` : choice.label;
+              question.multi_select && isSelected
+                ? `${choice.label} ✓`
+                : choice.label;
             return {
               label: prefix,
               description: choice.description,
@@ -167,7 +182,10 @@ function renderSubmitTab(
               <Text>{currentTheme.fg("text", `→  ${answer}`)}</Text>
             ) : (
               <Text>
-                {currentTheme.fg("textDim", `→  ${INK_QUESTION_NOT_ANSWERED_LABEL}`)}
+                {currentTheme.fg(
+                  "textDim",
+                  `→  ${INK_QUESTION_NOT_ANSWERED_LABEL}`,
+                )}
               </Text>
             )}
           </Box>

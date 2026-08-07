@@ -19,34 +19,48 @@
  * service without a constructor cycle. Bound at Agent scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IConfigService } from '#/app/config/config';
-import { ContextModel } from '#/agent/contextMemory/contextOps';
-import type { ContextMessage } from '#/agent/contextMemory/types';
-import type { Message } from '#/kosong/contract/message';
-import type { Tool } from '#/kosong/contract/tool';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IConfigService } from "#/app/config/config";
+import { ContextModel } from "#/agent/contextMemory/contextOps";
+import type { ContextMessage } from "#/agent/contextMemory/types";
+import type { Message } from "#/kosong/contract/message";
+import type { Tool } from "#/kosong/contract/tool";
 import {
   estimateTokens,
   estimateTokensForMessage,
   estimateTokensForMessages,
   estimateTokensForTools,
-} from '#/kosong/contract/tokens';
-import type { TokenUsage } from '#/kosong/contract/usage';
-import { IWireService } from '#/wire/wire';
+} from "#/kosong/contract/tokens";
+import type { TokenUsage } from "#/kosong/contract/usage";
+import { IWireService } from "#/wire/wire";
 
-import { TOKEN_COUNTING_SECTION, type TokenCountingConfig } from './configSection';
+import {
+  TOKEN_COUNTING_SECTION,
+  type TokenCountingConfig,
+} from "./configSection";
 import {
   IAgentTokenCountingService,
   type ContextSize,
   type TokenCountingRequest,
   type TokenCountingStrategy,
-} from './tokenCounting';
-import { TokenCountingModel, tokenCountingMeasured, type TokenAnchor } from './tokenCountingOps';
+} from "./tokenCounting";
+import {
+  TokenCountingModel,
+  tokenCountingMeasured,
+  type TokenAnchor,
+} from "./tokenCountingOps";
 
 const ZERO_ANCHOR: TokenAnchor = { length: 0, tokens: 0, measured: true };
 
-export class AgentTokenCountingService extends Disposable implements IAgentTokenCountingService {
+export class AgentTokenCountingService
+  extends Disposable
+  implements IAgentTokenCountingService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
@@ -61,7 +75,7 @@ export class AgentTokenCountingService extends Disposable implements IAgentToken
     // the default; the registered section default is 'measured+estimated'.
     return (
       this.config.get<TokenCountingConfig>(TOKEN_COUNTING_SECTION)?.strategy ??
-      'measured+estimated'
+      "measured+estimated"
     );
   }
 
@@ -80,7 +94,11 @@ export class AgentTokenCountingService extends Disposable implements IAgentToken
     return { size: measured + estimated, measured, estimated };
   }
 
-  measured(input: readonly Message[], _output: readonly Message[], usage: TokenUsage): void {
+  measured(
+    input: readonly Message[],
+    _output: readonly Message[],
+    usage: TokenUsage,
+  ): void {
     const context = this.context();
     if (!matchesContext(input, context)) return;
     const length = context.length;
@@ -97,8 +115,9 @@ export class AgentTokenCountingService extends Disposable implements IAgentToken
   }
 
   statusSize(): number {
-    if (this.strategy === 'measured') return this.latestMeasured();
-    if (this.strategy === 'estimated') return this.estimateMessages(this.context());
+    if (this.strategy === "measured") return this.latestMeasured();
+    if (this.strategy === "estimated")
+      return this.estimateMessages(this.context());
     // The live size can transiently dip below the last measured total while a
     // post-step fold/rewrite leaves the context shorter than the measured
     // prefix (the estimate then excludes the system prompt); the measured
@@ -150,7 +169,10 @@ export class AgentTokenCountingService extends Disposable implements IAgentToken
   }
 }
 
-function matchesContext(input: readonly Message[], context: readonly ContextMessage[]): boolean {
+function matchesContext(
+  input: readonly Message[],
+  context: readonly ContextMessage[],
+): boolean {
   if (input.length !== context.length) return false;
   for (let index = 0; index < input.length; index += 1) {
     if (input[index] !== context[index]) return false;
@@ -159,7 +181,12 @@ function matchesContext(input: readonly Message[], context: readonly ContextMess
 }
 
 function tokenUsageTotal(usage: TokenUsage): number {
-  return usage.inputCacheRead + usage.inputCacheCreation + usage.inputOther + usage.output;
+  return (
+    usage.inputCacheRead +
+    usage.inputCacheCreation +
+    usage.inputOther +
+    usage.output
+  );
 }
 
 function normalizeSliceIndex(index: number, length: number): number {
@@ -172,5 +199,5 @@ registerScopedService(
   IAgentTokenCountingService,
   AgentTokenCountingService,
   ScopeActivation.OnScopeCreated,
-  'tokenCounting',
+  "tokenCounting",
 );

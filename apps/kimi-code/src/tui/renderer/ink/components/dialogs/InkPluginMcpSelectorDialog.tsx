@@ -23,9 +23,7 @@ export function InkPluginMcpSelectorDialog({
       {serverRows.length === 0 ? (
         <Text>{currentTheme.fg("textMuted", "No MCP servers declared.")}</Text>
       ) : (
-        serverRows.map((row) => (
-          <PluginMcpRow key={row.value} row={row} />
-        ))
+        serverRows.map((row) => <PluginMcpRow key={row.value} row={row} />)
       )}
       <Text>{currentTheme.fg("textDim", selector.actionHeader)}</Text>
       {actionRows.map((row) => (

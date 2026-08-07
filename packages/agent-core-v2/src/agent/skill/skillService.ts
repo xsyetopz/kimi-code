@@ -11,29 +11,42 @@
  * Agent scope.
  */
 
-import { randomUUID } from 'node:crypto';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { randomUUID } from "node:crypto";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
-import type { ContentPart } from '#/kosong/contract/message';
+import type { ContentPart } from "#/kosong/contract/message";
 
-import type { ContextMessage, SkillActivationOrigin } from '#/agent/contextMemory/types';
-import { USER_PROMPT_ORIGIN } from '#/agent/contextMemory/types';
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import { renderUserSlashSkillPrompt } from './prompt';
-import { ISessionContext } from '#/session/sessionContext/sessionContext';
-import { Disposable } from '#/_base/di/lifecycle';
-import { ErrorCodes, Error2 } from '#/errors';
-import { isUserActivatableSkillType, type SkillDefinition } from '#/app/skillCatalog/types';
-import { IAgentPromptService } from '#/agent/prompt/prompt';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import type { Turn } from '#/agent/loop/loop';
-import { IWireService } from '#/wire/wire';
-import { IAgentSkillService, type SkillActivationInput } from './skill';
-import { skillActivate } from './skillOps';
-import { stripInlineSkillTokens } from './inlinePrompt';
-import { ISessionSkillCatalog } from '#/session/sessionSkillCatalog/skillCatalog';
+import type {
+  ContextMessage,
+  SkillActivationOrigin,
+} from "#/agent/contextMemory/types";
+import { USER_PROMPT_ORIGIN } from "#/agent/contextMemory/types";
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import { renderUserSlashSkillPrompt } from "./prompt";
+import { ISessionContext } from "#/session/sessionContext/sessionContext";
+import { Disposable } from "#/_base/di/lifecycle";
+import { ErrorCodes, Error2 } from "#/errors";
+import {
+  isUserActivatableSkillType,
+  type SkillDefinition,
+} from "#/app/skillCatalog/types";
+import { IAgentPromptService } from "#/agent/prompt/prompt";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import type { Turn } from "#/agent/loop/loop";
+import { IWireService } from "#/wire/wire";
+import { IAgentSkillService, type SkillActivationInput } from "./skill";
+import { skillActivate } from "./skillOps";
+import { stripInlineSkillTokens } from "./inlinePrompt";
+import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
 
-export class AgentSkillService extends Disposable implements IAgentSkillService {
+export class AgentSkillService
+  extends Disposable
+  implements IAgentSkillService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
@@ -42,7 +55,8 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
     @IWireService private readonly wire: IWireService,
     @ITelemetryService private readonly telemetry: ITelemetryService,
     @ISessionContext private readonly sessionContext: ISessionContext,
-    @IAgentContextMemoryService private readonly context: IAgentContextMemoryService,
+    @IAgentContextMemoryService
+    private readonly context: IAgentContextMemoryService,
   ) {
     super();
   }
@@ -51,7 +65,10 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
     await this.skillCatalog.ready;
     const skill = this.skillCatalog.catalog.getSkill(input.name);
     if (skill === undefined) {
-      throw new Error2(ErrorCodes.SKILL_NOT_FOUND, `Skill "${input.name}" was not found`);
+      throw new Error2(
+        ErrorCodes.SKILL_NOT_FOUND,
+        `Skill "${input.name}" was not found`,
+      );
     }
     if (!isUserActivatableSkillType(skill.metadata.type)) {
       throw new Error2(
@@ -60,11 +77,11 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
       );
     }
 
-    const skillArgs = input.args ?? '';
+    const skillArgs = input.args ?? "";
     const skillContent = this.renderSkillPrompt(skill, skillArgs);
     const content: ContentPart[] = [
       {
-        type: 'text',
+        type: "text",
         text: renderUserSlashSkillPrompt({
           skillName: skill.name,
           skillArgs,
@@ -77,10 +94,10 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
 
     const turn = await this.recordActivation(
       {
-        kind: 'skill_activation',
+        kind: "skill_activation",
         activationId: randomUUID(),
         skillName: skill.name,
-        trigger: 'user-slash',
+        trigger: "user-slash",
         skillType: skill.metadata.type,
         skillPath: skill.path,
         skillSource: skill.source,
@@ -91,7 +108,7 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
     if (turn === undefined) {
       throw new Error2(
         ErrorCodes.TURN_AGENT_BUSY,
-        'Cannot activate skill while another turn is active',
+        "Cannot activate skill while another turn is active",
       );
     }
     return turn;
@@ -102,14 +119,20 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
     userText: string,
   ): Promise<Turn> {
     if (invocations.length === 0) {
-      throw new Error2(ErrorCodes.REQUEST_INVALID, 'inline skill invocations must not be empty');
+      throw new Error2(
+        ErrorCodes.REQUEST_INVALID,
+        "inline skill invocations must not be empty",
+      );
     }
     await this.skillCatalog.ready;
     const skillMessages: ContextMessage[] = [];
     for (const input of invocations) {
       const skill = this.skillCatalog.catalog.getSkill(input.name);
       if (skill === undefined) {
-        throw new Error2(ErrorCodes.SKILL_NOT_FOUND, `Skill "${input.name}" was not found`);
+        throw new Error2(
+          ErrorCodes.SKILL_NOT_FOUND,
+          `Skill "${input.name}" was not found`,
+        );
       }
       if (!isUserActivatableSkillType(skill.metadata.type)) {
         throw new Error2(
@@ -117,13 +140,13 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
           `Skill "${skill.name}" cannot be activated by the user`,
         );
       }
-      const skillArgs = input.args ?? '';
+      const skillArgs = input.args ?? "";
       const skillContent = this.renderSkillPrompt(skill, skillArgs);
       const origin: SkillActivationOrigin = {
-        kind: 'skill_activation',
+        kind: "skill_activation",
         activationId: randomUUID(),
         skillName: skill.name,
-        trigger: 'user-slash',
+        trigger: "user-slash",
         skillType: skill.metadata.type,
         skillPath: skill.path,
         skillSource: skill.source,
@@ -132,10 +155,10 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
       this.wire.dispatch(skillActivate({ origin }));
       this.publishActivation(origin);
       skillMessages.push({
-        role: 'user',
+        role: "user",
         content: [
           {
-            type: 'text',
+            type: "text",
             text: renderUserSlashSkillPrompt({
               skillName: skill.name,
               skillArgs,
@@ -157,11 +180,12 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
       for (const message of skillMessages.slice(0, -1)) {
         this.context.append(message);
       }
-      const turn = (await this.prompt.enqueue({ message: lastMessage })).launched;
+      const turn = (await this.prompt.enqueue({ message: lastMessage }))
+        .launched;
       if (turn === undefined) {
         throw new Error2(
           ErrorCodes.TURN_AGENT_BUSY,
-          'Cannot activate skill while another turn is active',
+          "Cannot activate skill while another turn is active",
         );
       }
       return turn;
@@ -171,8 +195,8 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
       this.context.append(message);
     }
     const userMessage: ContextMessage = {
-      role: 'user',
-      content: [{ type: 'text', text: stripped }],
+      role: "user",
+      content: [{ type: "text", text: stripped }],
       toolCalls: [],
       origin: USER_PROMPT_ORIGIN,
     };
@@ -180,7 +204,7 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
     if (turn === undefined) {
       throw new Error2(
         ErrorCodes.TURN_AGENT_BUSY,
-        'Cannot activate skill while another turn is active',
+        "Cannot activate skill while another turn is active",
       );
     }
     return turn;
@@ -199,7 +223,7 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
 
     if (input === undefined) return undefined;
     const message: ContextMessage = {
-      role: 'user',
+      role: "user",
       content: [...input],
       toolCalls: [],
       origin,
@@ -214,12 +238,12 @@ export class AgentSkillService extends Disposable implements IAgentSkillService 
   }
 
   private publishActivation(origin: SkillActivationOrigin): void {
-    this.telemetry.track2('skill_invoked', {
+    this.telemetry.track2("skill_invoked", {
       skill_name: origin.skillName,
       trigger: origin.trigger,
     });
-    if (origin.skillType === 'flow') {
-      this.telemetry.track2('flow_invoked', {
+    if (origin.skillType === "flow") {
+      this.telemetry.track2("flow_invoked", {
         flow_name: origin.skillName,
       });
     }
@@ -231,5 +255,5 @@ registerScopedService(
   IAgentSkillService,
   AgentSkillService,
   ScopeActivation.OnScopeCreated,
-  'skill',
+  "skill",
 );

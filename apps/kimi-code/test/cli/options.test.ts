@@ -19,12 +19,9 @@ import {
 function parse(argv: string[]): CLIOptions {
   let captured: CLIOptions | undefined;
 
-  const program = createProgram(
-    "0.1.0-test",
-    (opts) => {
-      captured = opts;
-    },
-  );
+  const program = createProgram("0.1.0-test", (opts) => {
+    captured = opts;
+  });
 
   program.exitOverride();
   program.configureOutput({
@@ -61,10 +58,7 @@ describe("CLI options parsing", () => {
   describe("--version", () => {
     it("prints the version string and exits", () => {
       let output = "";
-      const program = createProgram(
-        "1.2.3",
-        () => {},
-      );
+      const program = createProgram("1.2.3", () => {});
       program.exitOverride();
       program.configureOutput({
         writeOut: (s) => {
@@ -78,10 +72,7 @@ describe("CLI options parsing", () => {
 
     it("supports -V as a short alias", () => {
       let output = "";
-      const program = createProgram(
-        "4.5.6",
-        () => {},
-      );
+      const program = createProgram("4.5.6", () => {});
       program.exitOverride();
       program.configureOutput({
         writeOut: (s) => {
@@ -419,10 +410,7 @@ describe("CLI options parsing", () => {
 
   describe("--agent / --agent-file", () => {
     it("describes agent selectors as new-session-only", () => {
-      const help = createProgram(
-        "0.1.0-test",
-        () => {},
-      ).helpInformation();
+      const help = createProgram("0.1.0-test", () => {}).helpInformation();
       const normalizedHelp = help.replaceAll(/\s+/g, " ");
 
       expect(normalizedHelp).toContain(
@@ -620,10 +608,7 @@ describe("CLI options parsing", () => {
     });
 
     it("registers the visible sub-commands", () => {
-      const program = createProgram(
-        "0.0.0",
-        () => {},
-      );
+      const program = createProgram("0.0.0", () => {});
       const commandNames: string[] = program.commands
         .filter((command) => !command.name().startsWith("__"))
         .map((command) => command.name());
@@ -636,7 +621,6 @@ describe("CLI options parsing", () => {
         "upgrade",
       ]);
     });
-
   });
 
   describe("rejected flags", () => {

@@ -206,7 +206,11 @@ export async function syncWireFile(
       known.offset !== offset
     ) {
       const ops: IndexBatchOp<SearchDoc>[] = [
-        { op: "set", key: metaKey, value: fileMeta(offset, turnState, stepState) },
+        {
+          op: "set",
+          key: metaKey,
+          value: fileMeta(offset, turnState, stepState),
+        },
       ];
       if (legacyKey !== null) ops.push({ op: "del", key: legacyKey });
       index.batch(ops);

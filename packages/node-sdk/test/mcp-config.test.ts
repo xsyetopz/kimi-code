@@ -339,7 +339,10 @@ function oauthHarness(rpc: OAuthRpc): KimiHarness {
         status: "authenticated" as const,
       }),
       flow: async () => undefined,
-      cancelLogin: async () => ({ cancelled: false, status: "cancelled" as const }),
+      cancelLogin: async () => ({
+        cancelled: false,
+        status: "cancelled" as const,
+      }),
       logout: async () => ({ logged_out: true as const, provider: "opencode" }),
     },
     telemetry: { track: () => undefined },

@@ -44,7 +44,10 @@ export function InkExperimentsSelectorDialog({
           return (
             <Box flexDirection="column" key={row.id}>
               <Text>
-                {currentTheme.fg(row.selected ? "primary" : "textDim", `  ${pointer} `)}
+                {currentTheme.fg(
+                  row.selected ? "primary" : "textDim",
+                  `  ${pointer} `,
+                )}
                 {title}
                 {"  "}
                 {status}
@@ -68,7 +71,10 @@ export function InkExperimentsSelectorDialog({
         </Text>
       ) : selector.belowCount > 0 ? (
         <Text>
-          {currentTheme.fg("textMuted", `▼ ${String(selector.belowCount)} more`)}
+          {currentTheme.fg(
+            "textMuted",
+            `▼ ${String(selector.belowCount)} more`,
+          )}
         </Text>
       ) : null}
       <Text>

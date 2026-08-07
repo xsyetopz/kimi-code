@@ -12,32 +12,42 @@
  * lets the catalog reload it when the switch is toggled.
  */
 
-import { Emitter, type Event } from '#/_base/event';
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IConfigService } from '#/app/config/config';
+import { Emitter, type Event } from "#/_base/event";
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IConfigService } from "#/app/config/config";
 
-import { visibleBuiltinSkills } from './builtin/builtin';
+import { visibleBuiltinSkills } from "./builtin/builtin";
 import {
   BUILTIN_PRODUCT_SKILLS_SECTION,
   builtinProductSkillsEnabled,
-} from './configSection';
+} from "./configSection";
 import {
   BUILTIN_SKILL_SOURCE_ID,
   SKILL_SOURCE_PRIORITY,
   type ISkillSource,
   type SkillContribution,
-} from './skillSource';
+} from "./skillSource";
 
 export interface IBuiltinSkillSource extends ISkillSource {
   readonly _serviceBrand: undefined;
 }
 
 export const IBuiltinSkillSource: ServiceIdentifier<IBuiltinSkillSource> =
-  createDecorator<IBuiltinSkillSource>('builtinSkillSource');
+  createDecorator<IBuiltinSkillSource>("builtinSkillSource");
 
-export class BuiltinSkillSource extends Disposable implements IBuiltinSkillSource {
+export class BuiltinSkillSource
+  extends Disposable
+  implements IBuiltinSkillSource
+{
   declare readonly _serviceBrand: undefined;
 
   readonly id = BUILTIN_SKILL_SOURCE_ID;
@@ -49,14 +59,17 @@ export class BuiltinSkillSource extends Disposable implements IBuiltinSkillSourc
     super();
     this._register(
       this.config.onDidSectionChange((event) => {
-        if (event.domain === BUILTIN_PRODUCT_SKILLS_SECTION) this.onDidChangeEmitter.fire();
+        if (event.domain === BUILTIN_PRODUCT_SKILLS_SECTION)
+          this.onDidChangeEmitter.fire();
       }),
     );
   }
 
   async load(): Promise<SkillContribution> {
     await this.config.ready;
-    return { skills: visibleBuiltinSkills(builtinProductSkillsEnabled(this.config)) };
+    return {
+      skills: visibleBuiltinSkills(builtinProductSkillsEnabled(this.config)),
+    };
   }
 }
 
@@ -65,5 +78,5 @@ registerScopedService(
   IBuiltinSkillSource,
   BuiltinSkillSource,
   ScopeActivation.OnScopeCreated,
-  'skillCatalog',
+  "skillCatalog",
 );

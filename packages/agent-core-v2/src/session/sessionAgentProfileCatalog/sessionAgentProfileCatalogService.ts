@@ -17,25 +17,29 @@
  * Session scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ILogService } from '#/_base/log/log';
-import { BugIndicatingError } from '#/errors';
-import type { AgentProfile } from '#/app/agentProfileCatalog/agentProfileCatalog';
-import { DEFAULT_AGENT_PROFILE_NAME } from '#/app/agentProfileCatalog/agentProfileCatalog';
+import { Disposable } from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ILogService } from "#/_base/log/log";
+import { BugIndicatingError } from "#/errors";
+import type { AgentProfile } from "#/app/agentProfileCatalog/agentProfileCatalog";
+import { DEFAULT_AGENT_PROFILE_NAME } from "#/app/agentProfileCatalog/agentProfileCatalog";
 import {
   IAgentProfileRegistry,
   type AgentProfileRegistration,
-} from '#/app/agentProfileCatalog/agentProfileRegistry';
-import { BUILTIN_AGENT_PROFILE_SOURCE_ID } from '#/app/agentProfileCatalog/builtinAgentProfileLoader';
+} from "#/app/agentProfileCatalog/agentProfileRegistry";
+import { BUILTIN_AGENT_PROFILE_SOURCE_ID } from "#/app/agentProfileCatalog/builtinAgentProfileLoader";
 
-import { ISessionAgentProfileCatalogSeed } from './agentProfileCatalogSeed';
+import { ISessionAgentProfileCatalogSeed } from "./agentProfileCatalogSeed";
 import {
   ISessionAgentProfileCatalog,
   type AgentProfileInspection,
   type AgentProfileSuppressedCandidate,
-} from './sessionAgentProfileCatalog';
+} from "./sessionAgentProfileCatalog";
 
 interface ProfileCandidate {
   readonly profile: AgentProfile;
@@ -56,14 +60,18 @@ export class SessionAgentProfileCatalogService
 
   constructor(
     @IAgentProfileRegistry private readonly registry: IAgentProfileRegistry,
-    @ISessionAgentProfileCatalogSeed private readonly seed: ISessionAgentProfileCatalogSeed,
+    @ISessionAgentProfileCatalogSeed
+    private readonly seed: ISessionAgentProfileCatalogSeed,
     @ILogService private readonly log: ILogService,
   ) {
     super();
     this.reproject();
     this._register(
       this.registry.onDidChange((change) => {
-        if (change.workspaceKey !== undefined && change.workspaceKey !== this.seed.workspaceKey) {
+        if (
+          change.workspaceKey !== undefined &&
+          change.workspaceKey !== this.seed.workspaceKey
+        ) {
           return;
         }
         this.reproject();
@@ -105,7 +113,7 @@ export class SessionAgentProfileCatalogService
   async reload(): Promise<void> {
     await this.ready;
     this.reproject();
-    this.onDidChangeEmitter.fire('catalog');
+    this.onDidChangeEmitter.fire("catalog");
   }
 
   private relevantEntries(): AgentProfileRegistration[] {
@@ -120,7 +128,9 @@ export class SessionAgentProfileCatalogService
     const inspections = new Map<string, AgentProfileInspection>();
     const entries = this.relevantEntries();
 
-    const builtinEntry = entries.find((e) => e.sourceId === BUILTIN_AGENT_PROFILE_SOURCE_ID);
+    const builtinEntry = entries.find(
+      (e) => e.sourceId === BUILTIN_AGENT_PROFILE_SOURCE_ID,
+    );
     if (builtinEntry !== undefined) {
       for (const profile of builtinEntry.contribution.profiles) {
         merged.set(profile.name, profile);
@@ -158,14 +168,17 @@ export class SessionAgentProfileCatalogService
       const suppressed: AgentProfileSuppressedCandidate[] = [];
       let winner = false;
       for (const candidate of candidates) {
-        if (merged.has(candidate.profile.name) && candidate.profile.override !== true) {
+        if (
+          merged.has(candidate.profile.name) &&
+          candidate.profile.override !== true
+        ) {
           this.log.warn(
             `agent file profile "${candidate.profile.name}" ignored: a same-name builtin profile exists; set "override: true" in the frontmatter to replace it`,
           );
           suppressed.push({
             sourceId: candidate.sourceId,
             priority: candidate.priority,
-            reason: 'builtin-override-required',
+            reason: "builtin-override-required",
           });
           continue;
         }
@@ -177,11 +190,13 @@ export class SessionAgentProfileCatalogService
           priority: candidate.priority,
           suppressed: [
             ...suppressed,
-            ...candidates.slice(candidates.indexOf(candidate) + 1).map((rest) => ({
-              sourceId: rest.sourceId,
-              priority: rest.priority,
-              reason: 'priority' as const,
-            })),
+            ...candidates
+              .slice(candidates.indexOf(candidate) + 1)
+              .map((rest) => ({
+                sourceId: rest.sourceId,
+                priority: rest.priority,
+                reason: "priority" as const,
+              })),
           ],
         });
         winner = true;
@@ -206,5 +221,5 @@ registerScopedService(
   ISessionAgentProfileCatalog,
   SessionAgentProfileCatalogService,
   ScopeActivation.OnScopeCreated,
-  'sessionAgentProfileCatalog',
+  "sessionAgentProfileCatalog",
 );

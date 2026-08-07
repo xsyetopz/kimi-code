@@ -1,10 +1,7 @@
 import { type Instance, type RenderOptions, render } from "ink";
 import { createElement } from "react";
 
-import {
-  InkTerminalView,
-  type InkTerminalViewProps,
-} from "./terminal-view";
+import { InkTerminalView, type InkTerminalViewProps } from "./terminal-view";
 import type { TerminalViewState } from "../terminal-view-state";
 
 export interface InkTerminalRenderer {

@@ -9,24 +9,31 @@
  * Workspace scope so every session of the handler shares one scan.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { ISkillDiscovery } from '#/app/skillCatalog/skillDiscovery';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { ISkillDiscovery } from "#/app/skillCatalog/skillDiscovery";
 import {
   PLUGIN_SKILL_SOURCE_ID,
   SKILL_SOURCE_PRIORITY,
   type ISkillSource,
   type SkillContribution,
-} from '#/app/skillCatalog/skillSource';
-import { IPluginService } from '#/app/plugin/plugin';
+} from "#/app/skillCatalog/skillSource";
+import { IPluginService } from "#/app/plugin/plugin";
 
 export interface IPluginSkillSource extends ISkillSource {
   readonly _serviceBrand: undefined;
 }
 
 export const IPluginSkillSource: ServiceIdentifier<IPluginSkillSource> =
-  createDecorator<IPluginSkillSource>('pluginSkillSource');
+  createDecorator<IPluginSkillSource>("pluginSkillSource");
 
 export { PLUGIN_SKILL_SOURCE_ID };
 
@@ -57,5 +64,5 @@ registerScopedService(
   IPluginSkillSource,
   PluginSkillSource,
   ScopeActivation.OnScopeCreated,
-  'workspaceSkillCatalog',
+  "workspaceSkillCatalog",
 );

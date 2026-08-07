@@ -12,14 +12,22 @@
  * forking a missing source throws.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IAgentSystemReminderService } from '#/agent/systemReminder/systemReminder';
-import { IAgentToolApprovalService } from '#/agent/toolApproval/toolApproval';
-import { denyToolExecution } from '#/agent/toolExecutor/beforeToolExecuteEvent';
-import { IAgentToolExecutorService } from '#/agent/toolExecutor/toolExecutor';
-import { IAgentLifecycleService } from '#/session/agentLifecycle/agentLifecycle';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
+import { IAgentToolApprovalService } from "#/agent/toolApproval/toolApproval";
+import { denyToolExecution } from "#/agent/toolExecutor/beforeToolExecuteEvent";
+import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
+import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
 
-import { ISessionBtwService, SIDE_QUESTION_SYSTEM_REMINDER, TOOL_CALL_DISABLED_MESSAGE } from './btw';
+import {
+  ISessionBtwService,
+  SIDE_QUESTION_SYSTEM_REMINDER,
+  TOOL_CALL_DISABLED_MESSAGE,
+} from "./btw";
 
 export class SessionBtwService implements ISessionBtwService {
   declare readonly _serviceBrand: undefined;
@@ -29,17 +37,18 @@ export class SessionBtwService implements ISessionBtwService {
   ) {}
 
   async start(): Promise<string> {
-    const child = await this.lifecycle.fork('main');
+    const child = await this.lifecycle.fork("main");
     child.accessor
       .get(IAgentSystemReminderService)
       ?.appendSystemReminder(SIDE_QUESTION_SYSTEM_REMINDER, {
-        kind: 'system_trigger',
-        name: 'btw',
+        kind: "system_trigger",
+        name: "btw",
       });
     const reason =
-      child.accessor.get(IAgentToolApprovalService)?.formatDenyMessage(
-        TOOL_CALL_DISABLED_MESSAGE,
-      ) ?? TOOL_CALL_DISABLED_MESSAGE;
+      child.accessor
+        .get(IAgentToolApprovalService)
+        ?.formatDenyMessage(TOOL_CALL_DISABLED_MESSAGE) ??
+      TOOL_CALL_DISABLED_MESSAGE;
     child.accessor
       .get(IAgentToolExecutorService)
       ?.onBeforeExecuteTool((event) => {
@@ -54,5 +63,5 @@ registerScopedService(
   ISessionBtwService,
   SessionBtwService,
   ScopeActivation.OnScopeCreated,
-  'session-btw',
+  "session-btw",
 );

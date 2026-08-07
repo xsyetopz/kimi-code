@@ -97,9 +97,7 @@ export class InkSingleLineInputSession<TResult> {
         : rawInputLine;
     return {
       title: this.title,
-      subtitleLines: this.emptyHinted
-        ? [this.emptyHint]
-        : this.subtitleLines,
+      subtitleLines: this.emptyHinted ? [this.emptyHint] : this.subtitleLines,
       inputLine,
       footer: this.footer,
     };

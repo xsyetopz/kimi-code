@@ -16,9 +16,7 @@ describe("inlinePrompt", () => {
 
   it("strips inline skill tokens from prompt text", () => {
     expect(
-      stripInlineSkillTokens(
-        "writing here /skill:alpha and /skill:beta later",
-      ),
+      stripInlineSkillTokens("writing here /skill:alpha and /skill:beta later"),
     ).toBe("writing here and later");
   });
 });

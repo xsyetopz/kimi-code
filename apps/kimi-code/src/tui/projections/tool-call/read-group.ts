@@ -18,9 +18,12 @@ export function projectReadGroupLines(state: ReadGroupViewState): string[] {
     else if (snapshot.phase === "failed") failed += 1;
     else totalLines += snapshot.lines;
   }
-  lines.push(buildReadGroupHeader(snapshots.length, pending, failed, totalLines));
+  lines.push(
+    buildReadGroupHeader(snapshots.length, pending, failed, totalLines),
+  );
   const visibleSnapshots = snapshots.filter(
-    (snapshot) => snapshot.filePath !== undefined && snapshot.filePath.length > 0,
+    (snapshot) =>
+      snapshot.filePath !== undefined && snapshot.filePath.length > 0,
   );
   visibleSnapshots.forEach((snapshot, index) => {
     lines.push(

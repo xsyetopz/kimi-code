@@ -149,9 +149,9 @@ describe("CopilotAuthAdapter", () => {
     await expect(
       adapter.resolveTokenProvider("github-copilot")?.getAccessToken(),
     ).resolves.toBe("github-access-token");
-    await expect(
-      adapter.getCachedAccessToken("github-copilot"),
-    ).resolves.toBe("github-access-token");
+    await expect(adapter.getCachedAccessToken("github-copilot")).resolves.toBe(
+      "github-access-token",
+    );
     expect(fetch).not.toHaveBeenCalled();
   });
 

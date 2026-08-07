@@ -14,7 +14,9 @@ export interface InlineSkillInvocation {
   readonly args?: string;
 }
 
-export function parseInlineSkillInvocations(text: string): InlineSkillInvocation[] {
+export function parseInlineSkillInvocations(
+  text: string,
+): InlineSkillInvocation[] {
   const invocations: InlineSkillInvocation[] = [];
   for (const match of text.matchAll(INLINE_SKILL_TOKEN_RE)) {
     const name = match[1];

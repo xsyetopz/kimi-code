@@ -1,25 +1,33 @@
 import { Disposable } from "#/_base/di/lifecycle";
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
-import type { ContextMessage, PromptOrigin } from '#/agent/contextMemory/types';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
+import type { ContextMessage, PromptOrigin } from "#/agent/contextMemory/types";
 
-import { IAgentSystemReminderService } from './systemReminder';
+import { IAgentSystemReminderService } from "./systemReminder";
 
-export class AgentSystemReminderService extends Disposable implements IAgentSystemReminderService {
+export class AgentSystemReminderService
+  extends Disposable
+  implements IAgentSystemReminderService
+{
   declare readonly _serviceBrand: undefined;
 
   constructor(
-    @IAgentContextMemoryService private readonly context: IAgentContextMemoryService,
+    @IAgentContextMemoryService
+    private readonly context: IAgentContextMemoryService,
   ) {
     super();
   }
 
   appendSystemReminder(content: string, origin: PromptOrigin): ContextMessage {
     const message: ContextMessage = {
-      role: 'user',
+      role: "user",
       content: [
         {
-          type: 'text',
+          type: "text",
           text: `<system-reminder>\n${content.trim()}\n</system-reminder>`,
         },
       ],
@@ -36,5 +44,5 @@ registerScopedService(
   IAgentSystemReminderService,
   AgentSystemReminderService,
   ScopeActivation.OnScopeCreated,
-  'systemReminder',
+  "systemReminder",
 );

@@ -121,7 +121,10 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
     const incompleteReason = incomplete
       ? decode.readStringField(incomplete, "reason")
       : null;
-    const normalized = decode.normalizeResponsesFinishReason(status, incompleteReason);
+    const normalized = decode.normalizeResponsesFinishReason(
+      status,
+      incompleteReason,
+    );
     this._finishReason = normalized.finishReason;
     this._rawFinishReason = normalized.rawFinishReason;
   }
@@ -155,7 +158,10 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
     if (output === undefined) return;
 
     for (const item of output) {
-      const outputItem = decode.readResponseOutputItem(item, "response.output item");
+      const outputItem = decode.readResponseOutputItem(
+        item,
+        "response.output item",
+      );
 
       if (outputItem.type === "message") {
         for (const contentItem of outputItem.content) {
@@ -297,7 +303,10 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
           if (!decode.hasOwn(chunk, "type")) {
             const message = decode.readStringField(chunk, "message");
             if (message !== undefined) {
-              throw decode.malformedStreamErrorEvent(message, this._convertErrorHook);
+              throw decode.malformedStreamErrorEvent(
+                message,
+                this._convertErrorHook,
+              );
             }
           }
           decode.failResponsesDecode("stream event.type", "must be a string.");
@@ -312,7 +321,11 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             break;
           case "response.created":
           case "response.in_progress": {
-            const responseObject = decode.requireObjectField(chunk, "response", type);
+            const responseObject = decode.requireObjectField(
+              chunk,
+              "response",
+              type,
+            );
             const respId = decode.readStringField(responseObject, "id");
             if (respId !== undefined) {
               this._id = respId;
@@ -320,10 +333,16 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             break;
           }
           case "response.output_item.added": {
-            const item = decode.readResponseOutputItem(chunk["item"], `${type}.item`);
+            const item = decode.readResponseOutputItem(
+              chunk["item"],
+              `${type}.item`,
+            );
             const outputIndex = decode.readNumberField(chunk, "output_index");
             if (item.type === "function_call") {
-              const streamIndex = decode.responseStreamIndex(item.itemId, outputIndex);
+              const streamIndex = decode.responseStreamIndex(
+                item.itemId,
+                outputIndex,
+              );
               setFunctionCallArguments(streamIndex, item.arguments ?? "");
               const tc: ToolCall = {
                 type: "function",
@@ -339,7 +358,10 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             break;
           }
           case "response.output_item.done": {
-            const item = decode.readResponseOutputItem(chunk["item"], `${type}.item`);
+            const item = decode.readResponseOutputItem(
+              chunk["item"],
+              `${type}.item`,
+            );
             const outputIndex = decode.readNumberField(chunk, "output_index");
             if (item.type === "reasoning") {
               const thinkPart: StreamedMessagePart = {
@@ -355,7 +377,10 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
               item.type === "function_call" &&
               typeof item.arguments === "string"
             ) {
-              const streamIndex = decode.responseStreamIndex(item.itemId, outputIndex);
+              const streamIndex = decode.responseStreamIndex(
+                item.itemId,
+                outputIndex,
+              );
               yield* yieldFinalArgumentsSuffix(
                 streamIndex,
                 item.arguments,
@@ -369,7 +394,11 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
               decode.readStringField(chunk, "item_id"),
               decode.readNumberField(chunk, "output_index"),
             );
-            const argumentsPart = decode.requireStringField(chunk, "delta", type);
+            const argumentsPart = decode.requireStringField(
+              chunk,
+              "delta",
+              type,
+            );
             const part: StreamedMessagePart = {
               type: "tool_call_part",
               argumentsPart,
@@ -409,7 +438,11 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             break;
           case "response.completed":
           case "response.incomplete": {
-            const responseObject = decode.requireObjectField(chunk, "response", type);
+            const responseObject = decode.requireObjectField(
+              chunk,
+              "response",
+              type,
+            );
             const respId = decode.readStringField(responseObject, "id");
             if (respId !== undefined) {
               this._id = respId;
@@ -432,8 +465,13 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             );
           }
           case "response.failed": {
-            const responseObject = decode.requireObjectField(chunk, "response", type);
-            const error = decode.readResponsesFailedResponseError(responseObject);
+            const responseObject = decode.requireObjectField(
+              chunk,
+              "response",
+              type,
+            );
+            const error =
+              decode.readResponsesFailedResponseError(responseObject);
             if (error !== undefined) {
               throw decode.errorFromOpenAIResponsesEvent(
                 "OpenAI Responses response.failed",

@@ -11,9 +11,7 @@ import {
 } from "@moonshot-ai/kimi-tui";
 
 import { DeviceCodeBoxComponent } from "#/tui/components/chrome/device-code-box";
-import {
-  MoonLoader,
-} from "#/tui/components/chrome/moon-loader";
+import { MoonLoader } from "#/tui/components/chrome/moon-loader";
 import { WelcomeComponent } from "#/tui/components/chrome/welcome";
 import { CompactionComponent } from "#/tui/components/dialogs/compaction";
 import { AssistantMessageComponent } from "#/tui/components/messages/assistant-message";
@@ -89,7 +87,10 @@ export class TranscriptCoordinator {
   createTranscriptComponent(entry: TranscriptEntry): Component | null {
     if (entry.compactionData !== undefined) {
       const data = entry.compactionData;
-      const block = new CompactionComponent(this.host.state.ui, data.instruction);
+      const block = new CompactionComponent(
+        this.host.state.ui,
+        data.instruction,
+      );
       if (data.result === "cancelled") {
         block.markCanceled();
       } else {
@@ -205,7 +206,9 @@ export class TranscriptCoordinator {
     data: ToolCallBlockData,
   ): void {
     const entries = this.host.state.transcriptEntries;
-    const existing = entries.find((entry) => entry.toolCallData?.id === toolCallId);
+    const existing = entries.find(
+      (entry) => entry.toolCallData?.id === toolCallId,
+    );
     if (existing !== undefined) {
       existing.toolCallData = data;
     } else {
@@ -221,10 +224,7 @@ export class TranscriptCoordinator {
     this.host.updateInkRenderer();
   }
 
-  syncShellRunTranscriptEntry(
-    entryId: string,
-    data: ShellRunViewState,
-  ): void {
+  syncShellRunTranscriptEntry(entryId: string, data: ShellRunViewState): void {
     const entry = this.host.state.transcriptEntries.find(
       (candidate) => candidate.id === entryId,
     );
@@ -498,9 +498,8 @@ export class TranscriptCoordinator {
       if (hasDispose(child)) child.dispose();
     }
 
-    this.host.state.transcriptEntries = this.host.state.transcriptEntries.filter(
-      (e) => !toRemove.has(e),
-    );
+    this.host.state.transcriptEntries =
+      this.host.state.transcriptEntries.filter((e) => !toRemove.has(e));
     return true;
   }
 

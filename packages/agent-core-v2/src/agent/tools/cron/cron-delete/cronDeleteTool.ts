@@ -41,22 +41,29 @@
  * id. Bound at Agent scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import type { ToolExecution } from '#/tool/toolContract';
-import { toInputJsonSchema } from '#/tool/input-schema';
-import { IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { ISessionCronService } from '#/session/cron/sessionCronService';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import type { ToolExecution } from "#/tool/toolContract";
+import { toInputJsonSchema } from "#/tool/input-schema";
+import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
+import { ISessionCronService } from "#/session/cron/sessionCronService";
 
-import { ICronDeleteTool, CronDeleteInputSchema, type CronDeleteInput } from './cron-delete';
-import CRON_DELETE_DESCRIPTION from './cron-delete.md?raw';
-
+import {
+  ICronDeleteTool,
+  CronDeleteInputSchema,
+  type CronDeleteInput,
+} from "./cron-delete";
+import CRON_DELETE_DESCRIPTION from "./cron-delete.md?raw";
 
 const ID_PATTERN = /^(?:[0-9a-f]{8}|[0-9A-HJKMNP-TV-Z]{26})$/i;
 
 export class CronDeleteTool implements ICronDeleteTool {
   declare readonly _serviceBrand: undefined;
 
-  readonly name = 'CronDelete' as const;
+  readonly name = "CronDelete" as const;
   readonly description = CRON_DELETE_DESCRIPTION;
   readonly parameters: Record<string, unknown> = toInputJsonSchema(
     CronDeleteInputSchema,
@@ -105,5 +112,5 @@ registerScopedService(
   ICronDeleteTool,
   CronDeleteTool,
   ScopeActivation.OnScopeCreated,
-  'cron',
+  "cron",
 );

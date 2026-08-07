@@ -30,14 +30,24 @@
  * expression parsing and timestamp formatting. Bound at Agent scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import type { ToolExecution } from '#/tool/toolContract';
-import { toInputJsonSchema } from '#/tool/input-schema';
-import { literalRulePattern } from '#/tool/rule-match';
-import { IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { ISessionCronService } from '#/session/cron/sessionCronService';
-import { computeNextCronRun, cronToHuman, hasFireWithinYears, parseCronExpression, type ParsedCronExpression } from '#/app/cron/cron-expr';
-import { formatLocalIsoWithOffset } from '#/app/cron/format';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import type { ToolExecution } from "#/tool/toolContract";
+import { toInputJsonSchema } from "#/tool/input-schema";
+import { literalRulePattern } from "#/tool/rule-match";
+import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
+import { ISessionCronService } from "#/session/cron/sessionCronService";
+import {
+  computeNextCronRun,
+  cronToHuman,
+  hasFireWithinYears,
+  parseCronExpression,
+  type ParsedCronExpression,
+} from "#/app/cron/cron-expr";
+import { formatLocalIsoWithOffset } from "#/app/cron/format";
 
 import {
   ICronCreateTool,
@@ -46,16 +56,15 @@ import {
   MAX_PROMPT_BYTES,
   type CronCreateInput,
   type CronCreateOutput,
-} from './cron-create';
-import CRON_CREATE_DESCRIPTION from './cron-create.md?raw';
-
+} from "./cron-create";
+import CRON_CREATE_DESCRIPTION from "./cron-create.md?raw";
 
 const ONE_SHOT_MAX_FUTURE_MS = 350 * 24 * 60 * 60 * 1000;
 
 export class CronCreateTool implements ICronCreateTool {
   declare readonly _serviceBrand: undefined;
 
-  readonly name = 'CronCreate' as const;
+  readonly name = "CronCreate" as const;
   readonly description = CRON_CREATE_DESCRIPTION;
   readonly parameters: Record<string, unknown> = toInputJsonSchema(
     CronCreateInputSchema,
@@ -70,11 +79,11 @@ export class CronCreateTool implements ICronCreateTool {
     if (this.cron.isDisabled()) {
       return {
         isError: true,
-        output: 'Cron scheduling is disabled (KIMI_DISABLE_CRON=1).',
+        output: "Cron scheduling is disabled (KIMI_DISABLE_CRON=1).",
       };
     }
 
-    const normalizedCron = args.cron.trim().split(/\s+/).join(' ');
+    const normalizedCron = args.cron.trim().split(/\s+/).join(" ");
 
     let parsed: ParsedCronExpression;
     try {
@@ -107,7 +116,7 @@ export class CronCreateTool implements ICronCreateTool {
       };
     }
 
-    const byteLen = Buffer.byteLength(args.prompt, 'utf8');
+    const byteLen = Buffer.byteLength(args.prompt, "utf8");
     if (byteLen > MAX_PROMPT_BYTES) {
       return {
         isError: true,
@@ -168,7 +177,9 @@ export class CronCreateTool implements ICronCreateTool {
 
         const ideal = computeNextCronRun(parsed, nowMs);
         const nextFireAt =
-          ideal === null ? null : this.cron.computeDisplayNextFire(task, parsed, ideal);
+          ideal === null
+            ? null
+            : this.cron.computeDisplayNextFire(task, parsed, ideal);
 
         const humanSchedule = cronToHuman(parsed);
 
@@ -198,10 +209,10 @@ function formatOutput(o: CronCreateOutput): string {
     `humanSchedule: ${o.humanSchedule}`,
     `recurring: ${String(o.recurring)}`,
     `nextFireAt: ${
-      o.nextFireAt === null ? 'null' : formatLocalIsoWithOffset(o.nextFireAt)
+      o.nextFireAt === null ? "null" : formatLocalIsoWithOffset(o.nextFireAt)
     }`,
   ];
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 registerScopedService(
@@ -209,5 +220,5 @@ registerScopedService(
   ICronCreateTool,
   CronCreateTool,
   ScopeActivation.OnScopeCreated,
-  'cron',
+  "cron",
 );

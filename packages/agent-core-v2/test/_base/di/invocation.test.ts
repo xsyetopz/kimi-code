@@ -1,12 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
+import { SyncDescriptor } from "#/_base/di/descriptors";
 import {
   createDecorator,
   type ServicesAccessor,
-} from '#/_base/di/instantiation';
-import { InstantiationService } from '#/_base/di/instantiationService';
-import { ServiceCollection } from '#/_base/di/serviceCollection';
+} from "#/_base/di/instantiation";
+import { InstantiationService } from "#/_base/di/instantiationService";
+import { ServiceCollection } from "#/_base/di/serviceCollection";
 
 interface IService1 {
   readonly _serviceBrand: undefined;
@@ -17,8 +17,8 @@ interface IService2 {
   d: boolean;
 }
 
-const IService1 = createDecorator<IService1>('invocation-s1');
-const IService2 = createDecorator<IService2>('invocation-s2');
+const IService1 = createDecorator<IService1>("invocation-s1");
+const IService2 = createDecorator<IService2>("invocation-s2");
 
 class Service1 implements IService1 {
   readonly _serviceBrand: undefined;
@@ -40,10 +40,12 @@ class Target2Dep {
   ) {}
 }
 
-describe('ServiceCollection', () => {
-  it('set returns the previous value (undefined first, then the old entry)', () => {
+describe("ServiceCollection", () => {
+  it("set returns the previous value (undefined first, then the old entry)", () => {
     const collection = new ServiceCollection();
-    expect(collection.set(IService1, null as unknown as IService1)).toBeUndefined();
+    expect(
+      collection.set(IService1, null as unknown as IService1),
+    ).toBeUndefined();
 
     const first = new Service1();
     collection.set(IService1, first);
@@ -52,7 +54,7 @@ describe('ServiceCollection', () => {
     expect(collection.set(IService1, second)).toBe(first);
   });
 
-  it('has reflects which ids are registered', () => {
+  it("has reflects which ids are registered", () => {
     const collection = new ServiceCollection();
     collection.set(IService1, null as unknown as IService1);
     expect(collection.has(IService1)).toBe(true);
@@ -63,7 +65,7 @@ describe('ServiceCollection', () => {
     expect(collection.has(IService2)).toBe(true);
   });
 
-  it('is live: registrations after the container is constructed are still visible', () => {
+  it("is live: registrations after the container is constructed are still visible", () => {
     const collection = new ServiceCollection();
     collection.set(IService1, new Service1());
 
@@ -84,10 +86,13 @@ describe('ServiceCollection', () => {
   });
 });
 
-describe('InstantiationService.invokeFunction', () => {
-  it('injects services and returns the callback value', () => {
+describe("InstantiationService.invokeFunction", () => {
+  it("injects services and returns the callback value", () => {
     const service = new InstantiationService(
-      new ServiceCollection([IService1, new Service1()], [IService2, new Service2()]),
+      new ServiceCollection(
+        [IService1, new Service1()],
+        [IService2, new Service2()],
+      ),
     );
     const result = service.invokeFunction((a) => {
       expect(a.get(IService1)).toBeInstanceOf(Service1);
@@ -97,15 +102,15 @@ describe('InstantiationService.invokeFunction', () => {
     expect(result).toBe(42);
   });
 
-  it('resolves a SyncDescriptor as a singleton within the same container', () => {
+  it("resolves a SyncDescriptor as a singleton within the same container", () => {
     interface IFoo {
       readonly _serviceBrand: undefined;
       tag: string;
     }
-    const IFoo = createDecorator<IFoo>('invocation-foo-singleton');
+    const IFoo = createDecorator<IFoo>("invocation-foo-singleton");
     class Foo implements IFoo {
       readonly _serviceBrand: undefined;
-      tag = 'foo';
+      tag = "foo";
     }
     const service = new InstantiationService(
       new ServiceCollection([IFoo, new SyncDescriptor(Foo)]),
@@ -118,7 +123,7 @@ describe('InstantiationService.invokeFunction', () => {
     });
   });
 
-  it('strict mode throws when resolving an unknown service', () => {
+  it("strict mode throws when resolving an unknown service", () => {
     const service = new InstantiationService(
       new ServiceCollection([IService1, new Service1()]),
       true,
@@ -129,7 +134,7 @@ describe('InstantiationService.invokeFunction', () => {
     });
   });
 
-  it('non-strict mode yields undefined for an unknown service', () => {
+  it("non-strict mode yields undefined for an unknown service", () => {
     const service = new InstantiationService(
       new ServiceCollection([IService1, new Service1()]),
     );
@@ -137,7 +142,7 @@ describe('InstantiationService.invokeFunction', () => {
     expect(value).toBeUndefined();
   });
 
-  it('accessor is only valid during the invocation (escaping use throws)', () => {
+  it("accessor is only valid during the invocation (escaping use throws)", () => {
     const service = new InstantiationService(
       new ServiceCollection([IService1, new Service1()]),
     );
@@ -152,14 +157,14 @@ describe('InstantiationService.invokeFunction', () => {
     );
   });
 
-  it('propagates errors thrown by the callback', () => {
+  it("propagates errors thrown by the callback", () => {
     const service = new InstantiationService(
       new ServiceCollection([IService1, new Service1()]),
     );
     expect(() =>
       service.invokeFunction(() => {
-        throw new Error('invoke-boom');
+        throw new Error("invoke-boom");
       }),
-    ).toThrow('invoke-boom');
+    ).toThrow("invoke-boom");
   });
 });

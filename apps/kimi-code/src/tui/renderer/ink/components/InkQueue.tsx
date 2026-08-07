@@ -17,9 +17,7 @@ export function InkQueue({ queue }: InkQueueProps): ReactNode {
       {queue.messages.map((message, index) => (
         <Text key={`${index}-${message}`}>{message}</Text>
       ))}
-      {queue.hint === undefined ? null : (
-        <Text dimColor>{queue.hint}</Text>
-      )}
+      {queue.hint === undefined ? null : <Text dimColor>{queue.hint}</Text>}
     </Box>
   );
 }

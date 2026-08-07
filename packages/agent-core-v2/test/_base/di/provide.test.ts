@@ -1,24 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import { createDecorator } from '#/_base/di/instantiation';
-import { InstantiationService } from '#/_base/di/instantiationService';
-import type { IDisposable } from '#/_base/di/lifecycle';
-import { ServiceCollection } from '#/_base/di/serviceCollection';
-import type { AvailabilityChange } from '#/_base/di/serviceCollection';
+import { SyncDescriptor } from "#/_base/di/descriptors";
+import { createDecorator } from "#/_base/di/instantiation";
+import { InstantiationService } from "#/_base/di/instantiationService";
+import type { IDisposable } from "#/_base/di/lifecycle";
+import { ServiceCollection } from "#/_base/di/serviceCollection";
+import type { AvailabilityChange } from "#/_base/di/serviceCollection";
 
 interface IFoo {
   tag: string;
 }
-const IFoo = createDecorator<IFoo>('provide-foo');
+const IFoo = createDecorator<IFoo>("provide-foo");
 
 interface IBar {
   tag: string;
 }
-const IBar = createDecorator<IBar>('provide-bar');
+const IBar = createDecorator<IBar>("provide-bar");
 
 class Foo implements IFoo, IDisposable {
-  tag = 'foo';
+  tag = "foo";
   disposed = false;
   dispose(): void {
     this.disposed = true;
@@ -26,12 +26,12 @@ class Foo implements IFoo, IDisposable {
 }
 
 class Bar implements IBar {
-  tag = 'bar';
+  tag = "bar";
   constructor(@IFoo public readonly foo: IFoo) {}
 }
 
-describe('InstantiationService.provide/unprovide (L1)', () => {
-  it('provides a service at runtime and resolves it', () => {
+describe("InstantiationService.provide/unprovide (L1)", () => {
+  it("provides a service at runtime and resolves it", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     const foo = ix.invokeFunction((a) => a.get(IFoo));
@@ -39,16 +39,18 @@ describe('InstantiationService.provide/unprovide (L1)', () => {
     ix.dispose();
   });
 
-  it('unprovide removes the token; strict resolution then throws', () => {
+  it("unprovide removes the token; strict resolution then throws", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     ix.invokeFunction((a) => a.get(IFoo));
     ix.unprovide(IFoo);
-    expect(() => ix.invokeFunction((a) => a.get(IFoo))).toThrow(/unknown service/);
+    expect(() => ix.invokeFunction((a) => a.get(IFoo))).toThrow(
+      /unknown service/,
+    );
     ix.dispose();
   });
 
-  it('unprovide retires the materialized instance', () => {
+  it("unprovide retires the materialized instance", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     const foo = ix.invokeFunction((a) => a.get(IFoo)) as Foo;
@@ -58,7 +60,7 @@ describe('InstantiationService.provide/unprovide (L1)', () => {
     ix.dispose();
   });
 
-  it('reprovide retires the old generation and resolves a fresh instance', () => {
+  it("reprovide retires the old generation and resolves a fresh instance", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     const first = ix.invokeFunction((a) => a.get(IFoo)) as Foo;
@@ -73,21 +75,24 @@ describe('InstantiationService.provide/unprovide (L1)', () => {
     expect(second.disposed).toBe(true);
   });
 
-  it('stamps every generation with a container-monotonic uid', () => {
+  it("stamps every generation with a container-monotonic uid", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     const h1 = ix.provide(IFoo, new SyncDescriptor(Foo));
     const h2 = ix.provide(IBar, new SyncDescriptor(Bar));
     ix.provide(IFoo, new SyncDescriptor(Foo));
-    const uidAfter = (ix as unknown as { _services: ServiceCollection })._services.uidOf(IFoo)!;
+    const uidAfter = (
+      ix as unknown as { _services: ServiceCollection }
+    )._services.uidOf(IFoo)!;
     expect(h2.uid).toBeGreaterThan(h1.uid);
     expect(uidAfter).toBeGreaterThan(h2.uid);
     ix.dispose();
   });
 
-  it('fires availability events with { oldUid, newUid } on provide/unprovide', () => {
+  it("fires availability events with { oldUid, newUid } on provide/unprovide", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     const changes: AvailabilityChange[] = [];
-    const services = (ix as unknown as { _services: ServiceCollection })._services;
+    const services = (ix as unknown as { _services: ServiceCollection })
+      ._services;
     services.onDidChange(IFoo, (change) => changes.push(change));
 
     const h1 = ix.provide(IFoo, new SyncDescriptor(Foo));
@@ -103,10 +108,11 @@ describe('InstantiationService.provide/unprovide (L1)', () => {
     ix.dispose();
   });
 
-  it('records the pinned flag on the entry', () => {
+  it("records the pinned flag on the entry", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo), { pinned: true });
-    const services = (ix as unknown as { _services: ServiceCollection })._services;
+    const services = (ix as unknown as { _services: ServiceCollection })
+      ._services;
     expect(services.isPinned(IFoo)).toBe(true);
     // Re-provide without the flag keeps the previous pinned metadata.
     ix.provide(IFoo, new SyncDescriptor(Foo));
@@ -114,15 +120,17 @@ describe('InstantiationService.provide/unprovide (L1)', () => {
     ix.dispose();
   });
 
-  it('the provide handle is a ledger entry: disposing it unprovides', () => {
+  it("the provide handle is a ledger entry: disposing it unprovides", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     const handle = ix.provide(IFoo, new SyncDescriptor(Foo));
     handle.dispose();
-    expect(() => ix.invokeFunction((a) => a.get(IFoo))).toThrow(/unknown service/);
+    expect(() => ix.invokeFunction((a) => a.get(IFoo))).toThrow(
+      /unknown service/,
+    );
     ix.dispose();
   });
 
-  it('container teardown retires provided services exactly once', () => {
+  it("container teardown retires provided services exactly once", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     const foo = ix.invokeFunction((a) => a.get(IFoo)) as Foo;
@@ -137,8 +145,8 @@ describe('InstantiationService.provide/unprovide (L1)', () => {
   });
 });
 
-describe('persistent dependency graph (L2 substrate)', () => {
-  it('records constructor-injection edges for materialized services', () => {
+describe("persistent dependency graph (L2 substrate)", () => {
+  it("records constructor-injection edges for materialized services", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     ix.provide(IBar, new SyncDescriptor(Bar));
@@ -149,12 +157,12 @@ describe('persistent dependency graph (L2 substrate)', () => {
     expect(edges[0]).toMatchObject({
       consumer: { scope: ix, token: IBar },
       dependency: { scope: ix, token: IFoo },
-      kind: 'instance',
+      kind: "instance",
     });
     ix.dispose();
   });
 
-  it('affectedSet computes the transitive dependents of a changed token', () => {
+  it("affectedSet computes the transitive dependents of a changed token", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     ix.provide(IBar, new SyncDescriptor(Bar));
@@ -162,26 +170,38 @@ describe('persistent dependency graph (L2 substrate)', () => {
 
     const tokens = (refs: readonly { token: unknown }[]): unknown[] =>
       refs.map((ref) => ref.token);
-    expect(tokens(ix.dependencyGraph.affectedSet([{ scope: ix, token: IFoo }]))).toEqual([IFoo, IBar]);
-    expect(tokens(ix.dependencyGraph.affectedSet([{ scope: ix, token: IBar }]))).toEqual([IBar]);
+    expect(
+      tokens(ix.dependencyGraph.affectedSet([{ scope: ix, token: IFoo }])),
+    ).toEqual([IFoo, IBar]);
+    expect(
+      tokens(ix.dependencyGraph.affectedSet([{ scope: ix, token: IBar }])),
+    ).toEqual([IBar]);
     ix.dispose();
   });
 
-  it('orders the affected set: dependents first for teardown, dependencies first for rebuild', () => {
+  it("orders the affected set: dependents first for teardown, dependencies first for rebuild", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     ix.provide(IBar, new SyncDescriptor(Bar));
     ix.invokeFunction((a) => a.get(IBar));
 
-    const affected = ix.dependencyGraph.affectedSet([{ scope: ix, token: IFoo }]);
+    const affected = ix.dependencyGraph.affectedSet([
+      { scope: ix, token: IFoo },
+    ]);
     const tokens = (refs: readonly { token: unknown }[]): unknown[] =>
       refs.map((ref) => ref.token);
-    expect(tokens(ix.dependencyGraph.reverseTopoOrder(affected))).toEqual([IBar, IFoo]);
-    expect(tokens(ix.dependencyGraph.topoOrder(affected))).toEqual([IFoo, IBar]);
+    expect(tokens(ix.dependencyGraph.reverseTopoOrder(affected))).toEqual([
+      IBar,
+      IFoo,
+    ]);
+    expect(tokens(ix.dependencyGraph.topoOrder(affected))).toEqual([
+      IFoo,
+      IBar,
+    ]);
     ix.dispose();
   });
 
-  it('retiring a consumer removes its edges', () => {
+  it("retiring a consumer removes its edges", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     ix.provide(IBar, new SyncDescriptor(Bar));
@@ -189,12 +209,14 @@ describe('persistent dependency graph (L2 substrate)', () => {
 
     ix.unprovide(IBar);
     expect(ix.dependencyGraph.edges()).toHaveLength(0);
-    const remaining = ix.dependencyGraph.affectedSet([{ scope: ix, token: IFoo }]);
+    const remaining = ix.dependencyGraph.affectedSet([
+      { scope: ix, token: IFoo },
+    ]);
     expect(remaining.map((ref) => ref.token)).toEqual([IFoo]);
     ix.dispose();
   });
 
-  it('container teardown leaves the graph empty (no dangling edges)', () => {
+  it("container teardown leaves the graph empty (no dangling edges)", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     ix.provide(IBar, new SyncDescriptor(Bar));
@@ -203,7 +225,7 @@ describe('persistent dependency graph (L2 substrate)', () => {
     expect(ix.dependencyGraph.edges()).toHaveLength(0);
   });
 
-  it('does not track createInstance products (leaves)', () => {
+  it("does not track createInstance products (leaves)", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     ix.provide(IFoo, new SyncDescriptor(Foo));
     class Leaf {
@@ -215,9 +237,11 @@ describe('persistent dependency graph (L2 substrate)', () => {
   });
 });
 
-describe('TestInstantiationService.set rerouting', () => {
-  it('set() on a materialized token retires the previous generation', async () => {
-    const { TestInstantiationService } = await import('#/_base/di/testInstantiationService');
+describe("TestInstantiationService.set rerouting", () => {
+  it("set() on a materialized token retires the previous generation", async () => {
+    const { TestInstantiationService } = await import(
+      "#/_base/di/testInstantiationService"
+    );
     const ix = new TestInstantiationService(new ServiceCollection(), true);
     ix.set(IFoo, new SyncDescriptor(Foo));
     const first = ix.get(IFoo) as Foo;
@@ -228,8 +252,10 @@ describe('TestInstantiationService.set rerouting', () => {
     ix.dispose();
   });
 
-  it('set() returns the previous value like before', async () => {
-    const { TestInstantiationService } = await import('#/_base/di/testInstantiationService');
+  it("set() returns the previous value like before", async () => {
+    const { TestInstantiationService } = await import(
+      "#/_base/di/testInstantiationService"
+    );
     const ix = new TestInstantiationService(new ServiceCollection(), true);
     const seeded = new Foo();
     expect(ix.set(IFoo, seeded)).toBeUndefined();

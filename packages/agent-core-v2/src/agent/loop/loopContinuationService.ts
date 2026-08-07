@@ -13,12 +13,16 @@
  * registers before the first turn runs.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
-import { IAgentLoopContinuationService } from './loopContinuation';
-import { IAgentLoopService } from './loop';
-import { ContinuationStepRequest } from './stepRequest';
+import { IAgentLoopContinuationService } from "./loopContinuation";
+import { IAgentLoopService } from "./loop";
+import { ContinuationStepRequest } from "./stepRequest";
 
 export class AgentLoopContinuationService
   extends Disposable
@@ -29,11 +33,14 @@ export class AgentLoopContinuationService
   constructor(@IAgentLoopService loop: IAgentLoopService) {
     super();
     this._register(
-      loop.hooks.onDidFinishStep.register('loop-continuation', async (ctx, next) => {
-        await next();
-        if (ctx.stopTurn || ctx.finishReason !== 'tool_calls') return;
-        loop.enqueue(new ContinuationStepRequest());
-      }),
+      loop.hooks.onDidFinishStep.register(
+        "loop-continuation",
+        async (ctx, next) => {
+          await next();
+          if (ctx.stopTurn || ctx.finishReason !== "tool_calls") return;
+          loop.enqueue(new ContinuationStepRequest());
+        },
+      ),
     );
   }
 }
@@ -43,5 +50,5 @@ registerScopedService(
   IAgentLoopContinuationService,
   AgentLoopContinuationService,
   ScopeActivation.OnScopeCreated,
-  'loop',
+  "loop",
 );
