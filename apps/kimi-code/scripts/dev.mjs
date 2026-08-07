@@ -162,7 +162,4 @@ function applySyntheticDevModelEnv(target) {
   if (target.KIMI_MODEL_PROVIDER_TYPE === undefined) {
     target.KIMI_MODEL_PROVIDER_TYPE = "openai";
   }
-  if (target.KIMI_MODEL_DISPLAY_NAME === undefined) {
-    target.KIMI_MODEL_DISPLAY_NAME = "syn:large:text";
-  }
 }
