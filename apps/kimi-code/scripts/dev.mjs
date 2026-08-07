@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { existsSync, readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
@@ -19,6 +20,9 @@ const EXTERNAL_MARKETPLACE_ENV = "KIMI_CODE_DEV_MARKETPLACE_URL";
 
 let marketplaceServer;
 const env = { ...process.env };
+
+loadRepoDotenv(REPO_ROOT, env);
+applySyntheticDevModelEnv(env);
 
 const externalUrl = process.env[EXTERNAL_MARKETPLACE_ENV]?.trim();
 if (externalUrl !== undefined && externalUrl.length > 0) {
@@ -98,3 +102,46 @@ child.on("exit", async (code, signal) => {
   }
   process.exit(code ?? 0);
 });
+
+/** Load repo-root `.env` without overriding variables already set in the shell. */
+function loadRepoDotenv(repoRoot, target) {
+  const dotenvPath = resolve(repoRoot, ".env");
+  if (!existsSync(dotenvPath)) return;
+  for (const line of readFileSync(dotenvPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    if (key.length === 0 || target[key] !== undefined) continue;
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    target[key] = value;
+  }
+}
+
+/**
+ * Map SYNTHETIC_API_KEY from `.env` into the KIMI_MODEL_* overlay channel so
+ * `bun run dev -- -p` can hit synthetic.new without editing config.toml.
+ */
+function applySyntheticDevModelEnv(target) {
+  const syntheticKey = target.SYNTHETIC_API_KEY?.trim();
+  if (syntheticKey === undefined || syntheticKey.length === 0) return;
+  if (target.KIMI_MODEL_API_KEY === undefined) {
+    target.KIMI_MODEL_API_KEY = syntheticKey;
+  }
+  if (target.KIMI_MODEL_NAME === undefined) {
+    target.KIMI_MODEL_NAME = "syn:large:text";
+  }
+  if (target.KIMI_MODEL_BASE_URL === undefined) {
+    target.KIMI_MODEL_BASE_URL = "https://api.synthetic.new/v1";
+  }
+  if (target.KIMI_MODEL_PROVIDER_TYPE === undefined) {
+    target.KIMI_MODEL_PROVIDER_TYPE = "openai";
+  }
+}
