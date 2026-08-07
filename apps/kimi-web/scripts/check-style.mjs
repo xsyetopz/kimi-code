@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // check-style.mjs — design-system §06 anti-pattern guard for apps/kimi-web.
 //
-// Scans src/** for the rules in the design system (§06 of the DesignSystemView spec):
+// Scans src/** for the §06 anti-pattern rules enforced by check:style:
 //   no-gradient-text, no-glassmorphism (.frost exempt), no-color-glow,
 //   icon-from-registry (hand-written <svg>; Icon/Spinner/MoonSpinner + the
 //   32x22 brand mark exempt), no-emoji-icon (moon in MoonSpinner exempt),
@@ -39,12 +39,6 @@ const ICON_EXEMPT = new Set([
   "components/ui/ContextRing.vue",
   "components/ui/AuthStateIcon.vue",
 ]);
-
-// Files entirely exempt from the §06 scan. The design-system showcase view is
-// documentation/demo CSS (forced-dark previews, syntax-highlighting palettes,
-// illustrative mockups) rather than product UI, so the anti-pattern rules do not
-// apply to it.
-const FILE_EXEMPT = new Set(["views/DesignSystemView.vue"]);
 
 const RADIUS_SCALE = new Set([4, 6, 8, 12, 16, 20, 999]);
 const WEIGHT_OK = new Set([
@@ -107,7 +101,6 @@ function extractStyleBlocks(content) {
 function checkFile(abs) {
   const content = fs.readFileSync(abs, "utf8");
   const file = rel(abs);
-  if (FILE_EXEMPT.has(file)) return;
   const isCss = abs.endsWith(".css");
   const blocks = isCss
     ? [{ text: content, baseLine: 1 }]
