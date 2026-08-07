@@ -1,8 +1,10 @@
 /**
- * `telemetry` domain — harness no-op `ITelemetryService` implementation.
+ * `telemetry` domain — harness `ITelemetryService` implementation.
  *
- * Registers a scoped service that satisfies every telemetry call site without
- * recording or transmitting events. Bound at App scope.
+ * Default harness installs with no appenders (events are silently dropped).
+ * In-process hosts attach a `TelemetryClient` through `setAppender`; events
+ * then flow to the host while `telemetry=false` in config keeps the service
+ * disabled. Bound at App scope.
  */
 
 import { toDisposable, type IDisposable } from "#/_base/di/lifecycle";
@@ -24,44 +26,109 @@ import {
   type TelemetryProperties,
 } from "./telemetry";
 
-export class NoopTelemetryService implements ITelemetryService {
+interface HarnessTelemetryShared {
+  enabled: boolean;
+  appenders: ITelemetryAppender[];
+}
+
+function mergeProperties(
+  context: TelemetryProperties,
+  properties?: TelemetryProperties,
+): TelemetryProperties | undefined {
+  if (properties === undefined) {
+    return Object.keys(context).length > 0 ? context : undefined;
+  }
+  return { ...context, ...properties };
+}
+
+export class HarnessTelemetryService implements ITelemetryService {
   declare readonly _serviceBrand: undefined;
 
-  track(_event: string, _properties?: TelemetryProperties): void {}
+  private readonly shared: HarnessTelemetryShared;
+  private readonly context: TelemetryProperties;
+
+  constructor(
+    shared?: HarnessTelemetryShared,
+    context: TelemetryProperties = {},
+  ) {
+    this.shared = shared ?? { enabled: true, appenders: [] };
+    this.context = context;
+  }
+
+  track(event: string, properties?: TelemetryProperties): void {
+    if (!this.shared.enabled || this.shared.appenders.length === 0) return;
+    const payload = mergeProperties(this.context, properties);
+    for (const appender of this.shared.appenders) {
+      appender.track(event, payload);
+    }
+  }
 
   track2<
     K extends TelemetryEventName,
     E extends TelemetryEventPayload<K> = never,
   >(
-    _event: K,
-    _properties?: StrictPropertyCheck<TelemetryEventPayload<K>, E>,
-  ): void {}
-
-  withContext(_patch: TelemetryContextPatch): ITelemetryService {
-    return this;
+    event: K,
+    properties?: StrictPropertyCheck<TelemetryEventPayload<K>, E>,
+  ): void {
+    this.track(event, properties as TelemetryProperties | undefined);
   }
 
-  setContext(_patch: TelemetryContextPatch): void {}
-
-  addAppender(_appender: ITelemetryAppender): IDisposable {
-    return toDisposable(() => {});
+  withContext(patch: TelemetryContextPatch): ITelemetryService {
+    return new HarnessTelemetryService(this.shared, {
+      ...this.context,
+      ...patch,
+    });
   }
 
-  removeAppender(_appender: ITelemetryAppender): void {}
+  setContext(patch: TelemetryContextPatch): void {
+    Object.assign(this.context, patch);
+  }
 
-  setAppender(_appender: ITelemetryAppender): void {}
+  addAppender(appender: ITelemetryAppender): IDisposable {
+    this.shared.appenders.push(appender);
+    return toDisposable(() => {
+      this.removeAppender(appender);
+    });
+  }
 
-  setEnabled(_enabled: boolean): void {}
+  removeAppender(appender: ITelemetryAppender): void {
+    const index = this.shared.appenders.indexOf(appender);
+    if (index >= 0) this.shared.appenders.splice(index, 1);
+  }
 
-  async flush(): Promise<void> {}
+  setAppender(appender: ITelemetryAppender): void {
+    this.shared.appenders.length = 0;
+    this.shared.appenders.push(appender);
+  }
 
-  async shutdown(): Promise<void> {}
+  setEnabled(enabled: boolean): void {
+    this.shared.enabled = enabled;
+  }
+
+  async flush(): Promise<void> {
+    await Promise.all(
+      this.shared.appenders.map(async (appender) => {
+        await appender.flush?.();
+      }),
+    );
+  }
+
+  async shutdown(): Promise<void> {
+    await Promise.all(
+      this.shared.appenders.map(async (appender) => {
+        await appender.shutdown?.();
+      }),
+    );
+  }
 }
+
+/** @deprecated Use `HarnessTelemetryService`. */
+export const NoopTelemetryService = HarnessTelemetryService;
 
 registerScopedService(
   LifecycleScope.App,
   ITelemetryService,
-  NoopTelemetryService,
+  HarnessTelemetryService,
   ScopeActivation.OnScopeCreated,
   "telemetry",
 );
