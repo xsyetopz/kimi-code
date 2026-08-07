@@ -1,6 +1,13 @@
 # kimi-tui Agent Guide
 
-`packages/kimi-tui` is the terminal UI engine for Kimi Code, forked from the pi-tui project (upstream pi-mono, baseline 0.80.2, commit `7859b0af`). It is no longer patched via pnpm patches — all local fixes are applied directly to the source. The differential-rendering behavior in `src/tui.ts` matches upstream: the fork's viewport/scrollback rendering patches were reverted; the only remaining divergences are listed below.
+`packages/kimi-tui` is the shared UI kit for Kimi Code — React components (`src/react/`), Ink adapters (`src/ink/`), and terminal primitives (`src/terminal/`). The pi-tui legacy framework (differential rendering, text editor, markdown, component tree) lives under `src/terminal/` during migration and is also re-exported from the root entry for backward compatibility. The framework is forked from pi-tui (upstream pi-mono, baseline 0.80.2, commit `7859b0af`); local fixes are applied directly to the source. The differential-rendering behavior in `src/tui.ts` matches upstream: the fork's viewport/scrollback rendering patches were reverted; the only remaining divergences are listed below.
+
+## Package exports
+
+- `@moonshot-ai/kimi-tui` — full surface (unchanged for existing consumers)
+- `@moonshot-ai/kimi-tui/react` — shared React kit types and components
+- `@moonshot-ai/kimi-tui/ink` — Ink host adapters
+- `@moonshot-ai/kimi-tui/terminal` — terminal primitives and pi-tui legacy framework
 
 ## Local divergences from upstream (must be preserved on every re-vendor)
 
