@@ -7,6 +7,7 @@
  */
 
 import type { ServiceRegistration } from "#/_base/di/test";
+import { NoopTelemetryService } from "#/app/telemetry/telemetryService";
 import {
   ITelemetryService,
   type TelemetryContextPatch,
@@ -57,5 +58,5 @@ export function recordingTelemetry(
 }
 
 export function registerTelemetryServices(reg: ServiceRegistration): void {
-  reg.definePartialInstance(ITelemetryService, {});
+  reg.defineInstance(ITelemetryService, new NoopTelemetryService());
 }
