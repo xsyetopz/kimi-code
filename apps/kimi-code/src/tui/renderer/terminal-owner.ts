@@ -1,10 +1,9 @@
 /** Renderer that currently owns stdin/stdout for the interactive terminal. */
-export type TerminalOwner = "none" | "kimi-tui" | "ink";
+export type TerminalOwner = "none" | "ink";
 
 /**
  * Small lifecycle guard shared by the coordinator and migration tests.
- * Exactly one renderer may own the process terminal at a time; a handoff must
- * explicitly release the previous owner before claiming the next one.
+ * Exactly one renderer may own the process terminal at a time.
  */
 export class TerminalOwnership {
   private owner: TerminalOwner = "none";

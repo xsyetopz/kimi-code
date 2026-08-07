@@ -56,7 +56,6 @@ export interface PresentationStateHost {
   readonly session: Session | undefined;
   readonly harness: KimiHarness;
   readonly deferUserMessages: boolean;
-  readonly terminalRenderer: "kimi-tui" | "ink";
   readonly sessionEventHandler: SessionEventHandler;
   readonly shellOutputStreams: Map<string, ShellOutputStreamEntry>;
 

@@ -109,8 +109,6 @@ export interface KimiTUIStartupInput {
   readonly startupNotice?: string;
   /** Enables the v2-only startup/session behavior for embedded callers. */
   readonly engineV2?: boolean;
-  /** Selects the terminal owner; Ink is the default and kimi-tui is rollback-only. */
-  readonly terminalRenderer?: "kimi-tui" | "ink";
 }
 
 function createInitialAppState(input: KimiTUIStartupInput): AppState {
@@ -184,10 +182,9 @@ export class KimiTUI {
   readonly messageQueueController: MessageQueueController;
   readonly promptInputController: PromptInputController;
   readonly tuiLifecycleController: TuiLifecycleController;
-  readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
   private inkOwnsTerminal(): boolean {
-    return this.terminalRenderer === "ink";
+    return true;
   }
 
   private get inkOverlay() {
@@ -235,7 +232,7 @@ export class KimiTUI {
   }
 
   /** Current terminal owner, exposed for lifecycle diagnostics and tests. */
-  get terminalRendererOwner(): "none" | "kimi-tui" | "ink" {
+  get terminalRendererOwner(): "none" | "ink" {
     return this.terminalOwnership.current;
   }
 
@@ -264,11 +261,8 @@ export class KimiTUI {
       },
     };
     this.options = tuiOptions;
-    // Embedded callers inherit the same React/Ink owner as the production CLI;
-    // kimi-tui remains available only when a caller explicitly opts into the
-    // rollback renderer during the migration window.
+    // Embedded callers inherit the same React/Ink owner as the production CLI.
     this.engineV2 = startupInput.engineV2 ?? false;
-    this.terminalRenderer = startupInput.terminalRenderer ?? "ink";
     this.startupNotice = startupInput.startupNotice;
     this.state = createTUIState(tuiOptions);
     this.inkDialogsController = new InkDialogsController(this);
@@ -1014,9 +1008,6 @@ export class KimiTUI {
 
   /** Snapshot terminal data for renderer implementations without UI objects. */
   getTerminalViewState(): TerminalViewState {
-    if (this.terminalRenderer === "kimi-tui") {
-      this.promptInputController.syncPromptEditorFromLegacy();
-    }
     const helpCommands: readonly TerminalHelpCommandView[] =
       this.getSlashCommands().map((command) => ({
         name: command.name,
@@ -1064,19 +1055,11 @@ export class KimiTUI {
   /**
    * Mount the Ink renderer at the coordinator boundary.
    *
-   * Ink is the default terminal owner. During the staged migration, input is
-   * still dispatched through the coordinator's focus tree while kimi-tui output
-   * stays stopped; only one renderer owns stdin/stdout at a time. Callers
-   * using the explicit rollback renderer must release kimi-tui before mounting
-   * this renderer.
+   * Ink is the sole terminal owner. The legacy kimi-tui differential renderer
+   * loop stays stopped so only one renderer attaches stdin/stdout at a time.
    */
   mountInkRenderer(options?: InkTerminalRendererOptions): InkTerminalRenderer {
     if (this.inkRenderer !== undefined) return this.inkRenderer;
-    if (this.terminalOwnership.current === "kimi-tui") {
-      throw new Error(
-        "Cannot mount Ink while kimi-tui owns the terminal; stop kimi-tui first.",
-      );
-    }
     this.inkRenderer = mountInkTerminalRenderer(
       this.getTerminalViewState(),
       options,
@@ -1092,11 +1075,7 @@ export class KimiTUI {
 
   /** Refresh whichever renderer currently owns the terminal output. */
   requestTerminalRender(): void {
-    if (this.inkOwnsTerminal()) {
-      this.updateInkRenderer();
-      return;
-    }
-    this.state.ui.requestRender();
+    this.updateInkRenderer();
   }
 
   /** Unmount the staged Ink bridge; safe to call repeatedly during shutdown. */

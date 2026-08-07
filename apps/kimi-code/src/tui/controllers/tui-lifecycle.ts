@@ -62,7 +62,6 @@ export interface TuiLifecycleHost {
   readonly harness: KimiHarness;
   readonly options: KimiTUIOptions;
   readonly engineV2: boolean;
-  readonly terminalRenderer: "kimi-tui" | "ink";
   readonly terminalOwnership: TerminalOwnership;
   readonly reverseRpcDisposers: Array<() => void>;
   readonly presentationStateController: PresentationStateController;
@@ -229,7 +228,6 @@ export class TuiLifecycleController {
     try {
       this.host.state.ui.stop();
     } finally {
-      this.host.terminalOwnership.release("kimi-tui");
       this.host.terminalOwnership.release("ink");
     }
   }
@@ -262,30 +260,11 @@ export class TuiLifecycleController {
     // Dispose any previous focus/clipboard/theme tracking so re-entering the
     // event loop (e.g. a future TUI reconnect) can't stack duplicate listeners.
     this.disposeTerminalTracking();
-    if (this.host.terminalRenderer === "ink") {
-      this.startInkEventLoop();
-      return;
-    }
-    if (this.host.terminalOwnership.current === "ink") {
-      throw new Error("Cannot start kimi-tui while Ink owns the terminal.");
-    }
-    this.host.state.ui.start();
-    this.host.terminalOwnership.claim("kimi-tui");
-    this.startClipboardImageHintController();
-    this.terminalFocusTrackingDispose = installTerminalFocusTracking(
-      this.host.state,
-    );
-    this.host.refreshTerminalThemeTracking();
+    this.startInkEventLoop();
   }
 
-  /** Start the staged Ink owner without starting kimi-tui's terminal loop. */
+  /** Start the Ink terminal owner without starting the legacy render loop. */
   private startInkEventLoop(): void {
-    if (this.host.terminalOwnership.current === "kimi-tui") {
-      // A handoff must stop the old terminal first; otherwise both renderers
-      // would attach stdin listeners and write competing screen diffs.
-      this.host.state.ui.stop();
-      this.host.terminalOwnership.release("kimi-tui");
-    }
     if (this.host.terminalOwnership.current === "ink") return;
 
     // TUI.requestRender() remains used by existing controllers, but its

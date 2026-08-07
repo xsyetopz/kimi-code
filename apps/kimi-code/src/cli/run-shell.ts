@@ -72,10 +72,7 @@ export async function runShell(
     // marker for the remaining command/controller interfaces while they are
     // collapsed onto the v2 contracts.
     engineV2: true,
-    // Ink is the production terminal owner. kimi-tui remains an explicit
-    // rollback switch while the last renderer-specific surfaces are retired.
-    terminalRenderer:
-      process.env["KIMI_TUI_RENDERER"] === "kimi-tui" ? "kimi-tui" : "ink",
+    // Ink is the production terminal owner.
   });
 
   let savedStty: string | undefined;

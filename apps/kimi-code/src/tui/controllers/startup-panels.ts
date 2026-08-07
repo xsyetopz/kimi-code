@@ -6,31 +6,12 @@ import {
 import { resolve } from "pathe";
 
 import type { KimiSlashCommand } from "#/tui/commands";
-import {
-  ApprovalPanelComponent,
-  type ApprovalPanelResponse,
-} from "#/tui/components/dialogs/approval-panel";
-import {
-  type ApprovalPreviewBlock,
-  ApprovalPreviewViewer,
-} from "#/tui/components/dialogs/approval-preview";
-import { HelpPanelComponent } from "#/tui/components/dialogs/help-panel";
-import { QuestionDialogComponent } from "#/tui/components/dialogs/question-dialog";
-import {
-  SessionPickerComponent,
-  type SessionRow,
-} from "#/tui/components/dialogs/session-picker";
-import {
-  type TrustPromptChoice,
-  TrustPromptComponent,
-} from "#/tui/components/dialogs/trust-prompt";
 import type { InkDialogsController } from "#/tui/controllers/ink-dialogs";
 import type { SessionOrchestrationController } from "#/tui/controllers/session-orchestration";
 import {
   reducePromptEditor,
 } from "#/tui/renderer/prompt-editor-state";
 import type { TerminalTrustPromptView } from "#/tui/renderer/terminal-view-state";
-import { adaptPanelResponse } from "#/tui/reverse-rpc/approval/adapter";
 import type { ApprovalController } from "#/tui/reverse-rpc/approval/controller";
 import type { QuestionController } from "#/tui/reverse-rpc/question/controller";
 import type {
@@ -42,13 +23,15 @@ import { formatErrorMessage } from "#/tui/utils/event-payload";
 import { notifyTerminalOnce } from "#/tui/utils/terminal-notification";
 import type { TUIState } from "../tui-state";
 
+import type { SessionRow } from "#/tui/components/dialogs/session-picker";
+import type { TrustPromptChoice } from "#/tui/components/dialogs/trust-prompt";
+
 import type { EditorKeyboardController } from "./editor-keyboard";
 
 export interface StartupPanelsHost {
   readonly state: TUIState;
   readonly harness: KimiHarness;
   readonly engineV2: boolean;
-  readonly terminalRenderer: "kimi-tui" | "ink";
   readonly inkDialogsController: InkDialogsController;
   readonly approvalController: ApprovalController;
   readonly questionController: QuestionController;
@@ -80,16 +63,6 @@ export class StartupPanelsController {
   private inkSessionPickerToggleScope:
     | ((sessionId: string) => void)
     | undefined;
-  /** The currently-mounted approval panel, if any (legacy kimi-tui renderer). */
-  private activeApprovalPanel: ApprovalPanelComponent | undefined;
-  /** Active full-screen approval preview (legacy kimi-tui renderer). */
-  private approvalPreview:
-    | {
-        component: ApprovalPreviewViewer;
-        savedChildren: readonly Component[];
-        panel: ApprovalPanelComponent;
-      }
-    | undefined;
   private sessionPickerOptions: {
     readonly applyStartupModes: boolean;
     readonly closeOnCancel: boolean;
@@ -113,42 +86,23 @@ export class StartupPanelsController {
   }
 
   mountEditorReplacement(panel: Component & Focusable): void {
-    if (
-      this.host.inkOwnsTerminal() &&
-      this.host.inkDialogsController.tryOpenFromPanel(panel)
-    ) {
+    if (this.host.inkDialogsController.tryOpenFromPanel(panel)) {
       return;
     }
     this.host.state.editorContainer.clear();
     this.host.state.editorContainer.addChild(panel);
-    if (!this.host.inkOwnsTerminal()) {
-      this.host.state.ui.setFocus(panel);
-      this.host.state.ui.requestRender();
-    }
     this.host.updateInkRenderer();
   }
 
   restoreEditor(): void {
     this.host.inkDialogsController.closeAll();
-    if (this.host.inkOwnsTerminal()) {
-      const children = this.host.state.editorContainer.children;
-      if (children.length === 1 && children[0] === this.host.state.editor) {
-        this.host.updateInkRenderer();
-        return;
-      }
-      // A legacy fallback panel was mounted for Ink input dispatch.
-      this.host.state.editorContainer.clear();
-      this.host.state.editorContainer.addChild(this.host.state.editor);
+    const children = this.host.state.editorContainer.children;
+    if (children.length === 1 && children[0] === this.host.state.editor) {
       this.host.updateInkRenderer();
       return;
     }
     this.host.state.editorContainer.clear();
     this.host.state.editorContainer.addChild(this.host.state.editor);
-    this.host.state.ui.setFocus(this.host.state.editor);
-    // Differential render only: closing a tall panel leaves the editor a few
-    // rows above the bottom (blank tail) until the next append, but avoids a
-    // destructive full redraw on every dialog close.
-    this.host.state.ui.requestRender();
     this.host.updateInkRenderer();
   }
 
@@ -161,10 +115,6 @@ export class StartupPanelsController {
         text,
       },
     );
-    if (!this.host.inkOwnsTerminal()) {
-      this.host.state.editor.setText(text);
-      this.host.state.ui.requestRender();
-    }
     this.host.updateEditorBorderHighlight(text);
     this.host.updateInkRenderer();
   }
@@ -226,19 +176,7 @@ export class StartupPanelsController {
         workDir,
         gatedMcpServers: [...info.gatedMcpServers],
       };
-      if (this.host.terminalRenderer === "ink") {
-        this.host.updateInkRenderer();
-        return;
-      }
-      this.mountEditorReplacement(
-        new TrustPromptComponent({
-          workDir,
-          gatedMcpServers: info.gatedMcpServers,
-          onSelect: (c) => {
-            resolveChoice(c);
-          },
-        }),
-      );
+      this.host.updateInkRenderer();
     });
     this.trustPromptChoiceResolver = undefined;
     this.host.state.activeDialog = null;
@@ -263,20 +201,7 @@ export class StartupPanelsController {
   showHelpPanel(): void {
     this.host.state.activeDialog = "help";
     this.inkOverlay.dialogScrollTop = 0;
-    if (this.host.terminalRenderer === "ink") {
-      // Ink owns the `/help` dialog in the production renderer. Keep the
-      // kimi-tui panel only for the explicit rollback renderer below.
-      this.host.updateInkRenderer();
-      return;
-    }
-    this.mountEditorReplacement(
-      new HelpPanelComponent({
-        commands: this.host.getSlashCommands(),
-        onClose: () => {
-          this.hideHelpPanel();
-        },
-      }),
-    );
+    this.host.updateInkRenderer();
   }
 
   hideHelpPanel(): void {
@@ -318,36 +243,13 @@ export class StartupPanelsController {
       title: "Kimi Code approval required",
       body: payload.tool_name,
     });
-    if (this.host.terminalRenderer === "ink") {
-      this.host.updateInkRenderer();
-      return;
-    }
-    const panel = new ApprovalPanelComponent(
-      { data: payload },
-      (response: ApprovalPanelResponse) => {
-        this.host.approvalController.respond(adaptPanelResponse(response));
-      },
-      () => {
-        this.host.toggleToolOutputExpansion();
-      },
-      (block) => {
-        this.openApprovalPreview(panel, block);
-      },
-    );
-    this.activeApprovalPanel = panel;
-    this.mountEditorReplacement(panel);
+    this.host.updateInkRenderer();
   }
 
   hideApprovalPanel(): void {
-    // If the full-screen preview is open, fold it back first so the saved-
-    // children stack stays consistent with what mountEditorReplacement set up.
-    if (
-      this.approvalPreview !== undefined ||
-      this.inkOverlay.approvalPreviewBlock !== null
-    ) {
-      this.closeApprovalPreview();
+    if (this.inkOverlay.approvalPreviewBlock !== null) {
+      this.host.inkDialogsController.closeApprovalPreview();
     }
-    this.activeApprovalPanel = undefined;
     this.host.inkDialogsController.resetApprovalState();
     this.host.patchLivePane({ pendingApproval: null });
     this.restoreEditor();
@@ -360,22 +262,8 @@ export class StartupPanelsController {
       title: "Kimi Code needs your answer",
       body: payload.questions[0]?.question,
     });
-    if (this.host.terminalRenderer === "ink") {
-      this.host.inkDialogsController.initQuestionState(payload.questions.length);
-      this.host.updateInkRenderer();
-      return;
-    }
-    const dialog = new QuestionDialogComponent(
-      { data: payload },
-      (response) => {
-        this.host.questionController.respond(response);
-      },
-      6,
-      () => {
-        this.host.toggleToolOutputExpansion();
-      },
-    );
-    this.mountEditorReplacement(dialog);
+    this.host.inkDialogsController.initQuestionState(payload.questions.length);
+    this.host.updateInkRenderer();
   }
 
   hideQuestionDialog(): void {
@@ -470,25 +358,7 @@ export class StartupPanelsController {
     this.inkSessionPickerToggleScope = (selectedSessionId) => {
       void this.applySessionPickerScopeChange(selectedSessionId);
     };
-    if (this.host.terminalRenderer === "ink") {
-      this.host.updateInkRenderer();
-      return;
-    }
-    this.mountEditorReplacement(
-      new SessionPickerComponent({
-        sessions: this.host.state.sessions,
-        loading: this.host.state.loadingSessions,
-        currentSessionId: this.host.state.appState.sessionId,
-        scope: this.host.state.sessionsScope,
-        initialSelectedSessionId: options.initialSelectedSessionId,
-        pageSize: 50,
-        onSelect: this.inkSessionPickerSelect!,
-        onCancel: options.onCancel,
-        onCtrlC: options.onCtrlC,
-        onCtrlD: options.onCtrlD,
-        onToggleScope: this.inkSessionPickerToggleScope!,
-      }),
-    );
+    this.host.updateInkRenderer();
   }
 
   private async handleSessionPickerSelect(
@@ -510,57 +380,5 @@ export class StartupPanelsController {
       this.host.applyStartupPermissionAndPlanToAppState();
     }
     this.hideSessionPicker();
-  }
-
-  // Mounts the full-screen approval preview viewer on top of the current
-  // approval panel. Uses the same nested-takeover pattern as
-  // openTaskOutputViewer: we snapshot the root container's children, swap
-  // in the viewer, and restore on close. The approval panel instance is
-  // kept around in `activeApprovalPanel` so its selection state survives.
-  private openApprovalPreview(
-    panel: ApprovalPanelComponent,
-    block: ApprovalPreviewBlock,
-  ): void {
-    if (
-      this.approvalPreview !== undefined ||
-      this.inkOverlay.approvalPreviewBlock !== null
-    ) {
-      return;
-    }
-    if (this.host.terminalRenderer === "ink") {
-      this.host.inkDialogsController.openApprovalPreview(block);
-      return;
-    }
-    const savedChildren = [...this.host.state.ui.children];
-    const viewer = new ApprovalPreviewViewer(
-      {
-        block,
-        onClose: () => {
-          this.closeApprovalPreview();
-        },
-      },
-      this.host.state.terminal,
-    );
-    this.host.state.ui.clear();
-    this.host.state.ui.addChild(viewer);
-    this.host.state.ui.setFocus(viewer);
-    this.host.state.ui.requestRender(true);
-    this.approvalPreview = { component: viewer, savedChildren, panel };
-  }
-
-  private closeApprovalPreview(): void {
-    if (this.inkOverlay.approvalPreviewBlock !== null) {
-      this.host.inkDialogsController.closeApprovalPreview();
-      return;
-    }
-    const preview = this.approvalPreview;
-    if (preview === undefined) return;
-    this.approvalPreview = undefined;
-    this.host.state.ui.clear();
-    for (const child of preview.savedChildren) {
-      this.host.state.ui.addChild(child);
-    }
-    this.host.state.ui.setFocus(preview.panel);
-    this.host.state.ui.requestRender(true);
   }
 }

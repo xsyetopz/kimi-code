@@ -171,10 +171,8 @@ export class SubAgentEventHandler {
   }
 
   clearAgentSwarmProgress(): void {
-    if (this.host.terminalRenderer === "ink") {
-      for (const toolCallId of this.agentSwarmProgress.keys()) {
-        this.host.removeToolCallTranscriptEntry(toolCallId);
-      }
+    for (const toolCallId of this.agentSwarmProgress.keys()) {
+      this.host.removeToolCallTranscriptEntry(toolCallId);
     }
     for (const progress of this.agentSwarmProgress.values()) {
       progress.dispose();
@@ -609,7 +607,6 @@ export class SubAgentEventHandler {
     toolCallId: string,
     progress: AgentSwarmProgressComponent,
   ): void {
-    if (this.host.terminalRenderer !== "ink") return;
     const activeCall = this.host.streamingUI.getActiveToolCall(toolCallId);
     const { turnId, step } = this.host.streamingUI.getTurnContext();
     const args = activeCall?.args ?? {};
@@ -661,9 +658,7 @@ export class SubAgentEventHandler {
   ): void {
     this.agentSwarmProgress.delete(toolCallId);
     progress.dispose();
-    if (this.host.terminalRenderer === "ink") {
-      this.host.removeToolCallTranscriptEntry(toolCallId);
-    }
+    this.host.removeToolCallTranscriptEntry(toolCallId);
     const children = this.host.state.transcriptContainer.children;
     const index = children.indexOf(progress);
     if (index >= 0) {

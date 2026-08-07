@@ -108,7 +108,6 @@ vi.mock("node:child_process", () => ({
 describe("runShell", () => {
   afterEach(() => {
     vi.clearAllMocks();
-    delete process.env["KIMI_TUI_RENDERER"];
     mocks.harnessGetConfig.mockResolvedValue({
       providers: {},
       defaultModel: "k2",
@@ -211,18 +210,8 @@ describe("runShell", () => {
       },
       version: "1.2.3-test",
       workDir: process.cwd(),
-      terminalRenderer: "ink",
     });
     expect(mocks.tuiStart).toHaveBeenCalledOnce();
-  });
-
-  it("keeps kimi-tui available only as an explicit rollback owner", async () => {
-    process.env["KIMI_TUI_RENDERER"] = "kimi-tui";
-    stubTuiStartup();
-    await runShell(minimalCliOptions, "1.2.3-test");
-
-    const [, , startupInput] = mocks.kimiTuiConstructor.mock.calls[0]!;
-    expect(startupInput).toMatchObject({ terminalRenderer: "kimi-tui" });
   });
 
   it("resolves the --agent profile into the TUI startup input", async () => {
@@ -357,9 +346,7 @@ describe("runShell", () => {
     // `finishStartup`; the (dim) startup notice stays reserved for things like
     // tui.toml parse errors, so the same warning is not shown twice.
     const [, , startupInput] = mocks.kimiTuiConstructor.mock.calls[0]!;
-    expect(startupInput).toMatchObject({
-      startupNotice: undefined,
-    });
+    expect(startupInput.startupNotice).toBeUndefined();
   });
 
   it("flushes diagnostic logs synchronously before exiting on a runtime crash", async () => {

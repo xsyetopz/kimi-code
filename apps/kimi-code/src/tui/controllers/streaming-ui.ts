@@ -42,7 +42,6 @@ export interface StreamingUIHost {
   mergeCurrentTurnSteps(): void;
   mergeCompletedTurnAssistants(): void;
   requestTerminalRender(): void;
-  readonly terminalRenderer: "kimi-tui" | "ink";
   syncToolCallTranscriptEntry(
     toolCallId: string,
     data: ToolCallBlockData,
@@ -807,7 +806,6 @@ export class StreamingUIController {
     const entryId = nextTranscriptId();
     const tip = currentWorkingTip()?.text;
     const mirrorCompactionToInk = (): void => {
-      if (this.host.terminalRenderer !== "ink") return;
       if (this._activeCompactionEntryId === undefined) return;
       if (this._activeCompactionBlock === undefined) return;
       this.host.syncCompactionTranscriptEntry(
@@ -872,7 +870,6 @@ export class StreamingUIController {
   }
 
   private mirrorToolCallToInk(tc: ToolCallComponent): void {
-    if (this.host.terminalRenderer !== "ink") return;
     const agentGroup = this.findActiveAgentGroupFor(tc.toolCallView.id);
     if (agentGroup !== undefined) {
       this.mirrorAgentGroupToInk(agentGroup);
@@ -913,7 +910,6 @@ export class StreamingUIController {
   }
 
   private mirrorAgentGroupToInk(group: AgentGroupComponent): void {
-    if (this.host.terminalRenderer !== "ink") return;
     if (this._agentGroupInkEntryId === undefined) return;
     this.host.syncAgentGroupTranscriptEntry(
       this._agentGroupInkEntryId,
@@ -932,7 +928,6 @@ export class StreamingUIController {
   }
 
   private mirrorReadGroupToInk(group: ReadGroupComponent): void {
-    if (this.host.terminalRenderer !== "ink") return;
     if (this._readGroupInkEntryId === undefined) return;
     this.host.syncReadGroupTranscriptEntry(
       this._readGroupInkEntryId,

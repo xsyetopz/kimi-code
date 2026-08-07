@@ -49,7 +49,6 @@ function makeTui() {
     },
     version: "test",
     workDir: "/tmp/kimi-test",
-    terminalRenderer: "ink",
   };
   return new KimiTUI({ track: vi.fn() } as never, input);
 }
