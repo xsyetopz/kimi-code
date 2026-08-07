@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   WIRE_PROTOCOL_VERSION,
@@ -6,6 +9,7 @@ import {
   IAgentContextMemoryService,
   IAgentTokenCountingService,
   IAgentGoalService,
+  IUserMemoryService,
   type ContextMessage,
   type WireRecord,
 } from "#/index";
@@ -17,17 +21,41 @@ import {
 } from "./harness";
 import { SyncDescriptor } from "#/_base/di/descriptors";
 import { DisposableStore } from "#/_base/di/lifecycle";
-import { TestInstantiationService } from "#/_base/di/test";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  _clearScopedRegistryForTests,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { TestInstantiationService, createScopedTestHost, stubPair } from "#/_base/di/test";
+import { createHooks } from "#/hooks";
 import { AppendLogStore } from "#/persistence/backends/node-fs/appendLogStore";
+import { FileStorageService } from "#/persistence/backends/node-fs/fileStorageService";
 import { InMemoryStorageService } from "#/persistence/backends/memory/inMemoryStorageService";
 import { IAppendLogStore } from "#/persistence/interface/appendLogStore";
 import { IFileSystemStorageService } from "#/persistence/interface/storage";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IUserMemoryService } from "#/app/userMemory/userMemory";
+import { formatMemoryRecallBlock } from "#/app/userMemory/userMemoryRecall";
+import { UserMemoryService } from "#/app/userMemory/userMemoryService";
 import { todoSet, TodoModel } from "#/session/todo/todoOps";
 import { OP_REGISTRY } from "#/wire/op";
 import { MODEL_CROSS_REDUCERS } from "#/wire/model";
 import { IWireService } from "#/wire/wire";
 import { AGENT_WIRE_RECORD_KEY } from "#/wire/record";
 import { registerTestAgentWire, restoreTestAgentWire } from "./wire/stubs";
+import {
+  buildSessionSummary,
+  SessionUserMemoryService,
+} from "#/session/userMemory/sessionUserMemoryService";
+import { ISessionUserMemoryService } from "#/session/userMemory/sessionUserMemory";
+import {
+  ISessionLifecycleHooks,
+  type SessionLifecycleHookSlots,
+} from "#/session/sessionLifecycleHooks/sessionLifecycleHooks";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
+import { makeSessionContext, ISessionContext } from "#/session/sessionContext/sessionContext";
+import { stubBootstrap } from "./app/bootstrap/stubs";
 
 const V1_RECORD_TYPES: ReadonlySet<string> = new Set([
   "metadata",
@@ -515,6 +543,155 @@ describe("AgentRecords persistence metadata", () => {
       measured: 42,
       estimated: 0,
     });
+  });
+});
+
+describe("user memory v1", () => {
+  let homeDir: string;
+  let disposeHost: (() => void) | undefined;
+
+  beforeEach(async () => {
+    _clearScopedRegistryForTests();
+    registerScopedService(
+      LifecycleScope.App,
+      IUserMemoryService,
+      UserMemoryService,
+      ScopeActivation.OnDemand,
+      "userMemory",
+    );
+    registerScopedService(
+      LifecycleScope.Session,
+      ISessionUserMemoryService,
+      SessionUserMemoryService,
+      ScopeActivation.OnScopeCreated,
+      "userMemory",
+    );
+    homeDir = await mkdtemp(join(tmpdir(), "kimi-user-memory-"));
+  });
+
+  afterEach(async () => {
+    disposeHost?.();
+    disposeHost = undefined;
+    await rm(homeDir, { recursive: true, force: true });
+  });
+
+  function buildMemoryHost(): IUserMemoryService {
+    const fileStorage = new FileStorageService(homeDir);
+    const host = createScopedTestHost([
+      stubPair(IFileSystemStorageService, fileStorage),
+      stubPair(IBootstrapService, stubBootstrap(homeDir)),
+    ]);
+    disposeHost = () => {
+      host.dispose();
+    };
+    return host.app.accessor.get(IUserMemoryService);
+  }
+
+  it("appends to CURRENT.md and topic documents under memory/topics", async () => {
+    const memory = buildMemoryHost();
+    await memory.append({ text: "Prefers TypeScript", source: "test" });
+    await memory.appendTopic("coding-style", "Uses 2-space indentation");
+
+    const current = await readFile(join(homeDir, "memory", "CURRENT.md"), "utf8");
+    expect(current).toContain("Prefers TypeScript");
+    expect(current).toContain("source=test");
+
+    const topic = await readFile(
+      join(homeDir, "memory", "topics", "coding-style.md"),
+      "utf8",
+    );
+    expect(topic).toContain("Uses 2-space indentation");
+  });
+
+  it("stages a rule-based session summary on onWillCloseSession", async () => {
+    const fileStorage = new FileStorageService(homeDir);
+    const sessionId = "sess-memory";
+    const sessionScope = `sessions/test-workspace/${sessionId}`;
+    const metadata: {
+      id: string;
+      title?: string;
+      lastPrompt?: string;
+      createdAt: number;
+      updatedAt: number;
+      archived: boolean;
+      read(): Promise<typeof metadata>;
+    } = {
+      id: sessionId,
+      title: "Memory test session",
+      lastPrompt: "remember my editor preference",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      archived: false,
+      read: async () => metadata,
+    };
+    const hooks = createHooks<SessionLifecycleHookSlots, keyof SessionLifecycleHookSlots>([
+      "onWillCloseSession",
+    ]);
+    const host = createScopedTestHost([
+      stubPair(IFileSystemStorageService, fileStorage),
+      stubPair(IBootstrapService, stubBootstrap(homeDir)),
+    ]);
+    disposeHost = () => {
+      host.dispose();
+    };
+    const session = host.app.createChild(LifecycleScope.Session, sessionId, {
+      extra: [
+        [
+          ISessionContext as never,
+          makeSessionContext({
+            sessionId,
+            workspaceId: "test-workspace",
+            sessionDir: join(homeDir, sessionScope),
+            sessionScope,
+            cwd: "/tmp/project",
+          }),
+        ],
+        [ISessionMetadata as never, metadata],
+        [ISessionLifecycleHooks as never, hooks],
+      ],
+    });
+    session.accessor.get(ISessionUserMemoryService);
+    await hooks.onWillCloseSession.run({ reason: "exit" });
+
+    const current = await readFile(join(homeDir, "memory", "CURRENT.md"), "utf8");
+    expect(current).toContain("Memory test session");
+    expect(current).toContain("remember my editor preference");
+    expect(current).toContain("source=session-close");
+  });
+
+  it("formats bounded recall for session-start injection", async () => {
+    const memory = buildMemoryHost();
+    await memory.append({ text: "Long-term fact: deploy on Fridays", source: "test" });
+    await memory.appendTopic("deploy", "Staging must pass before prod");
+
+    const reminder = await memory.formatRecallForInjection(800);
+    expect(reminder).toContain("<user_memory_recall>");
+    expect(reminder).toContain("deploy on Fridays");
+    expect(reminder).toContain("### deploy");
+    expect(reminder).toContain("Staging must pass before prod");
+  });
+
+  it("formats recall blocks with a token budget", () => {
+    const block = formatMemoryRecallBlock(
+      {
+        current: "alpha beta gamma",
+        topics: [{ name: "prefs", text: "dark mode" }],
+      },
+      4,
+    );
+    expect(block).toContain("<user_memory_recall>");
+    expect(block?.length ?? 0).toBeLessThan(200);
+  });
+
+  it("builds a compact session summary stub", () => {
+    expect(
+      buildSessionSummary({
+        sessionId: "sess-1",
+        reason: "archive",
+        title: "Ship memory",
+        lastPrompt: "x".repeat(250),
+      }),
+    ).toContain("sess-1 closed (archive)");
   });
 });
 

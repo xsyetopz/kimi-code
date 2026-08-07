@@ -34,6 +34,7 @@ export function stubBootstrap(
     cache: "cache",
     credentials: "credentials",
     cron: "cron",
+    memory: "memory",
   };
   return {
     _serviceBrand: undefined,
@@ -51,6 +52,7 @@ export function stubBootstrap(
     storeDir: `${homeDir}/store`,
     cacheDir: `${homeDir}/cache`,
     logsDir: `${homeDir}/logs`,
+    memoryDir: `${homeDir}/memory`,
     getEnv: (name) => env[name],
     scope: (name) => scopes[name],
   };

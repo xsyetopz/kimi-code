@@ -38,6 +38,7 @@ export class BootstrapService implements IBootstrapService {
   readonly storeDir: string;
   readonly cacheDir: string;
   readonly logsDir: string;
+  readonly memoryDir: string;
   readonly configKey: string;
 
   private readonly env: NodeJS.ProcessEnv;
@@ -58,6 +59,7 @@ export class BootstrapService implements IBootstrapService {
     this.storeDir = join(options.homeDir, 'store');
     this.cacheDir = join(options.homeDir, 'cache');
     this.logsDir = join(options.homeDir, 'logs');
+    this.memoryDir = join(options.homeDir, 'memory');
     this.configKey = basename(options.configPath);
     this.scopes = {
       config: '',
@@ -68,6 +70,7 @@ export class BootstrapService implements IBootstrapService {
       cache: relative(options.homeDir, this.cacheDir),
       credentials: 'credentials',
       cron: 'cron',
+      memory: 'memory',
     };
   }
 

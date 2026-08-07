@@ -108,7 +108,8 @@ export type PersistenceScopeName =
   | "logs"
   | "cache"
   | "credentials"
-  | "cron";
+  | "cron"
+  | "memory";
 
 export interface IBootstrapService {
   readonly _serviceBrand: undefined;
@@ -127,6 +128,7 @@ export interface IBootstrapService {
   readonly storeDir: string;
   readonly cacheDir: string;
   readonly logsDir: string;
+  readonly memoryDir: string;
   getEnv(name: string): string | undefined;
   scope(name: PersistenceScopeName): string;
   readonly configKey: string;
