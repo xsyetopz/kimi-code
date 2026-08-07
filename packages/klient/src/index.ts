@@ -40,6 +40,7 @@ export type {
   GlobalHostFsFacade,
   GlobalKosongFacade,
   GlobalPluginsFacade,
+  GlobalSearchFacade,
   GlobalSessionsFacade,
   GlobalWorkspacesFacade,
   KlientEnvInfo,

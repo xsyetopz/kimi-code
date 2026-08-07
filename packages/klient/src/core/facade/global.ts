@@ -51,6 +51,10 @@ import type {
   ReloadSummary,
 } from "@moonshot-ai/agent-core-v2/app/plugin/types";
 import type { CapabilityStatus } from "@moonshot-ai/agent-core-v2/app/capability/types";
+import type {
+  GlobalSearchPage,
+  GlobalSearchQuery,
+} from "@moonshot-ai/agent-core-v2/app/search/contract";
 
 /** Low-level caller the klient factory builds: routes + validates one service call. */
 export type Caller = (
@@ -237,6 +241,18 @@ export interface GlobalCapabilitiesFacade {
   install(id: string): Promise<CapabilityStatus>;
 }
 
+export interface GlobalSearchFacade {
+  query(input: GlobalSearchQuery): Promise<GlobalSearchPage>;
+  reindex(): Promise<{ sessions: number; documents: number }>;
+  status(): Promise<{
+    sessions: number;
+    documents: number;
+    lastIndexedAt: number | null;
+    generation: number;
+    degraded?: string;
+  }>;
+}
+
 export interface GlobalPluginsFacade {
   list(): Promise<readonly PluginSummary[]>;
   info(id: string): Promise<PluginInfo>;
@@ -283,6 +299,7 @@ export interface GlobalFacade {
   readonly flags: GlobalFlagsFacade;
   readonly plugins: GlobalPluginsFacade;
   readonly capabilities: GlobalCapabilitiesFacade;
+  readonly search: GlobalSearchFacade;
   readonly hostFs: GlobalHostFsFacade;
   env(): Promise<KlientEnvInfo>;
 }
@@ -604,6 +621,24 @@ export function createGlobalFacade(
         call("capabilityService", "installCapability", [
           id,
         ]) as Promise<CapabilityStatus>,
+    },
+
+    search: {
+      query: (input) =>
+        call("globalSearch", "search", [input]) as Promise<GlobalSearchPage>,
+      reindex: () =>
+        call("globalSearch", "reindex", []) as Promise<{
+          sessions: number;
+          documents: number;
+        }>,
+      status: () =>
+        call("globalSearch", "status", []) as Promise<{
+          sessions: number;
+          documents: number;
+          lastIndexedAt: number | null;
+          generation: number;
+          degraded?: string;
+        }>,
     },
 
     hostFs: {

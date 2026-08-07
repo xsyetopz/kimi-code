@@ -20,6 +20,7 @@ import {
 } from "./agent/services.js";
 import { authContract, authSummaryContract } from "./global/auth.js";
 import { capabilitiesContract } from "./global/capabilities.js";
+import { globalSearchContract } from "./global/search.js";
 import { catalogContract } from "./global/catalog.js";
 import { providerDiscoveryContract } from "./global/providerDiscovery.js";
 import { configContract } from "./global/config.js";
@@ -55,6 +56,7 @@ export const globalContract: KlientContract = {
   flagService: flagsContract,
   pluginService: pluginsContract,
   capabilityService: capabilitiesContract,
+  globalSearch: globalSearchContract,
   hostFolderBrowser: hostFsContract,
   bootstrapService: envContract,
   // workspace scope (+ the app-registered handler registry)
