@@ -245,7 +245,7 @@ function computeBudgetReport(
   };
 }
 
-function matchesGoal(state: GoalState, goalId: string | undefined): boolean {
+export function matchesGoal(state: GoalState, goalId: string | undefined): boolean {
   return goalId === undefined || state.goalId === goalId;
 }
 
@@ -257,7 +257,7 @@ function isGoalMutationTool(toolName: string): boolean {
   );
 }
 
-function toGoalStartReviewPermissionMode(
+export function toGoalStartReviewPermissionMode(
   label: string | undefined,
 ): PermissionMode | undefined {
   if (label === "auto" || label === "yolo" || label === "manual") return label;
@@ -299,7 +299,7 @@ function hasStepBudgetRemaining(
   return maxSteps === undefined || maxSteps <= 0 || currentStep < maxSteps;
 }
 
-function isTerminalUpdateGoalResult(
+export function isTerminalUpdateGoalResult(
   toolName: string,
   args: unknown,
   result: ExecutableToolResult,

@@ -120,7 +120,12 @@ import type {
   GoalStatus,
   GoalToolResult,
 } from "./types";
-import { normalizeCompletionCriterion } from "./goalService.support";
+import {
+  isTerminalUpdateGoalResult,
+  matchesGoal,
+  normalizeCompletionCriterion,
+  toGoalStartReviewPermissionMode,
+} from "./goalService.support";
 
 const MAX_GOAL_OBJECTIVE_LENGTH = 4000;
 
