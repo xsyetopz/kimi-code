@@ -220,7 +220,7 @@ export class BashTool implements IBashTool {
     const foregroundTimeoutMs = normalizeTimeoutMs(args.timeout, false);
     const command = this.isWindowsBash ? rewriteWindowsNullRedirect(args.command) : args.command;
     const effectiveCwd = args.cwd ?? this.ctx.cwd;
-    const description = startsInBackground ? args.description!.trim() : foregroundDescription(args);
+    const description = foregroundDescription(args);
     const timeoutMs = startsInBackground
       ? args.disable_timeout
         ? undefined
@@ -327,12 +327,6 @@ export class BashTool implements IBashTool {
         isError: true,
         output:
           'Background execution is not available for this agent because TaskOutput and TaskStop are not enabled.',
-      };
-    }
-    if (!args.description?.trim()) {
-      return {
-        isError: true,
-        output: 'description is required when run_in_background is true.',
       };
     }
     return undefined;

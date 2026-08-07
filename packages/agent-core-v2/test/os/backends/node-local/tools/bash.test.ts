@@ -1789,9 +1789,9 @@ describe("BashTool background mode", () => {
       context({ command: "sleep 10", run_in_background: true }),
     );
 
-    expect(missingDescription).toMatchObject({ isError: true });
-    expect(missingDescription.output).toContain("description is required");
-    expect(exec).not.toHaveBeenCalled();
+    expect(missingDescription.isError).not.toBe(true);
+    expect(missingDescription.output).toMatch(/task_id: bash-[0-9a-z]{8}/);
+    expect(exec).toHaveBeenCalled();
   });
 
   it("registers background commands and returns a task id", async () => {
@@ -2064,7 +2064,7 @@ describe("BashTool background mode", () => {
     expect(output).toContain("/tasks");
   });
 
-  it("rejects background command without description (description-required guard)", async () => {
+  it("auto-derives background description from command when omitted", async () => {
     const { service } = createFakeTaskService();
     const { runner, exec } = createTestRunner(processWithOutput());
     const tool = bashTool(runner, createTestEnv(), createTestCtx(), service);
@@ -2074,9 +2074,9 @@ describe("BashTool background mode", () => {
       context({ command: "sleep 1", run_in_background: true }),
     );
 
-    expect(result).toMatchObject({ isError: true });
-    expect(result.output).toContain("description is required");
-    expect(exec).not.toHaveBeenCalled();
+    expect(result.isError).not.toBe(true);
+    expect(result.output).toMatch(/task_id: bash-[0-9a-z]{8}/);
+    expect(exec).toHaveBeenCalled();
   });
 });
 
