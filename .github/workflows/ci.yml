@@ -124,11 +124,4 @@ jobs:
 
       - run: bun install --frozen-lockfile
       - name: Typecheck
-        run: |
-          bunx --package @typescript/native-preview@beta tsgo --version
-          for config in packages/*/tsconfig.json apps/kimi-code/tsconfig.json; do
-            echo "Typechecking ${config}"
-            bunx --package @typescript/native-preview@beta tsgo -p "${config}" --noEmit
-          done
-      - name: Typecheck VS Code extension
-        run: bun --filter kimi-code run typecheck
+        run: bun run typecheck
