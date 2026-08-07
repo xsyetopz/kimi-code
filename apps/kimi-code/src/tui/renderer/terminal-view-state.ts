@@ -18,6 +18,8 @@ import type { InkProviderManagerView } from "./ink/sessions/provider-manager";
 import type { InkStartPermissionPromptView } from "./ink/sessions/start-permission-prompt";
 import type { InkUndoSelectorView } from "./ink/sessions/undo-selector";
 import type { InkQuestionWizardView } from "./ink/question-wizard";
+import { effectiveModelAlias } from "@moonshot-ai/kimi-code-sdk";
+
 import type {
   AppState,
   LivePaneState,
@@ -41,6 +43,8 @@ export type TerminalActivityMode =
 /** The app fields needed by a terminal renderer, without runtime UI objects. */
 export interface TerminalAppView {
   readonly model: string;
+  /** Human-readable model label for chrome (resolves env overlay aliases). */
+  readonly modelLabel: string;
   readonly workDir: string;
   readonly additionalDirs: readonly string[];
   readonly sessionId: string;
@@ -252,9 +256,18 @@ export function resolveTerminalActivityMode(
   return source.livePane.mode;
 }
 
+/** Resolve the footer model label from catalog metadata, not the config alias key. */
+export function resolveTerminalModelLabel(appState: AppState): string {
+  const raw = appState.availableModels[appState.model];
+  if (raw === undefined) return appState.model;
+  const effective = effectiveModelAlias(raw);
+  return effective?.displayName ?? effective?.model ?? appState.model;
+}
+
 function projectAppState(appState: AppState): TerminalAppView {
   return {
     model: appState.model,
+    modelLabel: resolveTerminalModelLabel(appState),
     workDir: appState.workDir,
     additionalDirs: [...appState.additionalDirs],
     sessionId: appState.sessionId,

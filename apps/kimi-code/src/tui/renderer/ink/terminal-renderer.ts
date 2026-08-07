@@ -36,6 +36,9 @@ export function mountInkTerminalRenderer(
   const instance = render(node(initialView), {
     ...renderOptions,
     exitOnCtrlC: false,
+    interactive:
+      renderOptions?.interactive ??
+      (process.stdin.isTTY === true && process.stdout.isTTY === true),
   });
   return {
     update(view: TerminalViewState): void {

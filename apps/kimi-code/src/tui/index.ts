@@ -4,6 +4,7 @@ export type { KimiTUIOptions } from "./types";
 export {
   createTerminalViewState,
   resolveTerminalActivityMode,
+  resolveTerminalModelLabel,
 } from "./renderer/terminal-view-state";
 export type {
   TerminalActivityMode,

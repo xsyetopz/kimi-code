@@ -267,6 +267,11 @@ export class TuiLifecycleController {
     // TUI.requestRender() remains used by existing controllers, but its
     // output is suppressed while stopped. Ink is the sole stdout owner.
     this.host.state.ui.stop();
+    // Legacy `ui.stop()` may pause stdin even when `start()` never ran; Ink
+    // reads via the 'readable' event and needs a flowing stdin stream.
+    if (process.stdin.isPaused()) {
+      process.stdin.resume();
+    }
     this.host.mountInkRenderer({
       onInput: (data) => this.host.handleInkInput(data),
     });
@@ -567,7 +572,7 @@ export class TuiLifecycleController {
   private registerSignalHandlers(): void {
     this.unregisterSignalHandlers();
 
-    const signals: NodeJS.Signals[] = ["SIGTERM"];
+    const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
     if (process.platform !== "win32") {
       signals.push("SIGHUP");
     }
@@ -578,14 +583,15 @@ export class TuiLifecycleController {
           this.emergencyTerminalExit();
           return;
         }
-        // Registering a SIGTERM listener disables Node's default exit(143),
-        // so we must reinstate it after stop() or on failure.
-        this.stop(143).then(
+        const exitCode = signal === "SIGINT" ? 130 : 143;
+        // Registering a signal listener disables Node's default exit, so we
+        // must reinstate it after stop() or on failure.
+        this.stop(exitCode).then(
           () => {
-            process.exit(143);
+            process.exit(exitCode);
           },
           () => {
-            this.emergencyTerminalExit(143);
+            this.emergencyTerminalExit(exitCode);
           },
         );
       };

@@ -89,6 +89,24 @@ const child = spawn(
   },
 );
 
+// Forward terminal signals to the CLI child so Ctrl+C reaches the process that
+// owns raw mode. Without this the Bun parent can exit first and leave the
+// terminal stuck in Ink/kimi-tui raw mode.
+let shuttingDown = false;
+const forwardSignals =
+  process.platform === "win32"
+    ? ["SIGINT", "SIGTERM"]
+    : ["SIGINT", "SIGTERM", "SIGHUP"];
+for (const signal of forwardSignals) {
+  process.on(signal, () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    if (!child.killed) {
+      child.kill(signal);
+    }
+  });
+}
+
 child.on("error", async (error) => {
   console.error(`Failed to start Kimi Code dev CLI: ${error.message}`);
   await marketplaceServer?.close();
@@ -143,5 +161,8 @@ function applySyntheticDevModelEnv(target) {
   }
   if (target.KIMI_MODEL_PROVIDER_TYPE === undefined) {
     target.KIMI_MODEL_PROVIDER_TYPE = "openai";
+  }
+  if (target.KIMI_MODEL_DISPLAY_NAME === undefined) {
+    target.KIMI_MODEL_DISPLAY_NAME = "syn:large:text";
   }
 }

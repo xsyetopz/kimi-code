@@ -3,15 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   KimiTUI,
   type KimiTUIStartupInput,
-  type TUIState,
 } from "#/tui/kimi-tui";
 
 interface SignalDriver {
-  state: TUIState;
   registerSignalHandlers(): void;
   unregisterSignalHandlers(): void;
   emergencyTerminalExit(): never;
-  stop(): Promise<void>;
+  stop(exitCode?: number): Promise<void>;
 }
 
 function makeStartupInput(): KimiTUIStartupInput {
@@ -62,7 +60,7 @@ function makeHarness() {
 
 function makeDriver(): { driver: SignalDriver; tui: KimiTUI } {
   const tui = new KimiTUI(makeHarness() as never, makeStartupInput());
-  const driver = tui as unknown as SignalDriver;
+  const driver = tui.tuiLifecycleController as unknown as SignalDriver;
   return { driver, tui };
 }
 
@@ -92,7 +90,7 @@ function captureHandlers(driver: SignalDriver): CapturedHandlers {
       event: string | symbol,
       listener: (...args: unknown[]) => void,
     ): NodeJS.Process => {
-      if (event === "SIGTERM" || event === "SIGHUP") {
+      if (event === "SIGTERM" || event === "SIGHUP" || event === "SIGINT") {
         signalHandlers.set(event, listener);
       }
       return process;
@@ -166,7 +164,7 @@ describe("KimiTUI signal handlers", () => {
     expect(exitSpy).toHaveBeenCalledWith(129);
   });
 
-  it("registers SIGTERM and SIGHUP on POSIX, only SIGTERM on Windows", () => {
+  it("registers SIGINT, SIGTERM and SIGHUP on POSIX, only SIGINT and SIGTERM on Windows", () => {
     // POSIX
     Object.defineProperty(process, "platform", {
       value: "darwin",
@@ -174,6 +172,7 @@ describe("KimiTUI signal handlers", () => {
     });
     const posix = makeDriver();
     const posixCaptured = captureHandlers(posix.driver);
+    expect(posixCaptured.signalHandlers.has("SIGINT")).toBe(true);
     expect(posixCaptured.signalHandlers.has("SIGTERM")).toBe(true);
     expect(posixCaptured.signalHandlers.has("SIGHUP")).toBe(true);
     posixCaptured.restore();
@@ -186,6 +185,7 @@ describe("KimiTUI signal handlers", () => {
     });
     const win = makeDriver();
     const winCaptured = captureHandlers(win.driver);
+    expect(winCaptured.signalHandlers.has("SIGINT")).toBe(true);
     expect(winCaptured.signalHandlers.has("SIGTERM")).toBe(true);
     expect(winCaptured.signalHandlers.has("SIGHUP")).toBe(false);
     winCaptured.restore();
@@ -213,6 +213,32 @@ describe("KimiTUI signal handlers", () => {
     driver.unregisterSignalHandlers();
   });
 
+  it("SIGINT handler routes through stop(130) and forces exit 130 on success", async () => {
+    Object.defineProperty(process, "platform", {
+      value: "darwin",
+      configurable: true,
+    });
+    const { driver, tui } = makeDriver();
+    const stopSpy = vi
+      .spyOn(tui.tuiLifecycleController, "stop")
+      .mockResolvedValue(undefined);
+    const captured = captureHandlers(driver);
+
+    const sigint = captured.signalHandlers.get("SIGINT");
+    expect(sigint).toBeDefined();
+    sigint?.();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(stopSpy).toHaveBeenCalledWith(130);
+    expect(exitSpy).toHaveBeenCalledWith(130);
+
+    stopSpy.mockRestore();
+    captured.restore();
+    driver.unregisterSignalHandlers();
+  });
+
   it("SIGTERM handler falls back to emergency exit (code 143) when stop() rejects", async () => {
     Object.defineProperty(process, "platform", {
       value: "darwin",
@@ -220,7 +246,7 @@ describe("KimiTUI signal handlers", () => {
     });
     const { driver, tui } = makeDriver();
     const stopSpy = vi
-      .spyOn(tui, "stop")
+      .spyOn(tui.tuiLifecycleController, "stop")
       .mockRejectedValue(new Error("cleanup boom"));
     const captured = captureHandlers(driver);
 
@@ -250,10 +276,9 @@ describe("KimiTUI signal handlers", () => {
       configurable: true,
     });
     const { driver, tui } = makeDriver();
-    // `stop()` resolving without exiting models the defensive fallback path
-    // where `onExit` was not wired up. The handler must still exit 143 so
-    // supervisors see signal termination.
-    const stopSpy = vi.spyOn(tui, "stop").mockResolvedValue(undefined);
+    const stopSpy = vi
+      .spyOn(tui.tuiLifecycleController, "stop")
+      .mockResolvedValue(undefined);
     const captured = captureHandlers(driver);
 
     const sigterm = captured.signalHandlers.get("SIGTERM");
@@ -326,7 +351,7 @@ describe("KimiTUI signal handlers", () => {
     const { driver, tui } = makeDriver();
     // Suppress real stop work for this test — focus on the cleanup contract.
     vi.spyOn(tui, "stop").mockImplementation(async () => {
-      (tui as unknown as SignalDriver).unregisterSignalHandlers();
+      (tui.tuiLifecycleController as unknown as SignalDriver).unregisterSignalHandlers();
     });
     const beforeSigterm = process.listenerCount("SIGTERM");
     driver.registerSignalHandlers();
@@ -337,14 +362,14 @@ describe("KimiTUI signal handlers", () => {
   });
 
   it("stop() drains terminal input before stopping the UI and exiting", async () => {
-    const { driver, tui } = makeDriver();
+    const { tui } = makeDriver();
     const events: string[] = [];
     const drainInput = vi
-      .spyOn(driver.state.terminal, "drainInput")
+      .spyOn(tui.state.terminal, "drainInput")
       .mockImplementation(async () => {
         events.push("drain");
       });
-    const uiStop = vi.spyOn(driver.state.ui, "stop").mockImplementation(() => {
+    const uiStop = vi.spyOn(tui.state.ui, "stop").mockImplementation(() => {
       events.push("ui.stop");
     });
     tui.onExit = vi.fn(async () => {
@@ -365,7 +390,9 @@ describe("KimiTUI signal handlers", () => {
     // care which method blows up — only that the failure surfaces and any
     // listeners we installed up front get cleaned up before the throw escapes.
     vi.spyOn(
-      tui as unknown as { initMainTui(): Promise<boolean> },
+      tui.tuiLifecycleController as unknown as {
+        initMainTui(): Promise<boolean>;
+      },
       "initMainTui",
     ).mockRejectedValue(new Error("init boom"));
     // Stub state.ui.stop so the failure-path cleanup does not touch the real

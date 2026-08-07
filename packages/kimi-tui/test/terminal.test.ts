@@ -29,6 +29,19 @@ describe("normalizeAppleTerminalInput", () => {
   });
 });
 
+describe("ProcessTerminal stop without start", () => {
+  it("does not pause stdin when stop() runs before start()", () => {
+    const terminal = new ProcessTerminal();
+    const pause = mock.method(process.stdin, "pause", () => process.stdin);
+    try {
+      terminal.stop();
+      assert.equal(pause.mock.callCount(), 0);
+    } finally {
+      pause.mock.restore();
+    }
+  });
+});
+
 describe("ProcessTerminal Kitty keyboard protocol negotiation", () => {
   type NegotiationHarness = {
     terminal: ProcessTerminal;

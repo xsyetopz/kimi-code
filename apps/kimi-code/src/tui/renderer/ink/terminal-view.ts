@@ -46,7 +46,7 @@ export function projectInkChrome(view: TerminalViewState): InkChromeProjection {
       ? ` · ctx ${Math.round(view.app.contextUsage * 100)}%`
       : "";
   return {
-    footer: `${view.app.model} · ${mode}${plan}${effort}${context}`,
+    footer: `${view.app.modelLabel} · ${mode}${plan}${effort}${context}`,
   };
 }
 

@@ -108,10 +108,24 @@ function view(
 describe("InkTerminalView", () => {
   it("projects footer chrome without coupling to kimi-tui", () => {
     const terminalView = view({
-      appState: { planMode: true, thinkingEffort: "high", contextUsage: 0.42 },
+      appState: {
+        model: "__kimi_env_model__",
+        availableModels: {
+          __kimi_env_model__: {
+            provider: "__kimi_env__",
+            model: "syn:large:text",
+            maxContextSize: 262_144,
+            capabilities: ["thinking"],
+          },
+        },
+        planMode: true,
+        thinkingEffort: "high",
+        contextUsage: 0.42,
+      },
     });
     const chrome = projectInkChrome(terminalView);
-    expect(chrome.footer).toContain("k2");
+    expect(chrome.footer).toContain("syn:large:text");
+    expect(chrome.footer).not.toContain("__kimi_env_model__");
     expect(chrome.footer).toContain("42%");
   });
 

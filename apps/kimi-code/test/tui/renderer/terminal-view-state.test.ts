@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createTerminalViewState,
   resolveTerminalActivityMode,
+  resolveTerminalModelLabel,
   type TerminalViewSource,
   type TerminalEditorView,
 } from "#/tui/renderer/terminal-view-state";
@@ -179,5 +180,22 @@ describe("createTerminalViewState", () => {
       ],
     });
     expect(view.editor.autocomplete).toEqual(["/login — Sign in"]);
+  });
+
+  it("resolves env overlay model aliases to catalog labels", () => {
+    const label = resolveTerminalModelLabel({
+      ...baseAppState,
+      model: "__kimi_env_model__",
+      availableModels: {
+        __kimi_env_model__: {
+          provider: "__kimi_env__",
+          model: "syn:large:text",
+          displayName: "Synthetic Large",
+          maxContextSize: 262_144,
+          capabilities: ["thinking"],
+        },
+      },
+    } as AppState);
+    expect(label).toBe("Synthetic Large");
   });
 });
