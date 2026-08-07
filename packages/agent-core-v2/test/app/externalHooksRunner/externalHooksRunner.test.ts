@@ -393,8 +393,10 @@ describe("ExternalHooksRunnerService", () => {
       ],
       {
         onTriggered: () => {
+          throw new Error("trigger telemetry failed");
         },
         onResolved: () => {
+          throw new Error("resolve telemetry failed");
         },
       },
     );

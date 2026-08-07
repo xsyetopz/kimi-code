@@ -101,24 +101,6 @@ function withExifOrientation(jpeg: Uint8Array, orientation: number): Buffer {
   ]);
 }
 
-  readonly event: string;
-  readonly properties: Readonly<Record<string, unknown>> | undefined;
-}
-
-  const     track(event, properties) {
-      records.push({ event, properties });
-    },
-    track2: (event, properties) =>
-    setContext: () => {},
-    addAppender: () => ({ dispose: () => {} }),
-    removeAppender: () => {},
-    setAppender: () => {},
-    setEnabled: () => {},
-    flush: async () => {},
-    shutdown: async () => {},
-  };
-}
-
 function capabilities(
   overrides: Partial<ModelCapability> = {},
 ): ModelCapability {
@@ -174,7 +156,7 @@ function makeTool(
   files: Record<string, FakeFile>,
   caps: ModelCapability = capabilities(),
   videoUploader?: VideoUploader,
-  inlineVideoSupported?: boolean,
+    inlineVideoSupported?: boolean,
 ): ReadMediaFileTool {
   return new ReadMediaFileTool(
     createTestFs(files),
@@ -182,7 +164,7 @@ function makeTool(
     WORKSPACE,
     caps,
     videoUploader,
-    inlineVideoSupported,
+  inlineVideoSupported,
   );
 }
 
@@ -1077,22 +1059,11 @@ describe("createVideoUploader", () => {
     ).toBeUndefined();
   });
 
-  it("reports an error outcome with the error type and rethrows", async () => {
-    const failure = new TypeError("upload exploded");
-    const uploader = createVideoUploader(
-      modelWith(vi.fn().mockRejectedValue(failure)),
-      {
-        client:       },
-    );
-    await expect(uploader!(input)).rejects.toBe(failure);
-    expect(records).toHaveLength(1);
-    expect(records[0]!.event).toBe("video_upload");
-    expect(records[0]!.properties).toMatchObject({
-      outcome: "error",
-      error_type: "TypeError",
-      mime_type: "video/mp4",
-      size_bytes: 2048,
-    });
+  it("binds uploadVideo", async () => {
+    const uploadVideo = vi.fn().mockResolvedValue(uploadResult);
+    const uploader = createVideoUploader(modelWith(uploadVideo));
+    await expect(uploader!(input)).resolves.toEqual(uploadResult);
+    expect(uploadVideo).toHaveBeenCalledWith(input, undefined);
   });
 
   function heicBytes(): Buffer {

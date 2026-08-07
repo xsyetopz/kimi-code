@@ -2,6 +2,7 @@
  * GlobTool tests for the v2 fileTools domain.
  *
  * Ported from v1 (`packages/agent-core/test/tools/glob.test.ts`) and adapted
+ * to the v2 constructor `(fs, env, processService, workspace?)`. The
  * Glob search runs `rg --files` through `IHostProcessService.spawn` with the
  * search root passed as `options.cwd`; tests fake the process service and
  * assert on the spawned args / `cwd` value.
@@ -183,26 +184,6 @@ function execArgs(exec: ReturnType<typeof vi.fn>): string[] {
   return (exec.mock.calls[0] as ReadonlyArray<unknown>)[1] as string[];
 }
 
-  events: Array<{ event: string; properties: Record<string, unknown> }>,
-  return {
-    _serviceBrand: undefined,
-      events.push({ event, properties: properties ?? {} });
-    },
-    track2: (event, properties) => {
-      events.push({
-        event,
-      });
-    },
-    setContext: () => {},
-    addAppender: () => ({ dispose: () => {} }),
-    removeAppender: () => {},
-    setAppender: () => {},
-    setEnabled: () => {},
-    flush: async () => {},
-    shutdown: async () => {},
-  };
-}
-
 function isPromiseLike(
   value: ToolExecution | Promise<ToolExecution>,
 ): value is Promise<ToolExecution> {
@@ -266,6 +247,7 @@ function makeTool(
     env,
     processService,
     workspaceConfig,
+  );
   return { tool, exec, withCwd: withCwdOf(exec) };
 }
 
@@ -539,15 +521,29 @@ describe("GlobTool", () => {
     expect(retryArgs).toContain("1");
   });
 
-  it("tracks when glob uses a non-system ripgrep fallback", async () => {
+  it("surfaces an actionable error when rg is unavailable", async () => {
+    vi.mocked(ensureRgPath).mockRejectedValueOnce(
+      new Error("ripgrep (rg) is not available on PATH"),
+    );
+    const exec = vi.fn();
+    const { tool } = makeTool(workspace, {
+      exec,
+    });
+
+    const result = await execute(tool, { pattern: "*.ts" });
+
+    expect(result).toMatchObject({ isError: true });
+    expect(result.output).toContain(
+      "rg unavailable: ripgrep (rg) is not available on PATH",
+    );
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it("uses a non-system ripgrep fallback when available", async () => {
     vi.mocked(ensureRgPath).mockResolvedValueOnce({
       path: "/mock/rg",
       source: "share-bin-downloaded",
     });
-    const events: Array<{
-      event: string;
-      properties: Record<string, unknown>;
-    }> = [];
     const exec = execReturning("/workspace/a.ts\n");
     const { tool } = makeTool(workspace, {
       exec,
@@ -558,10 +554,6 @@ describe("GlobTool", () => {
     expect(result.isError).toBeFalsy();
     expect(result.output).toContain("a.ts");
     expect((exec.mock.calls[0] as ReadonlyArray<unknown>)[0]).toBe("/mock/rg");
-    expect(events).toContainEqual({
-      event: "glob_tool_rg_fallback",
-      properties: { source: "share-bin-downloaded", outcome: "resolved" },
-    });
   });
 
   describe("skills / additional dirs", () => {

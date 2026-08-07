@@ -378,7 +378,7 @@ describe("WorkspaceLifecycleService", () => {
         watch: () => ({ onDidChange: Event.None, dispose: () => {} }),
       } as unknown as IHostFsWatchService),
       stubPair(ILogService, stubLog()),
-      stubPair(ICronTaskPersistence, {
+            stubPair(ICronTaskPersistence, {
         _serviceBrand: undefined,
         get: () => Promise.resolve(undefined),
         list: () => Promise.resolve([]),
@@ -550,9 +550,6 @@ describe("WorkspaceLifecycleService", () => {
         resumeSessionById(host!.app.accessor, "s1"),
       ).rejects.toMatchObject({
         code: ErrorCodes.SESSION_NOT_FOUND,
-      });
-        event: "session_load_failed",
-        properties: { sessionId: "s1", reason: ErrorCodes.SESSION_NOT_FOUND },
       });
     });
 

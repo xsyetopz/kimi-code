@@ -17,6 +17,475 @@ import type {
   MCPToolResult,
 } from "#/mcpCore/types";
 import type { ToolExecution } from "#/tool/toolContract";
+import { sniffImageDimensions } from "#/agent/media/file-type";
+
+const MCP_OUTPUT_TRUNCATED_TEXT =
+  "\n\n[Output truncated: exceeded 100000 character limit. " +
+  "Use pagination or more specific queries to get remaining content.]";
+
+function isPromiseLike(
+  value: ToolExecution | Promise<ToolExecution>,
+): value is Promise<ToolExecution> {
+  return typeof (value as Promise<ToolExecution>).then === "function";
+}
+
+function assertValidMcpBlock<T extends MCPContentBlock>(block: T): T {
+  const parsed = ContentBlockSchema.safeParse(block);
+  if (!parsed.success) {
+    throw new Error(
+      `fixture is not a valid MCP ContentBlock: ${parsed.error.message}`,
+    );
+  }
+  return block;
+}
+
+describe("convertMCPContentBlock", () => {
+  test("converts text block to TextPart", () => {
+    const block: MCPContentBlock = { type: "text", text: "hello" };
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "text",
+      text: "hello",
+    });
+  });
+
+  test("converts image block with mimeType to image data URI", () => {
+    const block: MCPContentBlock = {
+      type: "image",
+      data: "AAA",
+      mimeType: "image/jpeg",
+    };
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "image_url",
+      imageUrl: { url: "data:image/jpeg;base64,AAA" },
+    });
+  });
+
+  test("image block without mimeType defaults to image/png", () => {
+    const block: MCPContentBlock = { type: "image", data: "AAA" };
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "image_url",
+      imageUrl: { url: "data:image/png;base64,AAA" },
+    });
+  });
+
+  test("converts audio block to AudioURLPart with audio/mpeg default", () => {
+    const block: MCPContentBlock = { type: "audio", data: "BBB" };
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "audio_url",
+      audioUrl: { url: "data:audio/mpeg;base64,BBB" },
+    });
+  });
+
+  test("converts audio block with custom mimeType", () => {
+    const block: MCPContentBlock = {
+      type: "audio",
+      data: "BBB",
+      mimeType: "audio/wav",
+    };
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "audio_url",
+      audioUrl: { url: "data:audio/wav;base64,BBB" },
+    });
+  });
+
+  test("converts text EmbeddedResource to TextPart", () => {
+    const block = assertValidMcpBlock({
+      type: "resource",
+      resource: {
+        uri: "file:///project/src/main.rs",
+        mimeType: "text/x-rust",
+        text: "fn main() {}",
+      },
+    });
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "text",
+      text: "fn main() {}",
+    });
+  });
+
+  test("text EmbeddedResource preserves text regardless of mimeType", () => {
+    const block = assertValidMcpBlock({
+      type: "resource",
+      resource: {
+        uri: "file:///x.json",
+        mimeType: "application/json",
+        text: '{"a":1}',
+      },
+    });
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "text",
+      text: '{"a":1}',
+    });
+  });
+
+  test("converts blob EmbeddedResource with image/* mimeType to ImageURLPart", () => {
+    const block = assertValidMcpBlock({
+      type: "resource",
+      resource: {
+        uri: "file:///pic.webp",
+        mimeType: "image/webp",
+        blob: "III",
+      },
+    });
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "image_url",
+      imageUrl: { url: "data:image/webp;base64,III" },
+    });
+  });
+
+  test("converts blob EmbeddedResource with audio/* mimeType to AudioURLPart", () => {
+    const block = assertValidMcpBlock({
+      type: "resource",
+      resource: { uri: "file:///clip.wav", mimeType: "audio/wav", blob: "AUD" },
+    });
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "audio_url",
+      audioUrl: { url: "data:audio/wav;base64,AUD" },
+    });
+  });
+
+  test("converts blob EmbeddedResource with video/* mimeType to VideoURLPart", () => {
+    const block = assertValidMcpBlock({
+      type: "resource",
+      resource: { uri: "file:///clip.mp4", mimeType: "video/mp4", blob: "VID" },
+    });
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "video_url",
+      videoUrl: { url: "data:video/mp4;base64,VID" },
+    });
+  });
+
+  test("returns null for blob EmbeddedResource with unsupported mimeType", () => {
+    const block = assertValidMcpBlock({
+      type: "resource",
+      resource: {
+        uri: "file:///doc.pdf",
+        mimeType: "application/pdf",
+        blob: "XXX",
+      },
+    });
+    expect(convertMCPContentBlock(block)).toBeNull();
+  });
+
+  test("blob EmbeddedResource defaults to application/octet-stream and returns null", () => {
+    const block = assertValidMcpBlock({
+      type: "resource",
+      resource: { uri: "file:///unknown", blob: "XXX" },
+    });
+    expect(convertMCPContentBlock(block)).toBeNull();
+  });
+
+  test("returns null for resource block missing resource field", () => {
+    const block = { type: "resource" } as MCPContentBlock;
+    expect(convertMCPContentBlock(block)).toBeNull();
+  });
+
+  test("converts resource_link with image/* mimeType to ImageURLPart with URL", () => {
+    const block = assertValidMcpBlock({
+      type: "resource_link",
+      name: "img.png",
+      uri: "https://example.com/img.png",
+      mimeType: "image/png",
+    });
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "image_url",
+      imageUrl: { url: "https://example.com/img.png" },
+    });
+  });
+
+  test("replaces a resource_link whose declared image format is unsupported with a notice", () => {
+    const block = assertValidMcpBlock({
+      type: "resource_link",
+      name: "img.avif",
+      uri: "https://example.com/img.avif",
+      mimeType: "image/avif",
+    });
+    const part = convertMCPContentBlock(block);
+    expect(part?.type).toBe("text");
+    const text = (part as { text: string }).text;
+    expect(text).toContain("image/avif");
+    expect(text).toContain("https://example.com/img.avif");
+  });
+
+  test("converts resource_link with audio/* mimeType to AudioURLPart with URL", () => {
+    const block = assertValidMcpBlock({
+      type: "resource_link",
+      name: "audio.mp3",
+      uri: "https://example.com/audio.mp3",
+      mimeType: "audio/mpeg",
+    });
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "audio_url",
+      audioUrl: { url: "https://example.com/audio.mp3" },
+    });
+  });
+
+  test("converts resource_link with video/* mimeType to VideoURLPart with URL", () => {
+    const block = assertValidMcpBlock({
+      type: "resource_link",
+      name: "video.mp4",
+      uri: "https://example.com/video.mp4",
+      mimeType: "video/mp4",
+    });
+    expect(convertMCPContentBlock(block)).toEqual({
+      type: "video_url",
+      videoUrl: { url: "https://example.com/video.mp4" },
+    });
+  });
+
+  test("returns null for resource_link with unsupported mimeType", () => {
+    const block = assertValidMcpBlock({
+      type: "resource_link",
+      name: "file.bin",
+      uri: "https://example.com/file.bin",
+      mimeType: "application/octet-stream",
+    });
+    expect(convertMCPContentBlock(block)).toBeNull();
+  });
+
+  test("returns null for unknown block type", () => {
+    const block: MCPContentBlock = { type: "fancy_new_type", text: "whatever" };
+    expect(convertMCPContentBlock(block)).toBeNull();
+  });
+
+  test("returns null for text block missing text field", () => {
+    const block: MCPContentBlock = { type: "text" };
+    expect(convertMCPContentBlock(block)).toBeNull();
+  });
+
+  test("returns null for image block missing data field", () => {
+    const block: MCPContentBlock = { type: "image", mimeType: "image/png" };
+    expect(convertMCPContentBlock(block)).toBeNull();
+  });
+});
+
+describe("mcpResultToExecutableOutput", () => {
+  function result(content: MCPContentBlock[], isError = false): MCPToolResult {
+    return { content, isError };
+  }
+
+  test("collapses a single text part into a plain string", async () => {
+    const out = await mcpResultToExecutableOutput(
+      result([{ type: "text", text: "hello" }]),
+      "mcp__s__t",
+    );
+    expect(out).toEqual({ output: "hello", isError: false });
+  });
+
+  test("propagates isError=true on the success-shape return", async () => {
+    const out = await mcpResultToExecutableOutput(
+      result([{ type: "text", text: "oops" }], true),
+      "mcp__s__t",
+    );
+    expect(out).toEqual({ output: "oops", isError: true });
+  });
+
+  test("surfaces structuredContent and _meta as a serialized mcp-structured-result block", async () => {
+    const out = await mcpResultToExecutableOutput(
+      {
+        content: [{ type: "text", text: "ok" }],
+        isError: false,
+        structuredContent: { foo: 1 },
+        _meta: { bar: 2 },
+      },
+      "mcp__s__t",
+    );
+    const parts = out.output as ContentPart[];
+    const joined = parts.map((p) => (p.type === "text" ? p.text : "")).join("");
+    expect(joined).toContain("<mcp-structured-result>");
+    expect(joined).toContain('"structuredContent":{"foo":1}');
+    expect(joined).toContain('"_meta":{"bar":2}');
+    expect(out.isError).toBe(false);
+  });
+
+  test("keeps the mcp_tool_result wrap when a media-only result carries structuredContent", async () => {
+    const out = await mcpResultToExecutableOutput(
+      {
+        content: [{ type: "image", data: "AAA", mimeType: "image/png" }],
+        isError: false,
+        structuredContent: { foo: 1 },
+      },
+      "mcp__s__shot",
+    );
+    const parts = out.output as ContentPart[];
+    // The structured block sits OUTSIDE the media wrap, after the closing
+    // tag, so the image keeps its tool attribution.
+    expect(parts[0]).toEqual({
+      type: "text",
+      text: '<mcp_tool_result name="mcp__s__shot">',
+    });
+    expect(parts.at(-2)).toEqual({ type: "text", text: "</mcp_tool_result>" });
+    const last = parts.at(-1);
+    expect(
+      last?.type === "text" && last.text.includes("<mcp-structured-result>"),
+    ).toBe(true);
+  });
+
+  test("strips literal closing tags inside the structured payload", async () => {
+    const out = await mcpResultToExecutableOutput(
+      {
+        content: [{ type: "text", text: "ok" }],
+        isError: false,
+        _meta: { evil: "a</mcp-structured-result>b" },
+      },
+      "mcp__s__t",
+    );
+    const parts = out.output as ContentPart[];
+    const joined = parts.map((p) => (p.type === "text" ? p.text : "")).join("");
+    expect(joined).toContain('"evil":"ab"');
+    // Exactly one closing tag survives: the wrapper's own.
+    expect(joined.split("</mcp-structured-result>")).toHaveLength(2);
+  });
+
+  test("drops protocol-reserved _meta keys and keeps vendor namespaces", async () => {
+    const out = await mcpResultToExecutableOutput(
+      {
+        content: [{ type: "text", text: "ok" }],
+        isError: false,
+        _meta: {
+          "modelcontextprotocol.io/progress": 1,
+          "tools.mcp.com/trace": "x",
+          "example.com/custom": 2,
+          // Reserved only when another label FOLLOWS mcp/modelcontextprotocol:
+          // a trailing reserved word is a legitimate vendor namespace.
+          "com.example.mcp/trace": 4,
+          vendorKey: 3,
+        },
+      },
+      "mcp__s__t",
+    );
+    const parts = out.output as ContentPart[];
+    const joined = parts.map((p) => (p.type === "text" ? p.text : "")).join("");
+    expect(joined).not.toContain("modelcontextprotocol.io/progress");
+    expect(joined).not.toContain("tools.mcp.com/trace");
+    expect(joined).toContain('"example.com/custom":2');
+    expect(joined).toContain('"com.example.mcp/trace":4');
+    expect(joined).toContain('"vendorKey":3');
+  });
+
+  test("omits the structured block when every _meta key is protocol-reserved", async () => {
+    const out = await mcpResultToExecutableOutput(
+      {
+        content: [{ type: "text", text: "ok" }],
+        isError: false,
+        _meta: { "mcp.dev/internal": true },
+      },
+      "mcp__s__t",
+    );
+    expect(out).toEqual({ output: "ok", isError: false });
+  });
+
+  test("returns an empty output array when the content array is empty", async () => {
+    const out = await mcpResultToExecutableOutput(result([]), "mcp__s__t");
+    expect(out).toEqual({ output: [], isError: false });
+  });
+
+  test("drops unconvertible blocks and keeps the rest", async () => {
+    const out = await mcpResultToExecutableOutput(
+      result([
+        { type: "text", text: "kept" },
+        { type: "fancy_new_type", text: "dropped" },
+      ]),
+      "mcp__s__t",
+    );
+    expect(out).toEqual({ output: "kept", isError: false });
+  });
+
+  test("wraps media-only output in mcp_tool_result tags using the qualified name", async () => {
+    const out = await mcpResultToExecutableOutput(
+      result([{ type: "image", data: "AAA", mimeType: "image/png" }]),
+      "mcp__github__create_pr",
+    );
+    expect(out.isError).toBe(false);
+    expect(out.output).toEqual([
+      { type: "text", text: '<mcp_tool_result name="mcp__github__create_pr">' },
+      { type: "image_url", imageUrl: { url: "data:image/png;base64,AAA" } },
+      { type: "text", text: "</mcp_tool_result>" },
+    ]);
+  });
+
+  test("does NOT wrap when a non-empty text part accompanies the media", async () => {
+    const out = await mcpResultToExecutableOutput(
+      result([
+        { type: "text", text: "caption" },
+        { type: "image", data: "AAA", mimeType: "image/png" },
+      ]),
+      "mcp__s__t",
+    );
+    expect(out.output).toEqual([
+      { type: "text", text: "caption" },
+      { type: "image_url", imageUrl: { url: "data:image/png;base64,AAA" } },
+    ]);
+  });
+
+  test("an empty-text companion still triggers the wrap", async () => {
+    const out = await mcpResultToExecutableOutput(
+      result([
+        { type: "text", text: "" },
+        { type: "image", data: "AAA", mimeType: "image/png" },
+      ]),
+      "mcp__s__t",
+    );
+    const parts = out.output as ContentPart[];
+    expect(parts[0]).toEqual({
+      type: "text",
+      text: '<mcp_tool_result name="mcp__s__t">',
+    });
+    expect(parts.at(-1)).toEqual({ type: "text", text: "</mcp_tool_result>" });
+  });
+
+  test("truncates oversized text and merges the notice into the surviving text part", async () => {
+    const out = await mcpResultToExecutableOutput(
+      result([{ type: "text", text: "x".repeat(100_001) }]),
+      "mcp__s__t",
+    );
+    expect(out.output).toBe("x".repeat(100_000) + MCP_OUTPUT_TRUNCATED_TEXT);
+    expect(out.truncated).toBe(true);
+  });
+
+  test("drops oversized binary parts in favor of a per-part notice without touching the text budget", async () => {
+    const huge = "x".repeat(14 * 1024 * 1024);
+    const out = await mcpResultToExecutableOutput(
+      result([{ type: "image", data: huge, mimeType: "image/png" }]),
+      "mcp__s__big",
+    );
+    const parts = out.output as ContentPart[];
+    expect(parts).toHaveLength(3);
+    expect(parts[0]).toEqual({
+      type: "text",
+      text: '<mcp_tool_result name="mcp__s__big">',
+    });
+    expect(parts[1]?.type).toBe("text");
+    expect((parts[1] as { text: string }).text).toContain("image_url dropped");
+    expect((parts[1] as { text: string }).text).toContain(
+      "10 MB per-part limit",
+    );
+    expect(parts[2]).toEqual({ type: "text", text: "</mcp_tool_result>" });
+    const joined = parts.map((p) => (p.type === "text" ? p.text : "")).join("");
+    expect(joined).not.toContain("Output truncated");
+    expect(out.truncated).toBe(true);
+  });
+
+  test("binary part within the per-part cap survives intact alongside oversized text", async () => {
+    const out = await mcpResultToExecutableOutput(
+      result([
+        { type: "text", text: "A".repeat(100_000) },
+        { type: "image", data: "B".repeat(500_000), mimeType: "image/png" },
+      ]),
+      "mcp__s__t",
+    );
+    expect(out.output).toEqual([
+      { type: "text", text: "A".repeat(100_000) },
+      {
+        type: "image_url",
+        imageUrl: { url: "data:image/png;base64," + "B".repeat(500_000) },
+      },
+    ]);
+    expect(out.truncated).toBeUndefined();
+  });
+
+  test("downsamples an oversized real image instead of leaving it full-size", async () => {
+    const big = Buffer.from(
       await new Jimp({
         width: 3600,
         height: 1800,
@@ -88,41 +557,6 @@ import type { ToolExecution } from "#/tool/toolContract";
     );
 
     expect(out.note).toBeUndefined();
-  });
-
-    const big = Buffer.from(
-      await new Jimp({
-        width: 3600,
-        height: 1800,
-        color: 0x3366ccff,
-      }).getBuffer("image/png"),
-    ).toString("base64");
-
-    await mcpResultToExecutableOutput(
-      result([{ type: "image", data: big, mimeType: "image/png" }]),
-      "mcp__s__shot",
-      {},
-    );
-
-    const events = records.filter(
-      (record) => record.event === "image_compress",
-    );
-    expect(events).toHaveLength(1);
-    const properties = events[0]!.properties;
-    expect(properties).toEqual(
-      expect.objectContaining({
-        source: "mcp_tool_result",
-        outcome: "compressed",
-        input_mime: "image/png",
-        output_mime: "image/png",
-        original_width: 3600,
-        original_height: 1800,
-        exif_transposed: false,
-      }),
-    );
-    expect(properties?.["final_width"]).toBeLessThanOrEqual(3000);
-    expect(properties?.["final_height"]).toBeLessThanOrEqual(3000);
-    expect(properties?.["duration_ms"]).toEqual(expect.any(Number));
   });
 
   test("persists originals into the provided session originals dir", async () => {

@@ -40,3 +40,194 @@ import { stubLoopWithHooks } from "../../agent/loop/stubs";
 import { stubToolExecutorEvents } from "../../agent/toolExecutor/stubs";
 import { registerToolResultTruncationServices } from "../../agent/toolResultTruncation/stubs";
 import { registerStateServices } from "../../state/stubs";
+import { registerTestAgentWireServices } from "../../wire/stubs";
+
+function message(text: string): ContextMessage {
+  return {
+    role: "user",
+    content: [{ type: "text", text }],
+    toolCalls: [],
+    origin: { kind: "user" },
+  };
+}
+
+function createPromptHarness(registry: IHarnessInterceptorRegistry) {
+  const disposables = new DisposableStore();
+  onTestFinished(() => disposables.dispose());
+  const context = stubContextMemory();
+  const loop = stubLoopWithHooks({ pendingTurnResult: true });
+  const fullCompaction = {
+    _serviceBrand: undefined,
+    compacting: null,
+    begin: () => false,
+    hooks: createHooks(["onWillCompact"]),
+    onDidFinishCompaction: Event.None,
+  } as unknown as IAgentFullCompactionService;
+  const ix = createServices(disposables, {
+    strict: true,
+    additionalServices: (reg) => {
+      registerStateServices(reg);
+      registerLogServices(reg);
+      registerTestAgentWireServices(reg, "wire/harness-interceptor");
+      registerToolResultTruncationServices(reg);
+      reg.defineInstance(IHarnessInterceptorRegistry, registry);
+      reg.defineInstance(IAgentContextMemoryService, context);
+      reg.defineInstance(IAgentLoopService, loop);
+      reg.defineInstance(IWireService, {
+        _serviceBrand: undefined,
+        append: () => {},
+        getModel: () => undefined,
+        restore: async () => {},
+        seal: async () => {},
+        hooks: createHooks(["onDidRestore"]),
+      } as unknown as IWireService);
+            reg.defineInstance(IAgentFullCompactionService, fullCompaction);
+      reg.define(IEventBus, EventBusService);
+      reg.define(IAgentSystemReminderService, AgentSystemReminderService);
+      reg.define(IAgentToolRegistryService, AgentToolRegistryService);
+      reg.define(IAgentToolExecutorService, AgentToolExecutorService);
+      reg.define(IAgentPromptService, AgentPromptService);
+      reg.define(
+        IAgentHarnessInterceptorService,
+        AgentHarnessInterceptorService,
+      );
+    },
+  });
+  return {
+    prompt: ix.get(IAgentPromptService),
+    toolExecutor: ix.get(IAgentToolExecutorService),
+    wiring: ix.get(IAgentHarnessInterceptorService),
+    loop,
+    context,
+  };
+}
+
+describe("HarnessInterceptorRegistryService", () => {
+  let disposables: DisposableStore;
+
+  afterEach(() => {
+    disposables?.dispose();
+  });
+
+  it("lists interceptors sorted by priority then name", () => {
+    disposables = new DisposableStore();
+    const registry = disposables.add(new HarnessInterceptorRegistryService());
+    registry.register({
+      name: "z-late",
+      priority: 10,
+      hooks: {},
+    });
+    registry.register({
+      name: "a-early",
+      priority: 0,
+      hooks: {},
+    });
+    registry.register({
+      name: "b-early",
+      priority: 0,
+      hooks: {},
+    });
+    expect(registry.list().map((item) => item.name)).toEqual([
+      "a-early",
+      "b-early",
+      "z-late",
+    ]);
+  });
+
+  it("rejects duplicate interceptor names", () => {
+    disposables = new DisposableStore();
+    const registry = disposables.add(new HarnessInterceptorRegistryService());
+    registry.register({ name: "dup", priority: 0, hooks: {} });
+    expect(() =>
+      registry.register({ name: "dup", priority: 1, hooks: {} }),
+    ).toThrow(BugIndicatingError);
+  });
+});
+
+describe("AgentHarnessInterceptorService", () => {
+  it("wires onBeforeSubmitPrompt interceptors into the prompt hook slot", async () => {
+    const registry = new HarnessInterceptorRegistryService();
+    let called = false;
+    registry.register({
+      name: "stub-block",
+      priority: 0,
+      hooks: {
+        onBeforeSubmitPrompt: async (ctx, next) => {
+          called = true;
+          ctx.block = true;
+          await next();
+        },
+      },
+    });
+
+    const { prompt, wiring } = createPromptHarness(registry);
+    expect(wiring).toBeDefined();
+    const handle = await prompt.enqueue({ message: message("blocked") });
+
+    expect(called).toBe(true);
+    await expect(handle.completion).resolves.toMatchObject({
+      state: "blocked",
+    });
+  });
+
+  it("wires onBeforeExecuteTool interceptors into the tool veto event", async () => {
+    const registry = new HarnessInterceptorRegistryService();
+    let called = false;
+    registry.register({
+      name: "stub-veto",
+      priority: 0,
+      hooks: {
+        onBeforeExecuteTool: (event: BeforeToolExecuteEvent) => {
+          called = true;
+          event.veto(denyToolExecution("harness veto"));
+        },
+      },
+    });
+
+    const disposables = new DisposableStore();
+    onTestFinished(() => disposables.dispose());
+    const events = stubToolExecutorEvents();
+    const ix = createServices(disposables, {
+      strict: true,
+      additionalServices: (reg) => {
+        registerStateServices(reg);
+        registerLogServices(reg);
+        registerTestAgentWireServices(reg, "wire/harness-interceptor-tool");
+        registerToolResultTruncationServices(reg);
+        reg.defineInstance(IHarnessInterceptorRegistry, registry);
+        reg.defineInstance(IAgentToolRegistryService, AgentToolRegistryService);
+        reg.defineInstance(IAgentToolExecutorService, events.executor);
+        reg.define(
+          IAgentHarnessInterceptorService,
+          AgentHarnessInterceptorService,
+        );
+      },
+    });
+    void ix.get(IAgentHarnessInterceptorService);
+
+    const decision = await events.fireBeforeExecute({
+      turnId: 1,
+      signal: new AbortController().signal,
+      toolCall: {
+        id: "call-1",
+        type: "function",
+        function: { name: "Read", arguments: "{}" },
+      },
+      toolCalls: [],
+      tool: undefined,
+      args: {},
+      execution: {
+        toolName: "Read",
+        toolCallId: "call-1",
+        accesses: {},
+        execute: async () => ({ output: "ok", isError: false }),
+      },
+    });
+
+    expect(called).toBe(true);
+    expect(decision?.veto).toMatchObject({
+      output: "harness veto",
+      isError: true,
+    });
+  });
+});

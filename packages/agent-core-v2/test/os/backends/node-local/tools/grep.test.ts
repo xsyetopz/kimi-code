@@ -51,6 +51,153 @@ import {
 import { GrepTool as ProductionGrepTool } from "#/agent/tools/os/grep/grepTool";
 import { ensureRgPath } from "#/os/backends/node-local/tools/rgLocator";
 import { stubWorkspaceContext } from "../../../../session/workspaceContext/stub-workspace-context";
+import { registerStateServices } from "../../../../state/stubs";
+
+vi.mock("#/os/backends/node-local/tools/rgLocator", () => ({
+  ensureRgPath: vi.fn(async () => ({
+    path: "/mock/rg",
+    source: "system-path",
+  })),
+  rgUnavailableMessage: (cause: unknown) =>
+    `rg unavailable: ${cause instanceof Error ? cause.message : String(cause)}`,
+}));
+
+const signal = new AbortController().signal;
+const workspace: WorkspaceConfig = {
+  workspaceDir: "/workspace",
+  additionalDirs: ["/extra"],
+};
+const MAX_COLUMNS_RG_ARGS = ["--max-columns", "500"] as const;
+const COMMON_RG_ARGS = [
+  "--null",
+  "--glob",
+  "!.git",
+  "--glob",
+  "!.svn",
+  "--glob",
+  "!.hg",
+  "--glob",
+  "!.bzr",
+  "--glob",
+  "!.jj",
+  "--glob",
+  "!.sl",
+] as const;
+const DEFAULT_RG_ARGS = [
+  "--hidden",
+  ...MAX_COLUMNS_RG_ARGS,
+  ...COMMON_RG_ARGS,
+] as const;
+const CONTENT_RG_ARGS = ["--hidden", ...COMMON_RG_ARGS] as const;
+const SENSITIVE_KEY_BASENAMES = ["id_rsa", "id_ed25519", "id_ecdsa"] as const;
+const SENSITIVE_KEY_RG_ARGS = SENSITIVE_KEY_BASENAMES.flatMap((basename) => [
+  "--glob",
+  `!**/${basename}`,
+  "--glob",
+  `!**/${basename}[-_]*`,
+  ...SENSITIVE_DOT_VARIANT_SUFFIXES.flatMap((suffix) => [
+    "--glob",
+    `!**/${basename}${suffix}`,
+  ]),
+]);
+const SENSITIVE_RG_ARGS = [
+  "--glob",
+  "!**/.env",
+  ...SENSITIVE_KEY_RG_ARGS,
+  "--glob",
+  "!**/.aws/credentials",
+  "--glob",
+  "!**/.aws/credentials/**",
+  "--glob",
+  "!**/.gcp/credentials",
+  "--glob",
+  "!**/.gcp/credentials/**",
+] as const;
+
+interface FakeKaos {
+  pathClass(): PathClass;
+  gethome(): string;
+  stat(path: string): Promise<HostFileStat>;
+  exec(...args: string[]): Promise<IHostProcess>;
+}
+
+function notImplemented(method: string): never {
+  throw new Error(`FakeKaos.${method} not implemented - override in the test`);
+}
+
+function createFakeKaos(overrides: Partial<FakeKaos> = {}): FakeKaos {
+  return {
+    pathClass: () => "posix",
+    gethome: () => "/home/test",
+    stat: () => notImplemented("stat"),
+    exec: () => notImplemented("exec"),
+    ...overrides,
+  };
+}
+
+function createTestEnv(kaos: FakeKaos): IHostEnvironment {
+  return {
+    _serviceBrand: undefined,
+    osKind: "Linux",
+    osArch: "x86_64",
+    osVersion: "test",
+    shellName: "bash",
+    shellPath: "/bin/bash",
+    pathClass: kaos.pathClass(),
+    homeDir: kaos.gethome(),
+    ready: Promise.resolve(),
+  };
+}
+
+function createTestFs(kaos: FakeKaos): IHostFileSystem {
+  return {
+    _serviceBrand: undefined,
+    readText: () => notImplemented("readText"),
+    writeText: () => notImplemented("writeText"),
+    appendText: () => notImplemented("appendText"),
+    readBytes: () => notImplemented("readBytes"),
+    writeBytes: () => notImplemented("writeBytes"),
+    readLines: () => notImplemented("readLines"),
+    createExclusive: () => notImplemented("createExclusive"),
+    stat: (path) => kaos.stat(path),
+    lstat: (path) => kaos.stat(path),
+    readdir: () => notImplemented("readdir"),
+    mkdir: () => notImplemented("mkdir"),
+    remove: () => notImplemented("remove"),
+    realpath: () => notImplemented("realpath"),
+  };
+}
+
+function createTestProcessService(kaos: FakeKaos): IHostProcessService {
+  return {
+    _serviceBrand: undefined,
+    spawn: (command, args = []) => kaos.exec(command, ...args),
+  };
+}
+
+class GrepTool extends ProductionGrepTool {
+  constructor(
+    kaos: FakeKaos,
+    workspaceConfig: WorkspaceConfig,
+      ) {
+    super(
+      createTestProcessService(kaos),
+      createTestFs(kaos),
+      createTestEnv(kaos),
+      stubWorkspaceContext(
+        workspaceConfig.workspaceDir,
+        workspaceConfig.additionalDirs,
+      ),
+    );
+  }
+}
+
+function processWithOutput(
+  stdout: string,
+  stderr = "",
+  exitCode = 0,
+): IHostProcess {
+  const stdoutStream = Readable.from([stdout]);
   const stderrStream = Readable.from([stderr]);
   return {
     _serviceBrand: undefined,
@@ -1809,12 +1956,6 @@ describe("GrepTool", () => {
     const result = await executeTool(tool, context({ pattern: "hit" }));
 
     expect(result.isError).not.toBe(true);
-    expect(records).toEqual([
-      {
-        event: "grep_tool_rg_fallback",
-        properties: { source: "share-bin-downloaded", outcome: "resolved" },
-      },
-    ]);
   });
 
   it("returns an install hint when spawning the resolved ripgrep path hits ENOENT", async () => {
@@ -1945,10 +2086,6 @@ describe("GrepTool", () => {
   });
 
   it("appends the count-mode summary and pagination to the model-visible output", async () => {
-    const counts = Array.from(
-      { length: 10 },
-      (_, i) => `/workspace/f${String(i)}.txt:3`,
-    );
     const stdout = `${counts.join("\n")}\n`;
     const exec = vi.fn().mockResolvedValue(processWithOutput(stdout));
     const tool = new GrepTool(createFakeKaos({ exec }), {

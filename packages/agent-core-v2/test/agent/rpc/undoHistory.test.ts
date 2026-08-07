@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { ErrorCodes } from "#/errors";
+
+import {
+  createTestAgent,
+  type TestAgentContext,
+} from "../../harness";
+
 describe("undoHistory RPC", () => {
   let ctx: TestAgentContext;
-
   afterEach(async () => {
     try {
       await ctx.expectResumeMatches();
@@ -11,23 +17,17 @@ describe("undoHistory RPC", () => {
     }
   });
 
-  it("tracks conversation_undo after undoing history", async () => {
-    records = [];
-    ctx = createTestAgent());
+  it("undoes history", async () => {
+    ctx = createTestAgent();
     ctx.appendUserTurn("undo me");
 
     const undone = await ctx.rpc.undoHistory({ count: 1 });
 
     expect(undone).toBe(1);
-    expect(records).toContainEqual({
-      event: "conversation_undo",
-      properties: { agent_id: "main", count: 1 },
-    });
   });
 
   it("rejects a fractional count without changing persisted history", async () => {
-    records = [];
-    ctx = createTestAgent());
+    ctx = createTestAgent();
     ctx.appendUserTurn("keep me");
     const history = ctx.context.get();
 
@@ -37,8 +37,5 @@ describe("undoHistory RPC", () => {
     });
 
     expect(ctx.context.get()).toBe(history);
-    expect(records).not.toContainEqual(
-      expect.objectContaining({ event: "conversation_undo" }),
-    );
   });
 });

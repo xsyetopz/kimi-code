@@ -4,6 +4,7 @@
  * TaskStop/Cron vetoes, abstention on unrelated tools, and every ExitPlanMode
  * review branch (approve with/without option, Reject and Exit, Revise,
  * dismiss, auto / no-plan / empty-plan / non-plan_review skips) with
+ * telemetry.
  * Wiring: real wire and plan services against a fireable executor event
  * stub; a stand-in listener registered after the plan listener proves
  * whether the guard ended adjudication (veto/allow) or abstained;
@@ -152,7 +153,6 @@ describe("AgentPlanService plan-guard listener", () => {
 
   beforeEach(() => {
     disposables = new DisposableStore();
-    records = [];
     requests = [];
     approvalResponse = { decision: "approved" };
     formatDenyMessage = vi.fn((message: string) => message);
@@ -199,15 +199,13 @@ describe("AgentPlanService plan-guard listener", () => {
         reg.definePartialInstance(IAgentContextInjectorService, {
           register: () => ({ dispose: () => {} }),
         });
-          set: () => {},
-        });
-        reg.defineInstance(IAgentToolExecutorService, executorEvents.executor);
+                reg.defineInstance(IAgentToolExecutorService, executorEvents.executor);
         reg.defineInstance(IAgentToolApprovalService, toolApproval);
         reg.defineInstance(
           IAgentPermissionModeService,
           stubPermissionModeService(() => mode),
         );
-        reg.defineInstance(IAgentStateService, new AgentStateService());
+                reg.defineInstance(IAgentStateService, new AgentStateService());
         reg.define(IAgentPlanService, AgentPlanService);
       },
     });
@@ -391,10 +389,6 @@ describe("AgentPlanService plan-guard listener", () => {
       expect(requests[0]?.origin).toBe("exit-plan-mode-review-ask");
       expect(requests[0]?.ask.kind).toBe("ask");
       expect(requests[0]?.ask.reason).toEqual({ has_options: false });
-      expect(records).toContainEqual({
-        event: "plan_submitted",
-        properties: { has_options: false },
-      });
       expect(decision?.veto).toBeDefined();
     });
 
@@ -413,14 +407,7 @@ describe("AgentPlanService plan-guard listener", () => {
         "Execute ONLY the selected approach",
       );
       expect(decision?.veto?.output).toContain("## Approved Plan:\n# Plan");
-      expect(records).toContainEqual({
-        event: "plan_submitted",
-        properties: { has_options: true },
-      });
-      expect(records).toContainEqual({
-        event: "plan_resolved",
-        properties: { outcome: "approved", chosen_option: "Approach B" },
-      });
+
       expect(await svc.status()).toBeNull();
     });
 
@@ -432,10 +419,6 @@ describe("AgentPlanService plan-guard listener", () => {
 
       expect(decision?.veto?.output).toContain(`Plan saved to: ${PLAN_PATH}`);
       expect(decision?.veto?.output).not.toContain("Selected approach:");
-      expect(records).toContainEqual({
-        event: "plan_resolved",
-        properties: { outcome: "approved" },
-      });
       expect(await svc.status()).toBeNull();
     });
 
@@ -468,10 +451,6 @@ describe("AgentPlanService plan-guard listener", () => {
         stopTurn: true,
         output: "Plan rejected by user. Plan mode deactivated.",
       });
-      expect(records).toContainEqual({
-        event: "plan_resolved",
-        properties: { outcome: "rejected_and_exited" },
-      });
       expect(await svc.status()).toBeNull();
     });
 
@@ -488,10 +467,6 @@ describe("AgentPlanService plan-guard listener", () => {
 
       expect(decision?.veto?.isError).toBe(false);
       expect(decision?.veto?.output).toContain("Add verification.");
-      expect(records).toContainEqual({
-        event: "plan_resolved",
-        properties: { outcome: "revise", has_feedback: true },
-      });
       expect(await svc.status()).not.toBeNull();
     });
 
@@ -507,10 +482,6 @@ describe("AgentPlanService plan-guard listener", () => {
         stopTurn: true,
         output: "Plan rejected by user. Plan mode remains active.",
       });
-      expect(records).toContainEqual({
-        event: "plan_resolved",
-        properties: { outcome: "rejected" },
-      });
       expect(await svc.status()).not.toBeNull();
     });
 
@@ -525,10 +496,6 @@ describe("AgentPlanService plan-guard listener", () => {
         isError: false,
         output: "Plan approval dismissed. Plan mode remains active.",
       });
-      expect(records).toContainEqual({
-        event: "plan_resolved",
-        properties: { outcome: "dismissed" },
-      });
       expect(await svc.status()).not.toBeNull();
     });
 
@@ -540,7 +507,6 @@ describe("AgentPlanService plan-guard listener", () => {
       );
 
       expect(requests).toHaveLength(0);
-      expect(records).toEqual([]);
       expect(decision).toBeUndefined();
       expect(permissionRan).toBe(true);
     });

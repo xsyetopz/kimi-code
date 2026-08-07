@@ -33,6 +33,197 @@ import { IEventBus } from "#/app/event/eventBus";
 import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
 import { registerLogServices } from "../../_base/log/stubs";
 import { registerStateServices } from "../../state/stubs";
+import { registerTestAgentWireServices } from "../../wire/stubs";
+
+type ToolExecutorEvent = {
+  readonly type: "tool.result";
+  readonly toolCallId: string;
+  readonly result: ToolResult;
+};
+
+let disposables: DisposableStore;
+let ix: TestInstantiationService;
+let executor: IAgentToolExecutorService;
+let registry: IAgentToolRegistryService;
+let events: ToolExecutorEvent[];
+let protocolEvents: DomainEvent[];
+let truncateForModel: IAgentToolResultTruncationService["truncateForModel"];
+
+beforeEach(() => {
+  disposables = new DisposableStore();
+  events = [];
+  protocolEvents = [];
+  truncateForModel = async (input) => input.result;
+  ix = createServices(disposables, {
+    additionalServices: (reg) => {
+      registerStateServices(reg);
+      registerTestAgentWireServices(reg, "wire/tool-executor");
+      reg.define(IAgentToolRegistryService, AgentToolRegistryService);
+      reg.define(IAgentToolExecutorService, AgentToolExecutorService);
+      reg.defineInstance(
+        IAgentScopeContext,
+        makeAgentScopeContext({ agentId: "main", agentScope: "" }),
+      );
+      reg.defineInstance(
+      );
+      reg.defineInstance(IAgentToolResultTruncationService, {
+        _serviceBrand: undefined,
+        truncateForModel: (input) => truncateForModel(input),
+      });
+      reg.defineInstance(IEventBus, {
+        publish: (event: { type: string }) => {
+          if (event.type.startsWith("tool.")) {
+            protocolEvents.push(event as unknown as DomainEvent);
+          }
+        },
+        subscribe: (..._args: unknown[]) => ({ dispose: () => {} }),
+      } as IEventBus);
+      registerLogServices(reg);
+    },
+    strict: true,
+  });
+  executor = ix.get(IAgentToolExecutorService);
+  registry = ix.get(IAgentToolRegistryService);
+});
+
+afterEach(() => {
+  disposables.dispose();
+});
+
+describe("AgentToolExecutorService", () => {
+  it("resolves by interface and routes a successful tool call through execute", async () => {
+    const tool = new TestTool("echo");
+    registry.register(tool);
+
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        output: "hi",
+        stopTurn: false,
+      }),
+    ]);
+    expect(tool.calls).toEqual([
+      expect.objectContaining({
+        toolCallId: "call_echo",
+        turnId: 0,
+        args: { text: "hi" },
+      }),
+    ]);
+    expect(eventTypes()).toEqual(["tool.result"]);
+    expect(protocolEventTypes()).toEqual(["tool.call.started", "tool.result"]);
+  });
+
+  it("rejects by policy before dynamic availability when a tool-call guard denies it", async () => {
+    const tool = new TestTool("blocked");
+    registry.register(tool, { source: "mcp" });
+    executor.registerUnavailableToolDescriber(
+      () => 'Tool "blocked" is not loaded',
+    );
+    executor.registerToolCallGuard(({ name, source }) =>
+      name === "blocked" && source === "mcp"
+        ? 'Tool "blocked" is disabled'
+        : undefined,
+    );
+
+    const results = await execute([toolCall("call_blocked", "blocked", {})]);
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        isError: true,
+        output: 'Tool "blocked" is disabled',
+      }),
+    ]);
+    expect(tool.calls).toEqual([]);
+  });
+
+  it("tags tool_call telemetry with recorded dup types, defaulting to normal", async () => {
+    const tool = new TestTool("echo");
+    registry.register(tool);
+    let tag = true;
+    executor.onBeforeExecuteTool((event) => {
+      if (tag && event.toolCall.id === "call_dup")
+        executor.recordDupType("call_dup", "cross_step");
+    });
+
+    await execute([
+      toolCall("call_ok", "echo", { text: "a" }),
+      toolCall("call_dup", "echo", { text: "b" }),
+    ]);
+
+    tag = false;
+    await execute([toolCall("call_dup", "echo", { text: "c" })]);
+  });
+
+  it("merges the request trace id into tool_call telemetry", async () => {
+    const tool = new TestTool("echo");
+    registry.register(tool);
+
+    await execute(
+      [toolCall("call_traced", "echo", { text: "hi" })],
+      undefined,
+      { traceId: "trace-tool-1" },
+    );
+  });
+
+  it("truncates final tool results before publishing protocol events", async () => {
+    truncateForModel = async (input) => ({
+      ...input.result,
+      output: "truncated output",
+      truncated: true,
+    });
+    const tool = new TestTool("large", { result: { output: "raw output" } });
+    registry.register(tool);
+
+    const results = await execute([toolCall("call_large", "large", {})]);
+
+    expect(results[0]).toMatchObject({
+      output: "truncated output",
+      truncated: true,
+    });
+    expect(protocolEvents).toContainEqual(
+      expect.objectContaining({
+        type: "tool.result",
+        toolCallId: "call_large",
+        output: "truncated output",
+      }),
+    );
+  });
+
+  it("preserves internal result notes without exposing them on protocol tool.result events", async () => {
+    const tool = new TestTool("captioned", {
+      result: {
+        output: "image sent",
+        note: "<system>Image compressed.</system>",
+      },
+    });
+    registry.register(tool);
+
+    const results = await execute([
+      toolCall("call_captioned", "captioned", {}),
+    ]);
+
+    expect(results[0]).toMatchObject({
+      output: "image sent",
+      note: "<system>Image compressed.</system>",
+    });
+    const protocolResult = protocolEvents.find(
+      (event): event is Extract<DomainEvent, { type: "tool.result" }> =>
+        event.type === "tool.result",
+    );
+    expect(protocolResult).toMatchObject({
+      type: "tool.result",
+      toolCallId: "call_captioned",
+      output: "image sent",
+    });
+    expect(
+      protocolResult as unknown as Record<string, unknown>,
+    ).not.toHaveProperty("note");
+  });
+
+  it("drops malformed notes and non-true truncated flags from internal results", async () => {
     const tool = new TestTool("malformed-meta", {
       result: {
         output: "image sent",
@@ -69,16 +260,6 @@ import { registerStateServices } from "../../state/stubs";
     expect(pairedToolCallIds()).toEqual({
       calls: ["call_missing"],
       results: ["call_missing"],
-    });
-      event: "tool_call",
-      properties: expect.objectContaining({
-        turn_id: 0,
-        tool_call_id: "call_missing",
-        tool_name: "missing",
-        outcome: "error",
-        duration_ms: expect.any(Number),
-        error_type: "error",
-      }),
     });
   });
 

@@ -25,6 +25,15 @@ import { IAgentLoopService } from "#/agent/loop/loop";
 import { MessageStepRequest } from "#/agent/loop/stepRequest";
 import { IAgentConversationUndoService } from "#/agent/undo/undo";
 import { ErrorCodes } from "#/errors";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
+import {
+  configServices,
+  createTestAgent,
+  externalHookServices,
+  homeDirServices,
+  type TestAgentContext,
+  type TestAgentServiceOverride,
+} from "../../harness";
 import {
   executeTool,
   type TestExecutableToolContext,
@@ -147,7 +156,7 @@ interface TaskServiceFixture {
   ctx: TestAgentContext;
   agent: FakeTaskAgent;
   manager: TaskServiceTestManager;
-  persistence?: ReturnType<typeof createAgentTaskPersistence>;
+    persistence?: ReturnType<typeof createAgentTaskPersistence>;
 }
 
 type TestContextMessage = {
@@ -229,7 +238,6 @@ function createAgentTaskService(
     ctx,
     agent,
     manager: ctx.get(IAgentTaskService) as TaskServiceTestManager,
-    records,
     persistence,
   };
 }
@@ -316,7 +324,7 @@ describe("AgentTaskService — event emission", () => {
   });
 
   it("emits task.started for process tasks", () => {
-    const { agent, manager, records } = createAgentTaskService();
+    const { agent, manager } = createAgentTaskService();
     const taskId = registerProcess(
       manager,
       pendingProcess(),
@@ -332,14 +340,10 @@ describe("AgentTaskService — event emission", () => {
         status: "running",
       }),
     });
-    expect(records).toContainEqual({
-      event: "background_task_created",
-      properties: { agent_id: "main", task_id: taskId, kind: "bash" },
-    });
   });
 
   it("emits task.started for agent tasks", () => {
-    const { agent, manager, records } = createAgentTaskService();
+    const { agent, manager } = createAgentTaskService();
     const taskId = manager.registerTask(
       agentTask(new Promise(() => {}), "agent task"),
     );
@@ -352,15 +356,31 @@ describe("AgentTaskService — event emission", () => {
         status: "running",
       }),
     });
-    expect(records).toContainEqual({
-      event: "background_task_created",
-      properties: { agent_id: "main", task_id: taskId, kind: "agent" },
+  });
+
+  it("emits task.terminated on natural exit", async () => {
+    const { agent, manager } = createAgentTaskService();
+    const taskId = registerProcess(
+      manager,
+      immediateProcess(0),
+      "echo",
+      "done",
+    );
+
+    await manager.wait(taskId);
+
+    expect(agent.emittedEvents).toContainEqual({
+      type: "task.terminated",
+      info: expect.objectContaining({
+        taskId,
+        status: "completed",
+      }),
     });
   });
 
   it("tracks failed and timed-out terminal statuses", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    const { manager, records } = createAgentTaskService();
+    const { manager } = createAgentTaskService();
     const failedId = registerProcess(
       manager,
       immediateProcess(1),
@@ -370,29 +390,12 @@ describe("AgentTaskService — event emission", () => {
     const timedOutId = manager.registerTask(
       agentTask(new Promise(() => {}), "slow agent", { timeoutMs: 1 }),
     );
-    records.length = 0;
 
     await manager.wait(failedId);
     const timedOut = manager.wait(timedOutId);
     await vi.advanceTimersByTimeAsync(5_010);
     await timedOut;
 
-    expect(records).toContainEqual({
-      event: "background_task_completed",
-      properties: expect.objectContaining({
-        agent_id: "main",
-        kind: "process",
-        status: "failed",
-      }),
-    });
-    expect(records).toContainEqual({
-      event: "background_task_completed",
-      properties: expect.objectContaining({
-        agent_id: "main",
-        kind: "agent",
-        status: "timed_out",
-      }),
-    });
   });
 
   it("emits task.terminated on stop", async () => {

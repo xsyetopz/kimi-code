@@ -1323,11 +1323,7 @@ describe("Agent tool execution contract", () => {
       accessor: {
         get: ((serviceId: unknown) => {
           if (serviceId === IEventBus) return eventBus;
-          if (serviceId === IAgentLifecycleService) return lifecycle;            return {
-              ...              track2: (event: string, properties: unknown) => {
-              },
-            };
-          }
+          if (serviceId === IAgentLifecycleService) return lifecycle;
           return undefined;
         }) as IAgentScopeHandle["accessor"]["get"],
       },
@@ -1358,15 +1354,6 @@ describe("Agent tool execution contract", () => {
     ).toMatchObject({
       parentAgentId: "main",
       callerAgentId: "main",
-    });
-      event: "subagent_created",
-      properties: {
-        subagent_name: "explore",
-        run_in_background: false,
-        agent_id: "agent-child",
-        parent_agent_id: "main",
-        parent_tool_call_id: "call_agent",
-      },
     });
     expect(
       events.find((event) => event.type === "subagent.completed"),

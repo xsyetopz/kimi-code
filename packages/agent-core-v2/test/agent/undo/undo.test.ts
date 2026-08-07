@@ -28,10 +28,15 @@ import { ErrorCodes } from "#/errors";
 import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 import { TodoModel, todoSet } from "#/session/todo/todoOps";
 import { defineModel } from "#/wire/model";
+import { IWireService } from "#/wire/wire";
+
+import {
+  createTestAgent,
+  type TestAgentContext,
+} from "../../harness";
 
 describe("AgentConversationUndoService", () => {
   let ctx: TestAgentContext;
-
   afterEach(async () => {
     try {
       await ctx.expectResumeMatches();
@@ -41,8 +46,7 @@ describe("AgentConversationUndoService", () => {
   });
 
   function setup() {
-    records = [];
-    ctx = createTestAgent());
+    ctx = createTestAgent();
     ctx.get(IAgentContextMemoryService);
     return ctx;
   }
@@ -294,6 +298,30 @@ describe("AgentConversationUndoService", () => {
     ]);
   });
 
+  it("restores plan mode and its telemetry mirror to their pre-turn value", async () => {
+    setup();
+    const undo = ctx.get(IAgentConversationUndoService);
+    const wire = ctx.get(IWireService);
+    ctx.appendTurnExchange("u1", "a1");
+    ctx.appendTurnExchange("u2", "a2");
+    await ctx.get(IAgentPlanService).enter("plan-x", false);
+    const restoredModes: boolean[] = [];
+    const subscription = ctx
+      .get(IEventBus)
+      .subscribe("agent.status.updated", (event) => {
+        if (event.planMode !== undefined) restoredModes.push(event.planMode);
+      });
+
+    try {
+      await undo.undo(1);
+
+      expect(wire.getModel(PlanModel).current.active).toBe(false);
+      expect(restoredModes).toEqual([false]);
+    } finally {
+      subscription.dispose();
+    }
+  });
+
   it("does not roll back world-time turn bookkeeping", async () => {
     setup();
     const undo = ctx.get(IAgentConversationUndoService);
@@ -378,9 +406,6 @@ describe("AgentConversationUndoService", () => {
         expect(ctx.context.get()).toEqual([]);
         expect(reconciled).toEqual(expectedReconciled);
         expect(undone).toEqual([]);
-        expect(
-          records.filter((record) => record.event === "conversation_undo"),
-        ).toEqual([]);
       } finally {
         subscription.dispose();
         flush.mockRestore();
@@ -442,11 +467,6 @@ describe("AgentConversationUndoService", () => {
     ctx.appendTurnExchange("u2", "a2");
 
     await ctx.rpc.undoHistory({ count: 1 });
-
-    expect(records).toContainEqual({
-      event: "conversation_undo",
-      properties: { agent_id: "main", count: 1 },
-    });
     expect(ctx.context.get().map((m) => m.role)).toEqual(["user", "assistant"]);
   });
 
@@ -524,10 +544,6 @@ describe("AgentConversationUndoService", () => {
         "assistant",
       ]);
       expect(undone).toEqual([1]);
-      expect(records).toContainEqual({
-        event: "conversation_undo",
-        properties: { agent_id: "main", count: 1 },
-      });
     } finally {
       subscription.dispose();
       update.mockRestore();

@@ -55,8 +55,10 @@ import {
   fitWithinEdge,
   FALLBACK_EDGES_PX,
   MAX_DECODE_PIXELS,
+  MAX_IMAGE_DECODE_BYTES,
   RECODABLE_MIME,
 } from "./image-compress-encode";
+import { buildImageCompressionCaption } from "./image-compress-caption";
 
 export type {
   ImageCompressionCaptionExtraction,

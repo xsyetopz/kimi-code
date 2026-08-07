@@ -226,6 +226,13 @@ import {
 import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
 import { ISessionSwarmService } from "#/session/swarm/sessionSwarm";
 import type { PathAccessOperation } from "#/session/workspaceContext/workspaceContext";
+import {
+  IWorkspaceContext,
+  LOCAL_OS_BACKEND_ID,
+  LOCAL_PERSISTENCE_BACKEND_ID,
+} from "#/workspace/workspaceContext/workspaceContext";
+import { workspacePersistenceScope } from "#/workspace/sessionLifecycle/internal/addressing";
+import "#/workspace/workspaceLease/workspaceLeaseService";
 
 import { stubAgentIdentity } from "../app/agentIdentity/stubs";
 import { stubClientIdentity } from "../app/bootstrap/stubs";
@@ -448,7 +455,7 @@ type MutableScopeSeed = Array<readonly [ServiceIdentifier<unknown>, unknown]>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCtor<T> = new (...args: any[]) => T;
-type TestAgentServiceScope = "app" | "session" | "agent";
+type TestAgentServiceScope = "app" | "workspace" | "session" | "agent";
 
 export interface TestAgentServiceRegistration {
   define<T>(id: ServiceIdentifier<T>, ctor: AnyCtor<T>): void;
@@ -1148,6 +1155,7 @@ export class AgentTestContext {
   private readonly options: TestAgentOptions;
   private readonly scriptedGenerate = createScriptedGenerate();
   private readonly root: Scope;
+  private readonly workspace: Scope;
   private readonly session: Scope;
   private readonly agent: Scope;
   private readonly disposables: IDisposable[] = [];
@@ -1295,8 +1303,45 @@ export class AgentTestContext {
 
     const bootstrap = this.root.accessor.get(IBootstrapService);
     const workspaceId = "test-workspace";
+    const persistenceScope = workspacePersistenceScope(
+      bootstrap.scope("sessions"),
+      workspaceId,
+    );
+    const workspaceMeta = {
+      id: workspaceId,
+      root: this.cwd,
+      name: "test-workspace",
+      createdAt: 0,
+      lastOpenedAt: 0,
+    };
+    this.workspace = this.root.createChild(LifecycleScope.Workspace, workspaceId, {
+      extra: collectScopeSeed(
+        [
+          (reg) => {
+            reg.defineInstance(IWorkspaceContext, {
+              _serviceBrand: undefined,
+              workspaceId,
+              cwd: this.cwd,
+              source: "local",
+              meta: workspaceMeta,
+              persistenceScope,
+              osBackendId: LOCAL_OS_BACKEND_ID,
+              persistenceBackendId: LOCAL_PERSISTENCE_BACKEND_ID,
+            } satisfies IWorkspaceContext);
+            reg.defineInstance(
+              IWorkspaceStateService,
+              new WorkspaceStateService(
+                this.root.accessor.get(IAppStateService),
+              ),
+            );
+          },
+        ],
+        this.serviceOverrides,
+        "workspace",
+      ),
+    });
     const sessionScope = `${bootstrap.scope("sessions")}/${workspaceId}/${sessionId}`;
-    this.session = this.root.createChild(LifecycleScope.Session, sessionId, {
+    this.session = this.workspace.createChild(LifecycleScope.Session, sessionId, {
       extra: collectScopeSeed(
         [
           (reg) => {
@@ -1363,15 +1408,6 @@ export class AgentTestContext {
               additionalDirs: [],
               onDidChange: Event.None as Event<void>,
             } satisfies ISessionWorkspaceInfo);
-            // The harness skips the Workspace scope entirely, so the session
-            // state service's cascade parent is seeded directly: a workspace
-            // state instance chained onto the App-scope root.
-            reg.defineInstance(
-              IWorkspaceStateService,
-              new WorkspaceStateService(
-                this.root.accessor.get(IAppStateService),
-              ),
-            );
             reg.defineInstance(IAgentLifecycleService, {
               _serviceBrand: undefined,
               onDidCreate: Event.None as Event<IAgentScopeHandle>,

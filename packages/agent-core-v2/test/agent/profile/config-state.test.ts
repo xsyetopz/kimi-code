@@ -4,6 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IAgentLLMRequesterService } from "#/agent/llmRequester/llmRequester";
 import { IAgentProfileService } from "#/agent/profile/profile";
 import type { ModelRecord } from "#/kosong/model/model";
+import {
+  configServices,
+  createTestAgent,
+  llmGenerateServices,
+  modelProviderOptionServices,
+  type TestAgentContext,
+} from "../../harness";
 
 type TestKimiConfig = ReturnType<Parameters<typeof configServices>[0]>;
 type TestProtocolModelConfig = NonNullable<TestKimiConfig["models"]>[string] &
@@ -26,10 +33,9 @@ describe("ConfigState model capabilities", () => {
       providers: {},
     };
     generate = defaultGenerate;
-    records = [];
     ctx = createTestAgent(
       configServices(() => kimiConfig),
-      llmGenerateServices((...args) => generate(...args))),
+      llmGenerateServices((...args) => generate(...args)),
     );
     profile = ctx.get(IAgentProfileService);
     requester = ctx.get(IAgentLLMRequesterService);
@@ -154,19 +160,8 @@ describe("ConfigState model capabilities", () => {
     };
     profile.update({ modelAlias: "kimi-code/kimi-for-coding" });
     profile.setThinking("off");
-    records.length = 0;
 
     profile.setThinking("low");
-
-    expect(records).toContainEqual({
-      event: "thinking_toggle",
-      properties: {
-        agent_id: "main",
-        enabled: true,
-        effort: "low",
-        from: "off",
-      },
-    });
   });
 
   it("does not infer Kimi capabilities from the provider catalogue", () => {

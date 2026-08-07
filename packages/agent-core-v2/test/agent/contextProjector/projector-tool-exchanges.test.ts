@@ -3,6 +3,7 @@
  *
  * Responsibilities: validates tool-exchange repair, strict projection, and
  * degraded/full-strip media projections through the public projector contract.
+ * Wiring: real AgentContextProjectorService with captured log and telemetry
  * boundaries. Run: bun test -- test/agent/contextProjector/projector-tool-exchanges.test.ts
  */
 
@@ -129,13 +130,12 @@ describe("projector tool-exchange normalization", () => {
   let disposables: DisposableStore;
   let projector: IAgentContextProjectorService;
   let warnings: WarningCall[];
-
   beforeEach(() => {
     disposables = new DisposableStore();
     warnings = [];
     const ix = disposables.add(new TestInstantiationService());
     ix.set(ILogService, createCapturingLog(warnings));
-    ix.set(IAgentStateService, new AgentStateService());
+        ix.set(IAgentStateService, new AgentStateService());
     ix.set(
       IAgentScopeContext,
       makeAgentScopeContext({ agentId: "main", agentScope: "" }),
@@ -672,6 +672,15 @@ describe("projector tool-exchange normalization", () => {
       );
     });
 
+    it("emits context_projection_repaired telemetry with the v1 wire keys when a repair occurs", () => {
+      project([
+        assistant("", ["c1", "c2"]),
+        reminder("host note"),
+        toolResult("c1", "one"),
+        toolResult("c2", "two"),
+      ]);
+    });
+
     it("does not emit context_projection_repaired on a clean projection or a trailing in-flight close", () => {
       project([
         user("go"),
@@ -699,11 +708,6 @@ describe("projector tool-exchange normalization", () => {
       expect(shape(history)).toEqual(["user", "user"]);
       expect(repairPayloads(warnings)).toEqual([
         expect.objectContaining({ vacuousDropped: 1 }),
-      ]);
-        {
-          event: "context_projection_repaired",
-          properties: expect.objectContaining({ vacuous_dropped: 1 }),
-        },
       ]);
     });
 

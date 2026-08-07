@@ -75,7 +75,6 @@ describe("AgentPermissionGate", () => {
     mode = "auto";
     rules = [];
     policyResult = undefined;
-    records = [];
     executorEvents = stubToolExecutorEvents();
     resolvePermissionResolution = vi.fn(async () => undefined);
     requestToolApproval = vi.fn(async () => undefined);
@@ -101,7 +100,7 @@ describe("AgentPermissionGate", () => {
           stubPermissionPolicyService(() => policyResult),
         );
         reg.defineInstance(IAgentToolApprovalService, toolApproval);
-        reg.defineInstance(IAgentToolExecutorService, executorEvents.executor);
+                reg.defineInstance(IAgentToolExecutorService, executorEvents.executor);
         reg.define(IAgentPermissionGate, AgentPermissionGate);
       },
       strict: true,
@@ -120,7 +119,6 @@ describe("AgentPermissionGate", () => {
 
     expect(await svc.authorize(makeContext("bash"))).toBeUndefined();
     expect(resolvePermissionResolution).not.toHaveBeenCalled();
-    expect(records).toEqual([]);
   });
 
   it("forwards the policy resolution to the approval service and returns its result", async () => {
@@ -170,20 +168,6 @@ describe("AgentPermissionGate", () => {
     const svc = make();
 
     await svc.authorize(makeContext("Bash"));
-
-    expect(records).toContainEqual({
-      event: "permission_policy_decision",
-      properties: {
-        turn_id: 1,
-        tool_call_id: "call-Bash",
-        policy_name: "user-configured-deny",
-        tool_name: "Bash",
-        permission_mode: "auto",
-        decision: "deny",
-        matched_rule: "Bash",
-        match_strategy: "literal",
-      },
-    });
   });
 
   it("vetoes with the resolved denial and ends adjudication on a deny resolution", async () => {

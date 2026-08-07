@@ -11,6 +11,7 @@
  * Full-line comments (`//`, `/* ...`, JSDoc `* ...`) are not code and may
  * quote the legacy v1 gate as parity documentation; they are skipped.
  * Brand/env names (`KIMI_CODE_*`, `KIMI_MODEL_*`) and `'kimi'` as data
+ * (config values fields, registration ids) do not match the
  * patterns — verified against the whole `src/` tree.
  */
 

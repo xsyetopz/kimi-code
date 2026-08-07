@@ -297,11 +297,7 @@ describe("AgentLifecycleService", () => {
       }),
       cancel: loopCancel,
       settled: loopSettled,
-      _serviceBrand: undefined,
-      get: () => ({ mode: "agent" }),
-      set: () => {},
-    });
-    ix.stub(IHostEnvironment, { _serviceBrand: undefined } as IHostEnvironment);
+    } as unknown as IAgentLoopService);        ix.stub(IHostEnvironment, { _serviceBrand: undefined } as IHostEnvironment);
     ix.stub(IHostFileSystem, { _serviceBrand: undefined } as IHostFileSystem);
     ix.stub(ISessionAgentProfileCatalog, {
       _serviceBrand: undefined,

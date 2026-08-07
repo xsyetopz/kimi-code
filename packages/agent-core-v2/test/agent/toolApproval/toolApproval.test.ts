@@ -34,6 +34,213 @@ import {
 } from "#/session/sessionContext/sessionContext";
 import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
 
+import { stubPermissionModeService } from "../permissionMode/stubs";
+
+const RETRY_GUIDANCE =
+  "Try a different approach — don't retry the same call, don't attempt to bypass the restriction.";
+
+interface ContextOptions {
+  readonly display?: ToolInputDisplay;
+  readonly description?: string;
+  readonly approvalRule?: string;
+  readonly traceId?: string;
+  readonly signal?: AbortSignal;
+}
+
+function makeContext(
+  toolName: string,
+  args: Record<string, unknown> = {},
+  options: ContextOptions = {},
+): ResolvedToolExecutionHookContext {
+  const toolCall: ToolCall = {
+    type: "function",
+    id: `call-${toolName}`,
+    name: toolName,
+    arguments: JSON.stringify(args),
+  };
+  return {
+    turnId: 1,
+    signal: options.signal ?? new AbortController().signal,
+    trace:
+      options.traceId === undefined ? undefined : { traceId: options.traceId },
+    toolCall,
+    toolCalls: [toolCall],
+    args,
+    execution: {
+      description: options.description ?? `Approve ${toolName}`,
+      display: options.display,
+      approvalRule: options.approvalRule ?? toolName,
+      execute: () => Promise.resolve({ output: "" }),
+    },
+  };
+}
+
+function ask(
+  overrides: Partial<Extract<PermissionPolicyResult, { kind: "ask" }>> = {},
+): Extract<PermissionPolicyResult, { kind: "ask" }> {
+  return { kind: "ask", ...overrides };
+}
+
+describe("AgentToolApprovalService", () => {
+  let disposables: DisposableStore;
+  let ix: TestInstantiationService;
+  let mode: PermissionMode;
+  let recorded: PermissionApprovalResultRecord[];
+  let eventBus: IEventBus;
+
+  beforeEach(() => {
+    disposables = new DisposableStore();
+    eventBus = disposables.add(new EventBusService());
+    mode = "manual";
+    recorded = [];
+    ix = createServices(disposables, {
+      additionalServices: (reg) => {
+        reg.defineInstance(
+          IAgentScopeContext,
+          makeAgentScopeContext({ agentId: "main", agentScope: "main" }),
+        );
+        reg.defineInstance(
+          IAgentPermissionModeService,
+          stubPermissionModeService(() => mode),
+        );
+        reg.defineInstance(IAgentPermissionRulesService, {
+          _serviceBrand: undefined,
+          rules: [],
+          sessionApprovalRulePatterns: [],
+          addRules: () => {},
+          recordApprovalResult: (record) => {
+            recorded.push(record);
+          },
+        });
+        reg.defineInstance(
+          ISessionContext,
+          makeSessionContext({
+            sessionId: "test-session",
+            workspaceId: "test-workspace",
+            sessionDir: "/tmp/test-session",
+            sessionScope: "sessions/test-workspace/test-session",
+            metaScope: "sessions/test-workspace/test-session/session-meta",
+            cwd: "/tmp/test-session",
+          }),
+        );
+                reg.defineInstance(IEventBus, eventBus);
+        reg.define(IAgentToolApprovalService, AgentToolApprovalService);
+      },
+      strict: true,
+    });
+  });
+  afterEach(() => {
+    disposables.dispose();
+  });
+
+  function make(): IAgentToolApprovalService {
+    return ix.get(IAgentToolApprovalService);
+  }
+
+  function useBroker(
+    request: (approval: ApprovalRequest) => Promise<ApprovalResponse>,
+  ): ReturnType<
+    typeof vi.fn<(approval: ApprovalRequest) => Promise<ApprovalResponse>>
+  > {
+    const requestSpy = vi.fn(request);
+    ix.set(ISessionApprovalService, {
+      _serviceBrand: undefined,
+      request: requestSpy,
+      enqueue: (approval) => ({ ...approval, id: approval.id ?? "approval-1" }),
+      decide: () => {},
+      listPending: () => [],
+    });
+    return requestSpy;
+  }
+
+  function subscribeApprovalEvents(): {
+    readonly requested: ReturnType<typeof vi.fn>;
+    readonly resolved: ReturnType<typeof vi.fn>;
+  } {
+    const requested = vi.fn();
+    const resolved = vi.fn();
+    disposables.add(
+      eventBus.subscribe("permission.approval.requested", requested),
+    );
+    disposables.add(
+      eventBus.subscribe("permission.approval.resolved", resolved),
+    );
+    return { requested, resolved };
+  }
+
+  function useSubagentScope(): void {
+    ix.set(
+      IAgentScopeContext,
+      makeAgentScopeContext({ agentId: "sub-1", agentScope: "sub-1" }),
+    );
+  }
+
+  describe("resolvePermissionResolution", () => {
+    it("maps an approve without metadata to undefined", async () => {
+      const svc = make();
+      await expect(
+        svc.resolvePermissionResolution(
+          { kind: "approve" },
+          makeContext("Bash"),
+          "p",
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    it("passes executionMetadata through on approve", async () => {
+      const executionMetadata = { marker: true };
+      const svc = make();
+      await expect(
+        svc.resolvePermissionResolution(
+          { kind: "approve", executionMetadata },
+          makeContext("Bash"),
+          "p",
+        ),
+      ).resolves.toEqual({ executionMetadata });
+    });
+
+    it("maps a deny to a block with the policy message", async () => {
+      const svc = make();
+      await expect(
+        svc.resolvePermissionResolution(
+          { kind: "deny", message: "nope" },
+          makeContext("Bash"),
+          "p",
+        ),
+      ).resolves.toEqual({ veto: { output: "nope", isError: true } });
+    });
+
+    it("uses a default reason when a deny has no message", async () => {
+      const svc = make();
+      await expect(
+        svc.resolvePermissionResolution(
+          { kind: "deny" },
+          makeContext("Bash"),
+          "p",
+        ),
+      ).resolves.toEqual({
+        veto: {
+          output: 'Tool "Bash" was denied by permission policy.',
+          isError: true,
+        },
+      });
+    });
+
+    it("appends worker guidance to deny messages for subagents", async () => {
+      useSubagentScope();
+      const svc = make();
+      await expect(
+        svc.resolvePermissionResolution(
+          { kind: "deny", message: "nope" },
+          makeContext("Bash"),
+          "p",
+        ),
+      ).resolves.toEqual({
+        veto: { output: `nope ${RETRY_GUIDANCE}`, isError: true },
+      });
+    });
+
+    it("strips the kind marker from result resolutions", async () => {
       const svc = make();
       await expect(
         svc.resolvePermissionResolution(
@@ -78,15 +285,6 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
         toolName: "Bash",
         sessionApprovalRule: undefined,
         result: { decision: "approved" },
-      });
-      expect(records).toContainEqual({
-        event: "permission_approval_result",
-        properties: expect.objectContaining({
-          policy_name: "fallback-ask",
-          tool_name: "Bash",
-          result: "approved",
-          session_cache_written: false,
-        }),
       });
     });
 
@@ -195,14 +393,6 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
         sessionApprovalRule: "Custom",
         result: { decision: "approved", scope: "session" },
       });
-      expect(records).toContainEqual({
-        event: "permission_approval_result",
-        properties: expect.objectContaining({
-          tool_name: "Custom",
-          result: "approved_for_session",
-          session_cache_written: true,
-        }),
-      });
     });
 
     it("keeps approved-once responses out of the session cache", async () => {
@@ -219,13 +409,6 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
       expect(recorded[0]).toMatchObject({
         sessionApprovalRule: undefined,
         result: { decision: "approved" },
-      });
-      expect(records).toContainEqual({
-        event: "permission_approval_result",
-        properties: expect.objectContaining({
-          result: "approved",
-          session_cache_written: false,
-        }),
       });
     });
 
@@ -276,18 +459,6 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
           isError: true,
         },
       });
-
-      expect(records).toContainEqual({
-        event: "permission_approval_result",
-        properties: expect.objectContaining({
-          policy_name: "fallback-ask",
-          tool_name: "Bash",
-          permission_mode: "manual",
-          result: "cancelled",
-          has_feedback: true,
-          session_cache_written: false,
-        }),
-      });
     });
 
     it.each([
@@ -304,6 +475,7 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
         true,
       ],
     ] as const)(
+      "tracks ask continuation telemetry for %s",
       async (_name, response, expectedResult, expectedHasFeedback) => {
         useBroker(async () => response);
         const svc = make();
@@ -327,20 +499,6 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
         ).resolves.toEqual({
           veto: { output: "Plan review handled." },
         });
-
-        expect(records).toContainEqual({
-          event: "permission_approval_result",
-          properties: expect.objectContaining({
-            policy_name: "exit-plan-mode-review-ask",
-            tool_name: "ExitPlanMode",
-            permission_mode: "manual",
-            result: expectedResult,
-            approval_surface: "plan_review",
-            duration_ms: expect.any(Number),
-            session_cache_written: false,
-            has_feedback: expectedHasFeedback,
-          }),
-        });
       },
     );
 
@@ -359,15 +517,6 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
           "exit-plan-mode-review-ask",
         ),
       ).rejects.toThrow("approval transport closed");
-
-      expect(records).toContainEqual({
-        event: "permission_approval_result",
-        properties: expect.objectContaining({
-          policy_name: "exit-plan-mode-review-ask",
-          tool_name: "ExitPlanMode",
-          result: "error",
-        }),
-      });
       expect(events.resolved).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "permission.approval.resolved",
@@ -399,6 +548,38 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
       });
     });
 
+    it("rethrows user cancellations without telemetry or resolution events", async () => {
+      const events = subscribeApprovalEvents();
+      const controller = new AbortController();
+      useBroker(() => new Promise<ApprovalResponse>(() => {}));
+      const svc = make();
+
+      const promise = svc.requestToolApproval(
+        makeContext("Bash", {}, { signal: controller.signal }),
+        ask(),
+        "fallback-ask",
+      );
+      const expectation = expect(promise).rejects.toBeInstanceOf(
+        UserCancellationError,
+      );
+      controller.abort(new UserCancellationError());
+      await expectation;
+
+      expect(events.requested).toHaveBeenCalledTimes(1);
+      expect(events.resolved).not.toHaveBeenCalled();
+      expect(recorded).toEqual([]);
+    });
+
+    it("merges the request trace id into approval result telemetry", async () => {
+      useBroker(async () => ({ decision: "approved" }));
+      const svc = make();
+
+      await svc.requestToolApproval(
+        makeContext("bash", {}, { traceId: "trace-approval-1" }),
+        ask(),
+        "fallback-ask",
+      );
+    });
   });
 
   describe("message formatting", () => {

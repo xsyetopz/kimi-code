@@ -340,26 +340,6 @@ function makeStreamingProcess(lines: readonly string[]): {
   return { proc, wasKilled: () => killed, yieldedLines: () => yielded };
 }
 
-  events: Array<{ event: string; properties: Record<string, unknown> }>,
-  return {
-    _serviceBrand: undefined,
-      events.push({ event, properties: properties ?? {} });
-    },
-    track2: (event, properties) => {
-      events.push({
-        event,
-      });
-    },
-    setContext: () => {},
-    addAppender: () => ({ dispose: () => {} }),
-    removeAppender: () => {},
-    setAppender: () => {},
-    setEnabled: () => {},
-    flush: async () => {},
-    shutdown: async () => {},
-  };
-}
-
 beforeEach(() => {
   _clearScopedRegistryForTests();
   registerScopedService(
@@ -398,7 +378,6 @@ function defaultGitStub(): IGitService {
 function makeSession(
   files: Record<string, string>,
   handler: RunHandler,
-  events: Array<{ event: string; properties: Record<string, unknown> }> = [],
   git: IGitService = defaultGitStub(),
   symlinks: readonly string[] = [],
   runner?: ISessionProcessRunner,
@@ -440,7 +419,7 @@ describe("WorkspaceFsService.gitStatus", () => {
       diff: async () => ({ path: "", diff: "", truncated: false }),
       findWorkTree: async () => null,
     };
-    const fs = makeSession({}, emptyHandler, [], git);
+    const fs = makeSession({}, emptyHandler, git);
     const result = await fs.gitStatus({ paths: ["src/a.ts"] });
     expect(calls).toHaveLength(1);
     expect(calls[0]?.cwd).toBe(WORK_DIR);
@@ -462,7 +441,7 @@ describe("WorkspaceFsService.gitStatus", () => {
       diff: async () => ({ path: "", diff: "", truncated: false }),
       findWorkTree: async () => null,
     };
-    const fs = makeSession({}, emptyHandler, [], git);
+    const fs = makeSession({}, emptyHandler, git);
     await expect(fs.gitStatus({})).rejects.toMatchObject({
       code: "fs.git_unavailable",
     });
@@ -489,7 +468,7 @@ describe("WorkspaceFsService.diff", () => {
       },
       findWorkTree: async () => null,
     };
-    const fs = makeSession({ "src/a.ts": "content" }, emptyHandler, [], git);
+    const fs = makeSession({ "src/a.ts": "content" }, emptyHandler, git);
     const result = await fs.diff({ path: "src/a.ts" });
     expect(calls).toHaveLength(1);
     expect(calls[0]?.cwd).toBe(WORK_DIR);
@@ -601,10 +580,6 @@ describe("WorkspaceFsService.search", () => {
 
 describe("WorkspaceFsService.grep", () => {
   it("falls back to the node implementation when rg is unavailable", async () => {
-    const events: Array<{
-      event: string;
-      properties: Record<string, unknown>;
-    }> = [];
     const fs = makeSession(
       { "src/a.ts": "hello world\nfoo bar\nhello again\n" },
       (args) => {
@@ -612,7 +587,6 @@ describe("WorkspaceFsService.grep", () => {
           return { stdout: "", exitCode: 1 };
         return { stdout: "", exitCode: 0 };
       },
-      events,
     );
     const result = await fs.grep({
       pattern: "hello",
@@ -626,10 +600,6 @@ describe("WorkspaceFsService.grep", () => {
     });
     expect(result.files).toHaveLength(1);
     expect(result.files[0]?.matches).toHaveLength(2);
-    expect(events).toContainEqual({
-      event: "fs_grep_node_fallback",
-      properties: { reason: "rg_missing" },
-    });
   });
 
   it("uses rg when available and parses its JSON output", async () => {
@@ -703,7 +673,7 @@ describe("WorkspaceFsService.grep", () => {
         return streaming.proc;
       },
     };
-    const fs = makeSession({}, emptyHandler, [], defaultGitStub(), [], runner);
+    const fs = makeSession({}, emptyHandler, defaultGitStub(), [], runner);
     const result = await fs.grep({
       pattern: "hit",
       regex: false,

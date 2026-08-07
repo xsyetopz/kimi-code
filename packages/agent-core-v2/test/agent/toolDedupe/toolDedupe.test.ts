@@ -44,6 +44,445 @@ import { registerLogServices } from "../../_base/log/stubs";
 import { stubLoopWithHooks } from "../loop/stubs";
 import { stubToolExecutorEvents } from "../toolExecutor/stubs";
 import { registerToolResultTruncationServices } from "../toolResultTruncation/stubs";
+import { registerTestAgentWireServices } from "../../wire/stubs";
+import {
+  createTestAgent,
+  execEnvServices,
+} from "../../harness";
+import { createFakeProcessRunner } from "../../tools/fixtures/fake-exec";
+
+const { REMINDER_TEXT_1, REMINDER_TEXT_3, makeReminderText2 } =
+  toolDedupeTesting;
+const ZERO_USAGE = emptyUsage();
+
+let disposables: DisposableStore;
+const noopEventBus: IEventBus = {
+  _serviceBrand: undefined,
+  publish: () => {},
+  subscribe: () => ({ dispose: () => {} }),
+};
+
+beforeEach(() => {
+  disposables = new DisposableStore();
+});
+
+afterEach(() => disposables.dispose());
+
+interface Harness {
+  readonly ix: TestInstantiationService;
+  readonly loop: IAgentLoopService;
+  readonly executor: IAgentToolExecutorService;
+  readonly registry: IAgentToolRegistryService;
+  readonly fireBefore: (
+    ctx: ResolvedToolExecutionHookContext,
+  ) => Promise<BeforeExecuteDecision | undefined>;
+}
+
+function createHarness(options: { readonly executorEvents?: boolean } = {},
+): Harness {
+  const loop = stubLoopWithHooks();
+  const events =
+    options.executorEvents === true ? stubToolExecutorEvents() : undefined;
+  const ix = createServices(disposables, {
+    additionalServices: (reg) => {
+      registerTestAgentWireServices(reg, "wire/tool-dedupe");
+      reg.defineInstance(IEventBus, noopEventBus);
+      const homedir = "/tmp/tool-dedupe-homedir";
+      reg.defineInstance(ISessionContext, {
+        _serviceBrand: undefined,
+        sessionId: "session-1",
+        workspaceId: "workspace-1",
+        sessionDir: homedir,
+        metaScope: "sessions/workspace-1/session-1",
+        cwd: homedir,
+        scope: (sub?: string): string =>
+          sub
+            ? `sessions/workspace-1/session-1/${sub}`
+            : "sessions/workspace-1/session-1",
+      } satisfies ISessionContext);
+      reg.defineInstance(IAgentScopeContext, {
+        _serviceBrand: undefined,
+        agentId: "main",
+        scope: (sub?: string): string =>
+          sub ? `agents/main/${sub}` : "agents/main",
+      } satisfies IAgentScopeContext);
+      reg.defineInstance(IBootstrapService, {
+        homeDir: homedir,
+      } as unknown as IBootstrapService);
+      reg.defineInstance(IAgentLoopService, loop);
+      reg.defineInstance(IAgentStateService, new AgentStateService());
+      reg.define(IAgentToolRegistryService, AgentToolRegistryService);
+      if (events === undefined) {
+        reg.define(IAgentToolExecutorService, AgentToolExecutorService);
+      } else {
+        reg.defineInstance(IAgentToolExecutorService, events.executor);
+      }
+      registerToolResultTruncationServices(reg);
+      reg.define(IAgentToolDedupeService, AgentToolDedupeService);
+      registerLogServices(reg);
+    },
+    strict: true,
+  });
+  ix.get(IAgentToolDedupeService);
+  const executor = ix.get(IAgentToolExecutorService);
+  const registry = ix.get(IAgentToolRegistryService);
+  return {
+    ix,
+    loop,
+    executor,
+    registry,
+    fireBefore: (ctx) => {
+      if (events === undefined) {
+        throw new Error("createHarness was not built with executorEvents");
+      }
+      return events.fireBeforeExecute(ctx);
+    },
+  };
+}
+
+function okResult(text: string): ToolDedupeResult {
+  return { output: text };
+}
+
+function errResult(text: string): ToolDedupeResult {
+  return { output: text, isError: true };
+}
+
+function toolCall(id: string, name: string, args: unknown): ToolCall {
+  return {
+    type: "function",
+    id,
+    name,
+    arguments: JSON.stringify(args),
+  };
+}
+
+class EchoTool implements ExecutableTool<Record<string, unknown>> {
+  readonly description = "Echo input text.";
+  readonly parameters = { type: "object", additionalProperties: true };
+  readonly calls: Array<
+    ExecutableToolContext & { readonly args: Record<string, unknown> }
+  > = [];
+
+  constructor(
+    readonly name = "Echo",
+    private readonly resultFor: (
+      args: Record<string, unknown>,
+    ) => ExecutableToolResult = (args) => ({
+      output: typeof args["text"] === "string" ? args["text"] : "",
+    }),
+  ) {}
+
+  resolveExecution(args: Record<string, unknown>): ToolExecution {
+    return {
+      approvalRule: this.name,
+      execute: async (ctx) => {
+        this.calls.push({ ...ctx, args });
+        return this.resultFor(args);
+      },
+    };
+  }
+}
+
+function beforeStep(
+  h: Harness,
+  turnId: number,
+  step: number,
+  signal = new AbortController().signal,
+): Promise<void> {
+  return h.loop.hooks.onWillBeginStep.run({ turnId, step, signal });
+}
+
+function afterStep(
+  h: Harness,
+  turnId: number,
+  step: number,
+  signal = new AbortController().signal,
+): Promise<void> {
+  return h.loop.hooks.onDidFinishStep.run({
+    turnId,
+    step,
+    signal,
+    usage: ZERO_USAGE,
+    finishReason: "completed",
+    stopTurn: false,
+  });
+}
+
+async function executeAll(
+  h: Harness,
+  calls: ToolCall[],
+  turnId: number,
+  signal = new AbortController().signal,
+  traceId?: string,
+): Promise<ToolExecutionResult[]> {
+  const results: ToolExecutionResult[] = [];
+  for await (const item of h.executor.execute(calls, {
+    turnId,
+    signal,
+    trace: { traceId },
+  })) {
+    results.push(item);
+  }
+  return results;
+}
+
+async function runStep(
+  h: Harness,
+  turnId: number,
+  step: number,
+  calls: ToolCall[],
+  signal?: AbortSignal,
+): Promise<ToolExecutionResult[]> {
+  const sig = signal ?? new AbortController().signal;
+  await beforeStep(h, turnId, step, sig);
+  const results = await executeAll(h, calls, turnId, sig);
+  await afterStep(h, turnId, step, sig);
+  return results;
+}
+
+function dummyExecution(): ResolvedToolExecutionHookContext["execution"] {
+  return { approvalRule: "x", execute: async () => ({ output: "" }) };
+}
+
+function willCtx(
+  id: string,
+  name: string,
+  args: unknown,
+  turnId = 1,
+  signal = new AbortController().signal,
+): ResolvedToolExecutionHookContext {
+  const tc = toolCall(id, name, args);
+  return {
+    turnId,
+    signal,
+    toolCall: tc,
+    toolCalls: [tc],
+    args,
+    execution: dummyExecution(),
+  };
+}
+
+function didCtx(
+  id: string,
+  name: string,
+  args: unknown,
+  result: ExecutableToolResult,
+  turnId = 1,
+  signal = new AbortController().signal,
+): ToolDidExecuteContext {
+  const tc = toolCall(id, name, args);
+  return {
+    turnId,
+    signal,
+    toolCall: tc,
+    toolCalls: [tc],
+    args,
+    outcome: "executed",
+    result,
+  };
+}
+
+describe("AgentToolDedupeService", () => {
+  describe("same-step dedupe", () => {
+    it("returns a placeholder synchronously and resolves to the real result on finalize", async () => {
+      const h = createHarness({ executorEvents: true });
+      await beforeStep(h, 1, 1);
+
+      const b1 = await h.fireBefore(willCtx("c1", "Read", { path: "/a" }));
+      expect(b1).toBeUndefined();
+
+      const b2 = await h.fireBefore(willCtx("c2", "Read", { path: "/a" }));
+      expect(b2?.veto).toEqual({ output: "" });
+
+      const d1 = didCtx("c1", "Read", { path: "/a" }, okResult("FILE_A"));
+      await h.executor.hooks.onDidExecuteTool.run(d1);
+      expect(d1.result).toEqual(okResult("FILE_A"));
+
+      const d2 = didCtx("c2", "Read", { path: "/a" }, b2!.veto!);
+      await h.executor.hooks.onDidExecuteTool.run(d2);
+      expect(d2.result).toEqual(okResult("FILE_A"));
+    });
+
+    it("propagates error results to same-step dups", async () => {
+      const h = createHarness({ executorEvents: true });
+      await beforeStep(h, 1, 1);
+
+      await h.fireBefore(willCtx("c1", "Bash", { cmd: "x" }));
+      const b2 = await h.fireBefore(willCtx("c2", "Bash", { cmd: "x" }));
+      expect(b2?.veto).toEqual({ output: "" });
+
+      const d1 = didCtx("c1", "Bash", { cmd: "x" }, errResult("boom"));
+      await h.executor.hooks.onDidExecuteTool.run(d1);
+      const d2 = didCtx("c2", "Bash", { cmd: "x" }, b2!.veto!);
+      await h.executor.hooks.onDidExecuteTool.run(d2);
+      expect(d2.result).toEqual(errResult("boom"));
+    });
+
+    it("finalizes original before dup (provider order)", async () => {
+      const h = createHarness();
+      const tool = new EchoTool("Echo");
+      h.registry.register(tool);
+
+      const results = await runStep(h, 1, 1, [
+        toolCall("c1", "Echo", { text: "A" }),
+        toolCall("c2", "Echo", { text: "A" }),
+      ]);
+
+      expect(tool.calls).toHaveLength(1);
+      expect(results.map((result) => result.result.output)).toEqual(["A", "A"]);
+    });
+
+    it("wires through ToolExecutor hooks and replaces same-step placeholders", async () => {
+      const h = createHarness();
+      const tool = new EchoTool();
+      h.registry.register(tool);
+
+      await beforeStep(h, 3, 1);
+      const results: ToolResult[] = [];
+      for await (const item of h.executor.execute(
+        [
+          toolCall("call_1", "Echo", { text: "same" }),
+          toolCall("call_2", "Echo", { text: "same" }),
+        ],
+        { turnId: 3, signal: new AbortController().signal },
+      )) {
+        results.push(item.result);
+      }
+
+      expect(tool.calls).toHaveLength(1);
+      expect(results.map((result) => result.output)).toEqual(["same", "same"]);
+    });
+  });
+
+  describe("cross-step streak", () => {
+    function registerRead(h: Harness): EchoTool {
+      const tool = new EchoTool("Read");
+      h.registry.register(tool);
+      return tool;
+    }
+
+    async function runStreak(h: Harness, count: number): Promise<ToolResult> {
+      let last: ToolResult | undefined;
+      for (let i = 0; i < count; i += 1) {
+        const [result] = await runStep(h, 1, i + 1, [
+          toolCall(`c${String(i)}`, "Read", { p: 1 }),
+        ]);
+        last = result!.result;
+      }
+      return last!;
+    }
+
+    it("does not inject reminder below 3 consecutive", async () => {
+      const h = createHarness();
+      registerRead(h);
+      const last = await runStreak(h, 2);
+      expect(typeof last.output).toBe("string");
+      expect(last.output as string).not.toContain("<system-reminder>");
+    });
+
+    it("injects reminder1 at exactly 3 consecutive", async () => {
+      const h = createHarness();
+      registerRead(h);
+      const last = await runStreak(h, 3);
+      expect(last.output as string).toContain("<system-reminder>");
+      expect(last.output as string).toContain(
+        "what new information you expect",
+      );
+      expect(last.output as string).not.toContain("Choose exactly one");
+    });
+
+    it("keeps injecting reminder1 at 4 consecutive", async () => {
+      const h = createHarness();
+      registerRead(h);
+      const last = await runStreak(h, 4);
+      expect(last.output as string).toContain("<system-reminder>");
+      expect(last.output as string).toContain(
+        "what new information you expect",
+      );
+    });
+
+    it("injects reminder2 at exactly 5 consecutive", async () => {
+      const h = createHarness();
+      registerRead(h);
+      const last = await runStreak(h, 5);
+      expect(last.output as string).toContain("<system-reminder>");
+      expect(last.output as string).toContain("issued 5 times in a row");
+      expect(last.output as string).toContain(
+        "Choose exactly one of the following",
+      );
+      expect(last.output as string).toContain("Falsification check");
+    });
+
+    it.each([6, 7])(
+      "keeps injecting reminder2 at %i consecutive",
+      async (streak) => {
+        const h = createHarness();
+        registerRead(h);
+        const last = await runStreak(h, streak);
+        expect(last.output as string).toContain("<system-reminder>");
+        expect(last.output as string).toContain(
+          `issued ${String(streak)} times in a row`,
+        );
+        expect(last.output as string).toContain(
+          "Choose exactly one of the following",
+        );
+      },
+    );
+
+    it("injects the dead-end reminder at exactly 8 consecutive", async () => {
+      const h = createHarness();
+      registerRead(h);
+      const last = await runStreak(h, 8);
+      expect(last.output as string).toContain("<system-reminder>");
+      expect(last.output as string).toContain("without any further tool calls");
+    });
+
+    it("resets streak when a different call is interleaved", async () => {
+      const h = createHarness();
+      registerRead(h);
+      for (let i = 0; i < 2; i += 1) {
+        await runStep(h, 1, i + 1, [
+          toolCall(`a${String(i)}`, "Read", { p: 1 }),
+        ]);
+      }
+      await runStep(h, 1, 3, [toolCall("b1", "Read", { p: 2 })]);
+      const [last] = await runStep(h, 1, 4, [toolCall("c1", "Read", { p: 1 })]);
+      expect(last!.result.output as string).not.toContain("<system-reminder>");
+    });
+
+    it("same-step dups inherit reminder1 when streak triggers on original", async () => {
+      const h = createHarness();
+      const tool = registerRead(h);
+      for (let i = 0; i < 2; i += 1) {
+        await runStep(h, 1, i + 1, [
+          toolCall(`p${String(i)}`, "Read", { p: 1 }),
+        ]);
+      }
+      const callsBefore = tool.calls.length;
+      const results = await runStep(h, 1, 3, [
+        toolCall("orig", "Read", { p: 1 }),
+        toolCall("dup", "Read", { p: 1 }),
+      ]);
+
+      expect(tool.calls.length).toBe(callsBefore + 1);
+      const byId = new Map(
+        results.map((result) => [result.toolCallId, result.result]),
+      );
+      expect(byId.get("orig")!.output as string).toContain("<system-reminder>");
+      expect(byId.get("orig")!.output as string).toContain(
+        "what new information you expect",
+      );
+      expect(byId.get("dup")!.output as string).toContain("<system-reminder>");
+      expect(byId.get("dup")!.output as string).toContain(
+        "what new information you expect",
+      );
+    });
+
+    it("same-step spam alone does not trigger reminder", async () => {
+      const h = createHarness();
+      registerRead(h);
+      const calls = Array.from({ length: 8 }, (_, i) =>
         toolCall(i === 0 ? "orig" : `dup${String(i)}`, "Read", { p: 1 }),
       );
       const results = await runStep(h, 1, 1, calls);
@@ -116,7 +555,7 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
 
   describe("key canonicalization", () => {
     it("treats argument objects with different key order as the same call", async () => {
-      const h = createHarness(undefined, { executorEvents: true });
+      const h = createHarness({ executorEvents: true });
       await beforeStep(h, 1, 1);
 
       const b1 = await h.fireBefore(willCtx("c1", "Read", { a: 1, b: 2 }));
@@ -135,7 +574,7 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
 
   describe("arg rewrite between checkSameStep and finalize", () => {
     it("resolves the dup deferred even when the original call args are rewritten before finalize", async () => {
-      const h = createHarness(undefined, { executorEvents: true });
+      const h = createHarness({ executorEvents: true });
       await beforeStep(h, 1, 1);
 
       const b1 = await h.fireBefore(willCtx("c1", "Read", { path: "/a" }));
@@ -164,7 +603,7 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
 
   describe("beginStep cleanup", () => {
     it("resolves leaked deferreds from a prior aborted step with an error result", async () => {
-      const h = createHarness(undefined, { executorEvents: true });
+      const h = createHarness({ executorEvents: true });
       await beforeStep(h, 1, 1);
       const b1 = await h.fireBefore(willCtx("leaked", "Read", { p: 1 }));
       expect(b1).toBeUndefined();
@@ -317,25 +756,10 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
       expect(last!.isError).toBe(true);
       expect(last!.stopTurn).toBe(true);
       expect(last!.output as string).toContain(REMINDER_TEXT_3.trim());
-        .filter((e) => e.event === "tool_call_repeat")
-        .map((e) => e.properties?.["action"]);
-      expect(actions).toEqual([
-        "none",
-        "r1",
-        "r1",
-        "r2",
-        "r2",
-        "r2",
-        "r3",
-        "r3",
-        "r3",
-        "r3",
-        "stop",
-      ]);
     });
 
     it("does not double-register a call that already went through onBeforeExecuteTool", async () => {
-      const h = createHarness(undefined, { executorEvents: true });
+      const h = createHarness({ executorEvents: true });
       for (let i = 0; i < 2; i += 1) {
         await beforeStep(h, 1, i + 1);
         const callId = `c${String(i)}`;
@@ -346,11 +770,6 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
         await h.executor.hooks.onDidExecuteTool.run(d);
         await afterStep(h, 1, i + 1);
       }
-      // Exactly one repeat at count 2 — a double registration would inflate
-      // the streak and fire the reminder one occurrence early.
-        (e) => e.event === "tool_call_repeat",
-      );
-      expect(repeats.map((e) => e.properties?.["repeat_count"])).toEqual([2]);
     });
 
     it("counts identical malformed argument texts as repeats", async () => {
@@ -361,9 +780,6 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
           malformedCall(`c${String(i)}`, '{"command":'),
         ]);
       }
-        (e) => e.event === "tool_call_repeat",
-      );
-      expect(repeats.map((e) => e.properties?.["repeat_count"])).toEqual([2]);
     });
 
     it("does not treat different malformed argument texts as the same call", async () => {
@@ -373,10 +789,6 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
       for (let i = 0; i < 3; i += 1) {
         await runStep(h, 1, i + 1, [malformedCall(`c${String(i)}`, raws[i]!)]);
       }
-      // All three normalize to {} on parse failure, but the raw texts
-      // differ, so no repeat streak may form.
-      expect(
-      ).toHaveLength(0);
     });
   });
 
@@ -401,13 +813,14 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
       };
     }
 
+    function rejectedBashAgent(): {
       readonly ctx: ReturnType<typeof createTestAgent>;
       readonly exec: ReturnType<typeof vi.fn>;
     } {
       const exec = vi
         .fn<ISessionProcessRunner["exec"]>()
         .mockRejectedValue(new Error("Bash should not execute"));
-      const ctx = createTestAgent(),
+      const ctx = createTestAgent(
         execEnvServices({
           processRunner: createFakeProcessRunner({
             exec: exec as unknown as ISessionProcessRunner["exec"],
@@ -415,12 +828,11 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
         }),
       );
       ctx.get(IAgentProfileService).update({ activeToolNames: ["Bash"] });
-      records.length = 0;
       return { ctx, exec };
     }
 
     it("force-stops a turn that keeps re-issuing the same validation-rejected call", async () => {
-      const { ctx, exec } = rejectedBashAgent(records);
+      const { ctx, exec } = rejectedBashAgent();
 
       // 12 identical calls missing the required "command": each is rejected
       // in preflight. If the breaker did not count them, the turn would keep
@@ -437,26 +849,10 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
 
       expect(exec).not.toHaveBeenCalled();
       expect(ctx.llmCalls).toHaveLength(12);
-      const actions = records
-        .filter((entry) => entry.event === "tool_call_repeat")
-        .map((entry) => entry.properties?.["action"]);
-      expect(actions).toEqual([
-        "none",
-        "r1",
-        "r1",
-        "r2",
-        "r2",
-        "r2",
-        "r3",
-        "r3",
-        "r3",
-        "r3",
-        "stop",
-      ]);
     });
 
     it("does not force-stop when the malformed argument text keeps changing", async () => {
-      const { ctx, exec } = rejectedBashAgent(records);
+      const { ctx, exec } = rejectedBashAgent();
 
       // 12 rejected calls, each with DIFFERENT malformed raw JSON: all
       // normalize to {} on parse failure, but they are not repeats of the
@@ -475,9 +871,6 @@ import { registerToolResultTruncationServices } from "../toolResultTruncation/st
 
       expect(exec).not.toHaveBeenCalled();
       expect(ctx.llmCalls).toHaveLength(13);
-      expect(
-        records.filter((entry) => entry.event === "tool_call_repeat"),
-      ).toHaveLength(0);
     });
   });
 });

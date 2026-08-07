@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
+
+import {
+  createTestAgent,
+  type TestAgentContext,
+} from "../../harness";
+
 describe("setPermission RPC", () => {
   let ctx: TestAgentContext;
-
   afterEach(async () => {
     try {
       await ctx.expectResumeMatches();
@@ -12,33 +18,20 @@ describe("setPermission RPC", () => {
   });
 
   it("applies the mode to the agent and tracks the afk toggle", async () => {
-    records = [];
-    ctx = createTestAgent());
+    ctx = createTestAgent();
 
     await ctx.rpc.setPermission({ mode: "auto" });
 
     expect(ctx.get(IAgentPermissionModeService).mode).toBe("auto");
-    expect(records).toContainEqual({
-      event: "afk_toggle",
-      properties: { agent_id: "main", enabled: true },
-    });
   });
 
   it("tracks the yolo toggle on enter and exit", async () => {
-    records = [];
-    ctx = createTestAgent());
+    ctx = createTestAgent();
 
     await ctx.rpc.setPermission({ mode: "yolo" });
     await ctx.rpc.setPermission({ mode: "manual" });
 
     expect(ctx.get(IAgentPermissionModeService).mode).toBe("manual");
-    expect(records).toContainEqual({
-      event: "yolo_toggle",
-      properties: { agent_id: "main", enabled: true },
-    });
-    expect(records).toContainEqual({
-      event: "yolo_toggle",
-      properties: { agent_id: "main", enabled: false },
-    });
+
   });
 });

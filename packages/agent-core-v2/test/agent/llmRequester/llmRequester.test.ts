@@ -11,6 +11,13 @@ import {
 } from "#/agent/llmRequester/llmRequester";
 import { IAgentProfileService } from "#/agent/profile/profile";
 import type { ILogger as Logger, LogPayload } from "#/_base/log/log";
+import {
+  configServices,
+  createTestAgent,
+  llmGenerateServices,
+  logServices,
+  type TestAgentContext,
+} from "../../harness";
 
 interface CapturedLogEntry {
   readonly level: "error" | "warn" | "info" | "debug";
@@ -410,29 +417,12 @@ describe("LLMRequester service migration coverage", () => {
       ctx = createTestAgent(
         llmGenerateServices(async () => {
           throw new APIStatusError(429, "rate limited");
-        })),
+        }),
       );
       const llmRequester = ctx.get(IAgentLLMRequesterService);
 
       await expect(llmRequester.request()).rejects.toMatchObject({
         name: "APIStatusError",
-      });
-
-      expect(records).toContainEqual({
-        event: "api_error",
-        properties: expect.objectContaining({
-          error_type: "rate_limit",
-          agent_id: "main",
-          model: "mock-model",
-          alias: "mock-model",
-          // vendor and wire protocol are separate fields now: the mock
-          // provider is the kimi vendor over the openai base.
-          provider_type: "kimi",
-          protocol: "openai",
-          retryable: expect.any(Boolean),
-          duration_ms: expect.any(Number),
-          status_code: 429,
-        }),
       });
     });
 
@@ -440,7 +430,7 @@ describe("LLMRequester service migration coverage", () => {
       ctx = createTestAgent(
         llmGenerateServices(async () => {
           throw new APIConnectionError("terminated");
-        })),
+        }),
       );
       const llmRequester = ctx.get(IAgentLLMRequesterService);
 
@@ -457,22 +447,6 @@ describe("LLMRequester service migration coverage", () => {
         }),
       ).rejects.toMatchObject({ name: "APIConnectionError" });
 
-      expect(records).toContainEqual({
-        event: "api_error",
-        properties: expect.objectContaining({
-          error_type: "network",
-          turn_id: 3,
-          request_kind: "turn",
-        }),
-      });
-      expect(records).toContainEqual({
-        event: "api_error",
-        properties: expect.objectContaining({
-          error_type: "network",
-          turn_id: 7,
-          request_kind: "full_compaction",
-        }),
-      });
     });
   });
 

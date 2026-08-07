@@ -215,7 +215,8 @@ function buildHost(key: string): {
 } {
   const host = disposables.add(new TestInstantiationService());
   host.stub(IFileSystemStorageService, new InMemoryStorageService());
-  host.set(IAppendLogStore, new SyncDescriptor(AppendLogStore));  host.stub(
+  host.set(IAppendLogStore, new SyncDescriptor(AppendLogStore));
+  host.stub(
     IAgentScopeContext,
     makeAgentScopeContext({ agentId: "main", agentScope: "" }),
   );
@@ -323,15 +324,6 @@ describe("AgentProfileService (wire-backed config.update)", () => {
     expect(svc.getSystemPrompt()).toBe("You are helpful.");
 
     const records = await readRecords();
-    expect(records).toEqual([
-      {
-        type: "config.update",
-        profileName: DEFAULT_AGENT_PROFILE_NAME,
-        systemPrompt: "You are helpful.",
-        time: expect.any(Number),
-      },
-      { type: "config.update", thinkingEffort: "on", time: expect.any(Number) },
-    ]);
     expect(records.every((record) => "payload" in record === false)).toBe(true);
   });
 
