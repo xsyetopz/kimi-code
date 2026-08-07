@@ -26,6 +26,7 @@ import {
 } from "../components/dialogs/feedback-input-dialog";
 import { ModelSelectorComponent } from "../components/dialogs/model-selector";
 import { PlatformSelectorComponent } from "../components/dialogs/platform-selector";
+import { isExperimentalFlagEnabled } from "./experimental-flags";
 import type { SlashCommandHost } from "./dispatch";
 
 export function promptPlatformSelection(
@@ -33,6 +34,7 @@ export function promptPlatformSelection(
 ): Promise<string | undefined> {
   return new Promise((resolve) => {
     const selector = new PlatformSelectorComponent({
+      showCopilotOAuth: isExperimentalFlagEnabled("copilot-oauth"),
       onSelect: (platformId) => {
         host.restoreEditor();
         resolve(platformId);

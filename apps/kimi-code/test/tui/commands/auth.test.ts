@@ -4,6 +4,7 @@ import {
   handleLoginCommand,
   handleLogoutCommand,
 } from "#/tui/commands/auth";
+import { setExperimentalFeatures } from "#/tui/commands/experimental-flags";
 import {
   promptLogoutProviderSelection,
   promptPlatformSelection,
@@ -163,6 +164,43 @@ describe("handleLoginCommand external oauth", () => {
     );
     expect(flow).toHaveBeenCalledWith("opencode-go");
   });
+
+  it("routes GitHub Copilot through engine auth", async () => {
+    setExperimentalFeatures([{ id: "copilot-oauth", enabled: true }]);
+    const host = makeHost({
+      harness: {
+        engineAuth: {
+          status: vi.fn(async () => ({ loggedIn: false })),
+          summarize: vi.fn(async () => []),
+          startLogin: vi.fn(async () => ({
+            flow_id: "flow-copilot",
+            provider: "github-copilot",
+            status: "authenticated" as const,
+          })),
+          flow: vi.fn(async () => undefined),
+          cancelLogin: vi.fn(),
+          logout: vi.fn(async () => ({
+            logged_out: true as const,
+            provider: "github-copilot",
+          })),
+        },
+      },
+    });
+    vi.mocked(promptPlatformSelection).mockResolvedValue("github-copilot");
+
+    await handleLoginCommand(host);
+
+    expect(host.harness.engineAuth.startLogin).toHaveBeenCalledWith(
+      "github-copilot",
+    );
+    expect(host.harness.auth.login).not.toHaveBeenCalled();
+    expect(host.authFlow.refreshConfigAfterLogin).toHaveBeenCalled();
+    expect(host.track).toHaveBeenCalledWith("login", {
+      provider: "github-copilot",
+      method: "oauth",
+      already_logged_in: false,
+    });
+  });
 });
 
 describe("handleLogoutCommand external oauth", () => {
@@ -193,5 +231,38 @@ describe("handleLogoutCommand external oauth", () => {
     expect(host.harness.engineAuth.logout).toHaveBeenCalledWith("opencode");
     expect(host.harness.auth.logout).not.toHaveBeenCalled();
     expect(host.track).toHaveBeenCalledWith("logout", { provider: "opencode" });
+  });
+
+  it("logs out GitHub Copilot through engine auth", async () => {
+    const host = makeHost({
+      harness: {
+        engineAuth: {
+          status: vi.fn(async (provider?: string) =>
+            provider === "github-copilot"
+              ? { loggedIn: true, provider: "github-copilot" }
+              : { loggedIn: false },
+          ),
+          summarize: vi.fn(async () => []),
+          startLogin: vi.fn(),
+          flow: vi.fn(),
+          cancelLogin: vi.fn(),
+          logout: vi.fn(async () => ({
+            logged_out: true as const,
+            provider: "github-copilot",
+          })),
+        },
+      },
+    });
+    vi.mocked(promptLogoutProviderSelection).mockResolvedValue("github-copilot");
+
+    await handleLogoutCommand(host);
+
+    expect(host.harness.engineAuth.logout).toHaveBeenCalledWith(
+      "github-copilot",
+    );
+    expect(host.harness.auth.logout).not.toHaveBeenCalled();
+    expect(host.track).toHaveBeenCalledWith("logout", {
+      provider: "github-copilot",
+    });
   });
 });
