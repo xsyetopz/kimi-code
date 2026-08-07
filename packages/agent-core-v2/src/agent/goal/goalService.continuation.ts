@@ -85,8 +85,6 @@ import {
   IAgentUsageService,
   type UsageRecordedContext,
 } from "#/agent/usage/usage";
-import type { GoalBudgetProperties } from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IConfigService } from "#/app/config/config";
 import {
   ErrorCodes,
@@ -546,7 +544,6 @@ export class AgentGoalServiceContinuation extends AgentGoalServiceHooks {
     this.liveWallClockStartedAt = undefined;
     this.wire.dispatch(clearGoal({}));
     if (opts.emit !== false) this.emitGoalUpdated(null);
-    if (opts.track !== false) this.telemetry.track2("goal_cleared", { actor });
   }
 
   private applyLifecycle(
@@ -589,14 +586,6 @@ export class AgentGoalServiceContinuation extends AgentGoalServiceHooks {
   }
 
   private trackStatusChanged(state: GoalState, actor: GoalActor): void {
-    this.telemetry.track2("goal_status_changed", {
-      actor,
-      status: state.status,
-      turns_used: state.turnsUsed,
-      tokens_used: state.tokensUsed,
-      wall_clock_ms: this.liveWallClockMs(state),
-      ...budgetTelemetryProperties(state.budgetLimits),
-    });
   }
 
   private requireState(): GoalState {

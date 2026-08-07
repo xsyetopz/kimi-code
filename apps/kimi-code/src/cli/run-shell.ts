@@ -41,12 +41,6 @@ export async function runShell(
     homeDir: resolveKimiHome(),
     identity: createKimiCodeHostIdentity(version),
     skillDirs: opts.skillsDirs,
-    sessionStartedProperties: {
-      yolo: opts.yolo,
-      auto: opts.auto,
-      plan: opts.plan,
-      afk: false,
-    },
   };
   const harness = createKimiHarnessV2(harnessOptions);
   startupTrace("harness:created");

@@ -18,7 +18,6 @@ import { SDKRpcClientBase } from "#/rpc";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { waitForAgentWireEvent } from "./session-runtime-helpers";
-import { recordingTelemetry, type TelemetryRecord } from "./telemetry";
 import { TEST_IDENTITY } from "./test-identity";
 
 // node-sdk/agent-core normalize paths to forward slashes (pathe). Mirror that
@@ -125,7 +124,6 @@ describe("KimiHarness.createSession transport link", () => {
     const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
-      telemetry: recordingTelemetry(records),
     });
 
     try {
@@ -189,7 +187,6 @@ describe("KimiHarness.createSession transport link", () => {
     const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
-      telemetry: recordingTelemetry(records),
       uiMode: "print",
     });
 
@@ -222,7 +219,6 @@ describe("KimiHarness.createSession transport link", () => {
     const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
-      telemetry: recordingTelemetry(records),
       sessionStartedProperties: { yolo: true, plan: false },
     });
 
@@ -257,7 +253,6 @@ describe("KimiHarness.createSession transport link", () => {
     const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
-      telemetry: recordingTelemetry(records),
       sessionStartedProperties: { mode: "process", source: "process" },
     });
 
@@ -313,7 +308,6 @@ describe("KimiHarness.createSession transport link", () => {
     const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
-      telemetry: recordingTelemetry(records),
     });
 
     try {
@@ -353,7 +347,6 @@ describe("KimiHarness.createSession transport link", () => {
     const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
-      telemetry: recordingTelemetry(records),
     });
 
     try {
@@ -395,7 +388,6 @@ describe("KimiHarness.createSession transport link", () => {
     const records: TelemetryRecord[] = [];
     const harness = createKimiHarnessV2({
       homeDir,
-      telemetry: recordingTelemetry(records),
     });
 
     try {
@@ -917,7 +909,6 @@ effort = "medium"
           provider: "opencode",
         }),
       },
-      telemetry: recordingTelemetry(records),
       ensureConfigFile: async () => undefined,
       onClose: () => undefined,
     });

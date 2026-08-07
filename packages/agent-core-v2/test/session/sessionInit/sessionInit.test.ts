@@ -6,7 +6,6 @@ import { TestInstantiationService } from "#/_base/di/test";
 import { UserCancellationError } from "#/_base/utils/abort";
 import { IBootstrapService } from "#/app/bootstrap/bootstrap";
 import { IEventBus } from "#/app/event/eventBus";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IHostEnvironment } from "#/os/interface/hostEnvironment";
 import {
   IHostFileSystem,
@@ -96,9 +95,7 @@ describe("SessionInitService", () => {
             return { appendSystemReminder };
           if (id === IAgentAgentsMdReminderService) return { seedInjected };
           if (id === IWireService) return { flush };
-          if (id === IEventBus) return eventBus;
-          if (id === ITelemetryService) return telemetry;
-          return undefined;
+          if (id === IEventBus) return eventBus;          return undefined;
         },
       },
     };

@@ -81,7 +81,6 @@ import { IConfigService } from "#/app/config/config";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
 import { IFileSystemStorageService } from "#/persistence/interface/storage";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IWireService } from "#/wire/wire";
 import {
   IAgentTaskService,
@@ -269,9 +268,7 @@ export class AgentTaskServiceCore
   private readonly persistence: AgentTaskPersistence;
   private notificationRestoreQueue: Promise<void> = Promise.resolve();
 
-  constructor(
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentContextMemoryService
+  constructor(    @IAgentContextMemoryService
     private readonly context: IAgentContextMemoryService,
     @IConfigService private readonly config: IConfigService,
     @IAtomicDocumentStore atomicDocs: IAtomicDocumentStore,

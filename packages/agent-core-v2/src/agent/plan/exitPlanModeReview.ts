@@ -2,13 +2,11 @@
  * `plan` domain — ExitPlanMode plan review.
  *
  * Owns the user-facing review that intercepts an `ExitPlanMode` call carrying
- * a non-empty `plan_review` display: emits `plan_submitted` / `plan_resolved`
- * through `telemetry`, drives the approval round-trip through `toolApproval`
- * (origin `exit-plan-mode-review-ask`, matching the legacy permission
- * policy's telemetry), and folds every approval outcome (approve with or
- * without a selected option, Revise with feedback, Reject and Exit, dismiss)
- * into a synthetic tool result, exiting plan mode through `plan` when the
- * outcome deactivates it.
+ * a non-empty `plan_review` display: drives the approval round-trip through
+ * `toolApproval` (origin `exit-plan-mode-review-ask`), and folds every
+ * approval outcome (approve with or without a selected option, Revise with
+ * feedback, Reject and Exit, dismiss) into a synthetic tool result, exiting
+ * plan mode through `plan` when the outcome deactivates it.
  */
 
 import type {
@@ -20,11 +18,6 @@ import type {
   BeforeExecuteDecision,
   ResolvedToolExecutionHookContext,
 } from "#/agent/toolExecutor/toolHooks";
-import type {
-  PlanResolvedEvent,
-  PlanSubmittedEvent,
-} from "#/app/telemetry/events";
-import type { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
 
 import type { IAgentPlanService } from "./plan";
@@ -36,7 +29,6 @@ export class ExitPlanModeReview {
   constructor(
     private readonly plan: IAgentPlanService,
     private readonly toolApproval: IAgentToolApprovalService,
-    private readonly telemetry: ITelemetryService,
   ) {}
 
   async requestApproval(
@@ -45,9 +37,6 @@ export class ExitPlanModeReview {
     const display = context.execution.display;
     if (display?.kind !== "plan_review") return undefined;
     if (display.plan.trim().length === 0) return undefined;
-    this.trackPlanTelemetry("plan_submitted", {
-      has_options: display.options !== undefined && display.options.length >= 2,
-    });
     return this.toolApproval.requestToolApproval(
       context,
       {
@@ -75,15 +64,6 @@ export class ExitPlanModeReview {
     );
     this.plan.exit();
 
-    if (result.selectedLabel !== undefined && result.selectedLabel.length > 0) {
-      this.trackPlanTelemetry("plan_resolved", {
-        outcome: "approved",
-        chosen_option: result.selectedLabel,
-      });
-    } else {
-      this.trackPlanTelemetry("plan_resolved", { outcome: "approved" });
-    }
-
     const optionPrefix =
       selected === undefined
         ? ""
@@ -103,8 +83,6 @@ export class ExitPlanModeReview {
   private rejectedApprovalResult(
     result: ApprovalResponse,
   ): PermissionPolicyResolution {
-    this.trackRejectedPlanResolution(result);
-
     if (result.decision === "cancelled") {
       return {
         kind: "result",
@@ -149,50 +127,6 @@ export class ExitPlanModeReview {
         output: "Plan rejected by user. Plan mode remains active.",
       },
     };
-  }
-
-  private trackRejectedPlanResolution(result: ApprovalResponse): void {
-    if (result.decision === "cancelled") {
-      this.trackPlanTelemetry("plan_resolved", { outcome: "dismissed" });
-      return;
-    }
-
-    if (result.selectedLabel === "Reject and Exit") {
-      this.trackPlanTelemetry("plan_resolved", {
-        outcome: "rejected_and_exited",
-      });
-      return;
-    }
-
-    const feedback = result.feedback ?? "";
-    if (result.selectedLabel === "Revise" || feedback.length > 0) {
-      this.trackPlanTelemetry("plan_resolved", {
-        outcome: "revise",
-        has_feedback: feedback.length > 0,
-      });
-      return;
-    }
-
-    this.trackPlanTelemetry("plan_resolved", { outcome: "rejected" });
-  }
-
-  private trackPlanTelemetry(
-    event: "plan_submitted",
-    properties: PlanSubmittedEvent,
-  ): void;
-  private trackPlanTelemetry(
-    event: "plan_resolved",
-    properties: PlanResolvedEvent,
-  ): void;
-  private trackPlanTelemetry(
-    event: "plan_submitted" | "plan_resolved",
-    properties: PlanSubmittedEvent | PlanResolvedEvent,
-  ): void {
-    if (event === "plan_submitted") {
-      this.telemetry.track2("plan_submitted", properties as PlanSubmittedEvent);
-    } else {
-      this.telemetry.track2("plan_resolved", properties as PlanResolvedEvent);
-    }
   }
 }
 

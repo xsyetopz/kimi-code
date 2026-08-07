@@ -110,10 +110,8 @@ interface TelemetryRecord {
   readonly properties: Readonly<Record<string, unknown>> | undefined;
 }
 
-function recordingTelemetry(records: TelemetryRecord[]): ITelemetryService {
-  const telemetry: ITelemetryService = {
-    _serviceBrand: undefined,
-    track(event, properties) {
+function : ITelemetryService {
+  const     track(event, properties) {
       records.push({ event, properties });
     },
     track2: (event, properties) =>
@@ -742,7 +740,6 @@ describe("ReadMediaFileTool", () => {
       { "/workspace/big.png": { data: big } },
       capabilities(),
       undefined,
-      recordingTelemetry(records),
     );
 
     await execute(tool, { path: "/workspace/big.png" });
@@ -1025,7 +1022,6 @@ describe("AgentMediaToolsRegistrar", () => {
       createTestFs({}),
       createTestEnv(),
       workspaceCtx,
-      recordingTelemetry([]),
       new AgentStateService(),
     );
     const bindModel = (alias: string, caps: ModelCapability): void => {
@@ -1135,8 +1131,7 @@ describe("createVideoUploader", () => {
     const uploader = createVideoUploader(
       modelWith(vi.fn().mockResolvedValue(uploadResult)),
       {
-        client: recordingTelemetry(records),
-        props: { model: "example-model", protocol: "kimi" },
+        client:         props: { model: "example-model", protocol: "kimi" },
       },
     );
     await expect(uploader!(input)).resolves.toEqual(uploadResult);
@@ -1158,8 +1153,7 @@ describe("createVideoUploader", () => {
     const uploader = createVideoUploader(
       modelWith(vi.fn().mockRejectedValue(failure)),
       {
-        client: recordingTelemetry(records),
-      },
+        client:       },
     );
     await expect(uploader!(input)).rejects.toBe(failure);
     expect(records).toHaveLength(1);
@@ -1174,8 +1168,7 @@ describe("createVideoUploader", () => {
 
   it("never lets a throwing telemetry client break the upload", async () => {
     const throwing = {
-      ...recordingTelemetry([]),
-      track2: () => {
+      ...      track2: () => {
         throw new Error("sink down");
       },
     } as ITelemetryService;

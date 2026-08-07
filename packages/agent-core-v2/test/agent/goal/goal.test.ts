@@ -338,8 +338,7 @@ describe("AgentGoalService", () => {
     telemetry = [];
     events = [];
     ctx = createTestAgent(
-      wireRecordPersistenceServices(persistence),
-      telemetryServices(recordingTelemetry(telemetry)),
+      wireRecordPersistenceServices(persistence)),
     );
     context = ctx.get(IAgentContextMemoryService);
     goals = ctx.get(IAgentGoalService) as GoalServiceTestManager;
@@ -2559,8 +2558,7 @@ describe("AgentGoalService mid-turn budget stop", () => {
 
   it("runs the prompt as a normal turn when the goal's turn budget was reached at launch", async () => {
     const telemetry: TelemetryRecord[] = [];
-    const ctx = createTestAgent(
-      telemetryServices(recordingTelemetry(telemetry)),
+    const ctx = createTestAgent(),
     );
     try {
       ctx.configure();

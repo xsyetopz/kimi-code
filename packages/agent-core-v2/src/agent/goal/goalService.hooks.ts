@@ -85,8 +85,6 @@ import {
   IAgentUsageService,
   type UsageRecordedContext,
 } from "#/agent/usage/usage";
-import type { GoalBudgetProperties } from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IConfigService } from "#/app/config/config";
 import {
   ErrorCodes,

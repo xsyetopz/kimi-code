@@ -11,7 +11,6 @@ import {
   SDKRpcClientBase,
 } from "#/index";
 
-import { recordingTelemetry } from "./telemetry";
 import { TEST_IDENTITY } from "./test-identity";
 
 const tempDirs: string[] = [];
@@ -97,7 +96,6 @@ read_byte_budget = 65536
           provider: "opencode",
         }),
       },
-      telemetry: recordingTelemetry([]),
       ensureConfigFile: async () => undefined,
       onClose: () => undefined,
       imageLimits: limits,

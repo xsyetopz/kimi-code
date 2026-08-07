@@ -135,8 +135,6 @@ import type {
 import { IAgentStateService } from "#/agent/state/agentState";
 import { IAgentAgentsMdReminderService } from "#/agent/agentsMdReminder/agentsMdReminder";
 
-import { ITelemetryService } from "#/app/telemetry/telemetry";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
 import { IWireService } from "#/wire/wire";
 import type { PayloadOf } from "#/wire/types";
 import { IEventBus } from "#/app/event/eventBus";
@@ -371,10 +369,6 @@ export class AgentProfileService extends AgentProfileServiceCore {
   ): void {
     if (changed.modelAlias !== undefined) {
       const model = this.tryResolveRawModel();
-      this.telemetryContext.set({
-        provider_type: model?.providerType ?? model?.protocol,
-        protocol: model?.protocol,
-      });
     }
     if (
       changed.modelAlias !== undefined ||

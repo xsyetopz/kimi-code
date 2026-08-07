@@ -14,7 +14,6 @@ import {
   type AskUserQuestionInput,
 } from "#/agent/tools/ask-user-question/ask-user-question";
 import { AskUserQuestionTool } from "#/agent/tools/ask-user-question/askUserQuestionTool";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IAgentTaskService } from "#/agent/task/task";
 import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
 import type {

@@ -32,7 +32,6 @@ import type {
   ResolvedToolExecutionHookContext,
 } from "#/agent/toolExecutor/toolHooks";
 import { IEventBus } from "#/app/event/eventBus";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { ISessionApprovalService } from "#/session/approval/approval";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
@@ -76,9 +75,7 @@ export class AgentToolApprovalService
     private readonly rulesService: IAgentPermissionRulesService,
     @ISessionContext private readonly session: ISessionContext,
     @IInstantiationService
-    private readonly instantiation: IInstantiationService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IEventBus private readonly eventBus: IEventBus,
+    private readonly instantiation: IInstantiationService,    @IEventBus private readonly eventBus: IEventBus,
   ) {
     super();
   }
@@ -155,19 +152,6 @@ export class AgentToolApprovalService
         context.signal.throwIfAborted();
       } catch (error) {
         if (isUserCancellation(error)) throw error;
-        this.telemetry.track2("permission_approval_result", {
-          turn_id: context.turnId,
-          tool_call_id: context.toolCall.id,
-          policy_name: origin,
-          tool_name: name,
-          permission_mode: this.modeService.mode,
-          result: "error",
-          approval_surface: display.kind,
-          duration_ms: Date.now() - startedAt,
-          session_cache_written: false,
-          has_feedback: false,
-          trace_id: context.trace?.traceId,
-        });
         this.eventBus.publish({
           type: "permission.approval.resolved",
           ...approvalContext,
@@ -200,23 +184,6 @@ export class AgentToolApprovalService
       action,
       sessionApprovalRule,
       result: response,
-    });
-    this.telemetry.track2("permission_approval_result", {
-      turn_id: context.turnId,
-      tool_call_id: context.toolCall.id,
-      policy_name: origin,
-      tool_name: name,
-      permission_mode: this.modeService.mode,
-      result:
-        response.decision === "approved" && response.scope === "session"
-          ? "approved_for_session"
-          : response.decision,
-      approval_surface: display.kind,
-      duration_ms: Date.now() - startedAt,
-      session_cache_written: sessionApprovalRule !== undefined,
-      has_feedback:
-        response.feedback !== undefined && response.feedback.length > 0,
-      trace_id: context.trace?.traceId,
     });
 
     const resolved = result.resolveApproval?.(response);

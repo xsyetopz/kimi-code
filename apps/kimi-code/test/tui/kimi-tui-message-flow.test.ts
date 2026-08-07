@@ -273,8 +273,7 @@ function makeHarness(
     })),
     close: vi.fn(async () => {}),
     track: vi.fn(),
-    setTelemetryContext: vi.fn(),
-    get interactiveAgentId() {
+        get interactiveAgentId() {
       return interactiveAgentScope.getStore() ?? "main";
     },
     withInteractiveAgent: vi.fn((agentId: string, fn: () => unknown) => {

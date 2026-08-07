@@ -39,7 +39,6 @@ import {
 import { defineState } from "#/_base/state/stateRegistry";
 import { IAgentStateService } from "#/agent/state/agentState";
 import { IEventBus } from "#/app/event/eventBus";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IModelCatalog, type Model } from "#/kosong/model/catalog";
 import { type ModelRequester } from "#/kosong/model/modelRequester";
 import { IHostEnvironment } from "#/os/interface/hostEnvironment";
@@ -75,9 +74,7 @@ export class AgentMediaToolsRegistrar
     @IHostFileSystem private readonly fs: IHostFileSystem,
     @IHostEnvironment private readonly env: IHostEnvironment,
     @ISessionWorkspaceContext
-    private readonly workspaceCtx: ISessionWorkspaceContext,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentStateService private readonly states: IAgentStateService,
+    private readonly workspaceCtx: ISessionWorkspaceContext,    @IAgentStateService private readonly states: IAgentStateService,
     @ISessionSkillCatalog private readonly skillCatalog?: ISessionSkillCatalog,
   ) {
     super();
@@ -136,17 +133,9 @@ export class AgentMediaToolsRegistrar
         },
       },
       capabilities,
-      videoUploader: createVideoUploader(requester, {
-        client: this.telemetry,
-        props: {
-          model: modelAlias,
-          provider_type: model?.providerType ?? model?.protocol,
-          protocol: model?.protocol,
-        },
-      }),
+      videoUploader: createVideoUploader(requester),
       inlineVideoSupported:
         model?.protocol !== "openai" && model?.protocol !== "openai_responses",
-      telemetry: this.telemetry,
     });
   }
 }

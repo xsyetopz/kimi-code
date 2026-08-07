@@ -72,7 +72,6 @@ import {
   guessMime,
 } from "#/_base/utils/fileMeta";
 import { ErrorCodes, Error2, isError2, unwrapErrorCause } from "#/errors";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   IHostFileSystem,
   type HostDirEntry,
@@ -140,7 +139,6 @@ export class WorkspaceFsService extends WorkspaceFsServiceCore {
           resolution.path,
         );
       }
-      this.telemetry.track2("fs_grep_node_fallback", { reason: "rg_missing" });
       return await this.grepWithNode(req, controller.signal, startedAt);
     } finally {
       clearTimeout(timer);

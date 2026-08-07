@@ -33,7 +33,6 @@ import {
 import { defineState } from "#/_base/state/stateRegistry";
 import { IAgentStateService } from "#/agent/state/agentState";
 import { IFileService } from "#/app/file/fileService";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { ContentPart, Message } from "#/kosong/contract/message";
 import type { ModelRequester } from "#/kosong/model/modelRequester";
 import { IBlobStore } from "#/persistence/interface/blobStore";
@@ -71,9 +70,7 @@ export class AgentVideoResolverService implements IAgentVideoResolverService {
 
   constructor(
     @IFileService private readonly files: IFileService,
-    @IBlobStore private readonly blobs: IBlobStore,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentStateService private readonly states: IAgentStateService,
+    @IBlobStore private readonly blobs: IBlobStore,    @IAgentStateService private readonly states: IAgentStateService,
   ) {
     this.states.register(mediaResolvedKey);
   }
@@ -175,14 +172,7 @@ export class AgentVideoResolverService implements IAgentVideoResolverService {
     if (!model.capabilities.video_in) return { part: tag(ref), memoize: true };
     const inlineSupported = inlineVideoSupportedForProtocol(model.protocol);
 
-    const uploader = createVideoUploader(requester, {
-      client: this.telemetry,
-      props: {
-        model: model.name,
-        provider_type: model.providerType ?? model.protocol,
-        protocol: model.protocol,
-      },
-    });
+    const uploader = createVideoUploader(requester);
     if (uploader === undefined) {
       return {
         part: inlineSupported ? inlineVideoPart(bytes, mimeType) : tag(ref),

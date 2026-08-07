@@ -24,7 +24,6 @@ import { PlanModel } from "#/agent/plan/planOps";
 import { IAgentPromptService } from "#/agent/prompt/prompt";
 import { IAgentConversationUndoService } from "#/agent/undo/undo";
 import { IEventBus } from "#/app/event/eventBus";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
 import { ErrorCodes } from "#/errors";
 import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 import { TodoModel, todoSet } from "#/session/todo/todoOps";
@@ -55,7 +54,7 @@ describe("AgentConversationUndoService", () => {
 
   function setup() {
     records = [];
-    ctx = createTestAgent(telemetryServices(recordingTelemetry(records)));
+    ctx = createTestAgent());
     ctx.get(IAgentContextMemoryService);
     return ctx;
   }

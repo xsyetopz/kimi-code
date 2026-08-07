@@ -64,11 +64,6 @@ import { createUserMessage, type Message } from "#/kosong/contract/message";
 import type { Tool } from "#/kosong/contract/tool";
 import { inputTotal, type TokenUsage } from "#/kosong/contract/usage";
 import { IEventBus } from "#/app/event/eventBus";
-import type {
-  CompactionFailedEvent,
-  CompactionFinishedEvent,
-} from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   ErrorCodes,
   Error2,
@@ -159,9 +154,7 @@ export class AgentFullCompactionService
     private readonly toolSelect: IAgentToolSelectService,
     @IInstantiationService
     private readonly instantiation: IInstantiationService,
-    @ISessionTodoService private readonly todo: ISessionTodoService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IWireService private readonly wire: IWireService,
+    @ISessionTodoService private readonly todo: ISessionTodoService,    @IWireService private readonly wire: IWireService,
     @IEventBus private readonly eventBus: IEventBus,
     @ILogService private readonly log: ILogService,
     @IAgentLoopService private readonly loopService: IAgentLoopService,
@@ -793,36 +786,9 @@ export class AgentFullCompactionService
         droppedCount: droppedCount === 0 ? undefined : droppedCount,
       });
 
-      const properties: CompactionFinishedEvent = {
-        turn_id: active.originTurnId,
-        source: data.source,
-        tokens_before: result.tokensBefore,
-        tokens_after: result.tokensAfter,
-        duration_ms: Date.now() - startedAt,
-        compacted_count: result.compactedCount,
-        dropped_count: result.droppedCount,
-        retry_count: retryCount,
-        round: 1,
-        thinking_effort: thinkingEffort,
-        trace_id: attempt.traceId,
-        ...usageTelemetry(attempt.usage),
-      };
-      this.telemetry.track2("compaction_finished", properties);
       return result;
     } catch (error) {
       if (isAbortError(error)) throw error;
-      const properties: CompactionFailedEvent = {
-        turn_id: active.originTurnId,
-        source: data.source,
-        tokens_before: tokensBefore,
-        duration_ms: Date.now() - startedAt,
-        round: 1,
-        retry_count: retryCount,
-        thinking_effort: thinkingEffort,
-        error_type: error instanceof Error ? error.name : "Unknown",
-        trace_id: findAPIStatusError(error)?.traceId ?? active.traceId,
-      };
-      this.telemetry.track2("compaction_failed", properties);
       if (
         isError2(error) &&
         (error.code === ErrorCodes.AUTH_LOGIN_REQUIRED ||

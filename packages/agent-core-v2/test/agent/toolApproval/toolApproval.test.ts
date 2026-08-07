@@ -22,7 +22,6 @@ import { IAgentToolApprovalService } from "#/agent/toolApproval/toolApproval";
 import { AgentToolApprovalService } from "#/agent/toolApproval/toolApprovalService";
 import { IEventBus } from "#/app/event/eventBus";
 import { EventBusService } from "#/app/event/eventBusService";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { ToolCall } from "#/kosong/contract/message";
 import {
   ISessionApprovalService,
@@ -130,7 +129,7 @@ describe("AgentToolApprovalService", () => {
             cwd: "/tmp/test-session",
           }),
         );
-        reg.defineInstance(ITelemetryService, recordingTelemetry(records));
+        reg.defineInstance(ITelemetryService);
         reg.defineInstance(IEventBus, eventBus);
         reg.define(IAgentToolApprovalService, AgentToolApprovalService);
       },

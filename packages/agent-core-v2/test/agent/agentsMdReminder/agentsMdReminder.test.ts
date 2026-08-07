@@ -15,7 +15,6 @@ import { DisposableStore } from "#/_base/di/lifecycle";
 import { createServices, type TestInstantiationService } from "#/_base/di/test";
 import { IBashParserService } from "#/app/bashParser/bashParser";
 import { BashParserService } from "#/app/bashParser/bashParserService";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { ToolCall } from "#/kosong/contract/message";
 import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
 import { IHostEnvironment } from "#/os/interface/hostEnvironment";
@@ -97,9 +96,7 @@ interface Harness {
 function createHarness(
   options: {
     readonly withDedupe?: boolean;
-    readonly withRealExecutor?: boolean;
-    readonly telemetry?: ITelemetryService;
-    readonly cwd?: string;
+    readonly withRealExecutor?: boolean;    readonly cwd?: string;
     readonly hostFs?: IHostFileSystem;
     readonly pathClass?: "posix" | "win32";
     readonly restoredProfile?: {
@@ -179,8 +176,7 @@ function createHarness(
       reg.defineInstance(IBashParserService, new BashParserService());
       reg.defineInstance(
         ITelemetryService,
-        options.telemetry ?? recordingTelemetry(telemetryEvents),
-      );
+        options.telemetry ??       );
       if (options.withDedupe === true) {
         reg.defineInstance(IAgentLoopService, stubLoopWithHooks());
         reg.define(IAgentToolDedupeService, AgentToolDedupeService);
@@ -931,8 +927,7 @@ describe("agentsMdReminder round-2 hardening", () => {
   it("releases the claim when attaching the reminder fails, so the next touch retries", async () => {
     let shouldThrow = true;
     const telemetry = {
-      ...recordingTelemetry([]),
-      track2: (event: string, properties?: unknown) => {
+      ...      track2: (event: string, properties?: unknown) => {
         if (shouldThrow) throw new Error("telemetry boom");
       },
     } satisfies ITelemetryService;

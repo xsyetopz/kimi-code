@@ -14,7 +14,6 @@ import { TestInstantiationService } from "#/_base/di/test";
 import { Event } from "#/_base/event";
 import { abortError } from "#/_base/utils/abort";
 import { type DomainEvent, IEventBus } from "#/app/event/eventBus";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type {
   McpConnectionManager,
   McpServerEntry,
@@ -232,7 +231,7 @@ describe("AgentMcpService", () => {
       },
       subscribe: () => toDisposable(() => {}),
     });
-    ix.stub(ITelemetryService, recordingTelemetry(telemetryEvents));
+    ix.stub(ITelemetryService);
     ix.set(
       IAgentToolRegistryService,
       new SyncDescriptor(AgentToolRegistryService),

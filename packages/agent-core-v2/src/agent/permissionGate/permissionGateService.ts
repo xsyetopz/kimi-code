@@ -28,7 +28,6 @@ import type {
   BeforeToolExecuteEvent,
   ResolvedToolExecutionHookContext,
 } from "#/agent/toolExecutor/toolHooks";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 
 import { IAgentPermissionGate } from "./permissionGate";
 
@@ -45,9 +44,7 @@ export class AgentPermissionGate
     @IAgentPermissionPolicyService
     private readonly policyService: IAgentPermissionPolicyService,
     @IAgentToolApprovalService
-    private readonly toolApproval: IAgentToolApprovalService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentToolExecutorService toolExecutor: IAgentToolExecutorService,
+    private readonly toolApproval: IAgentToolApprovalService,    @IAgentToolExecutorService toolExecutor: IAgentToolExecutorService,
   ) {
     super();
     this._register(
@@ -65,15 +62,6 @@ export class AgentPermissionGate
   private async adjudicate(event: BeforeToolExecuteEvent): Promise<void> {
     const evaluation = await this.policyService.evaluate(event);
     if (evaluation === undefined) return;
-    this.telemetry.track2("permission_policy_decision", {
-      turn_id: event.turnId,
-      tool_call_id: event.toolCall.id,
-      policy_name: evaluation.policyName,
-      tool_name: event.toolCall.name,
-      permission_mode: this.modeService.mode,
-      decision: evaluation.result.kind,
-      ...evaluation.result.reason,
-    });
     const { result, policyName } = evaluation;
     if (result.kind === "ask") {
       event.waitUntil(() =>
@@ -100,15 +88,6 @@ export class AgentPermissionGate
   ): Promise<BeforeExecuteDecision | undefined> {
     const evaluation = await this.policyService.evaluate(context);
     if (evaluation === undefined) return undefined;
-    this.telemetry.track2("permission_policy_decision", {
-      turn_id: context.turnId,
-      tool_call_id: context.toolCall.id,
-      policy_name: evaluation.policyName,
-      tool_name: context.toolCall.name,
-      permission_mode: this.modeService.mode,
-      decision: evaluation.result.kind,
-      ...evaluation.result.reason,
-    });
     return this.toolApproval.resolvePermissionResolution(
       evaluation.result,
       context,

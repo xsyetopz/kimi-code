@@ -61,7 +61,6 @@ import {
   inlineVideoPart,
   isVideoUploadAuthError,
 } from "#/agent/media/videoUpload";
-import type { ITelemetryService } from "#/app/telemetry/telemetry";
 
 import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import { IHostEnvironment } from "#/os/interface/hostEnvironment";
@@ -88,7 +87,6 @@ import {
   formatByteSize,
   resolveMaxImageEdgePx,
   resolveReadImageByteBudget,
-  type ImageCompressionTelemetry,
   type ImageCropRegion,
 } from "#/agent/media/image-compress";
 import {
@@ -250,23 +248,16 @@ export class ReadMediaFileTool implements AgentTool<ReadMediaFileInput> {
   readonly description: string;
   readonly parameters: Record<string, unknown> = toInputJsonSchema(
     ReadMediaFileInputSchema,
-  );
-  private readonly compressTelemetry: ImageCompressionTelemetry | undefined;
-  private readonly inlineVideoSupported: boolean;
+  );  private readonly inlineVideoSupported: boolean;
   constructor(
     private readonly fs: IHostFileSystem,
     private readonly env: IHostEnvironment,
     private readonly workspace: WorkspaceConfig,
     private readonly capabilities: ModelCapability,
     private readonly videoUploader?: VideoUploader,
-    telemetry?: ITelemetryService,
     inlineVideoSupported?: boolean,
   ) {
     this.description = buildDescription(capabilities);
-    this.compressTelemetry =
-      telemetry === undefined
-        ? undefined
-        : { client: telemetry, source: "read_media" };
     this.inlineVideoSupported = inlineVideoSupported ?? false;
   }
 
@@ -450,7 +441,6 @@ export class ReadMediaFileTool implements AgentTool<ReadMediaFileInput> {
             args.region,
             {
               skipResize: args.full_resolution === true,
-              telemetry: this.compressTelemetry,
             },
           );
           if (!outcome.ok) {
@@ -504,7 +494,6 @@ export class ReadMediaFileTool implements AgentTool<ReadMediaFileInput> {
             {
               byteBudget: readByteBudget,
               maxEdge,
-              telemetry: this.compressTelemetry,
             },
           );
           if (

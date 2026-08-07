@@ -6,7 +6,6 @@ import { IBootstrapService } from "#/app/bootstrap/bootstrap";
 import { IEventBus } from "#/app/event/eventBus";
 import { type ToolCall } from "#/kosong/contract/message";
 import { emptyUsage } from "#/kosong/contract/usage";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import type { ISessionProcessRunner } from "#/session/process/processRunner";
 import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
@@ -88,17 +87,14 @@ interface Harness {
 }
 
 function createHarness(
-  telemetry: ITelemetryService = recordingTelemetry(telemetryEvents),
-  options: { readonly executorEvents?: boolean } = {},
+    options: { readonly executorEvents?: boolean } = {},
 ): Harness {
   const loop = stubLoopWithHooks();
   const events =
     options.executorEvents === true ? stubToolExecutorEvents() : undefined;
   const ix = createServices(disposables, {
     additionalServices: (reg) => {
-      registerTestAgentWireServices(reg, "wire/tool-dedupe");
-      reg.defineInstance(ITelemetryService, telemetry);
-      reg.defineInstance(IEventBus, noopEventBus);
+      registerTestAgentWireServices(reg, "wire/tool-dedupe");      reg.defineInstance(IEventBus, noopEventBus);
       const homedir = "/tmp/tool-dedupe-homedir";
       reg.defineInstance(ISessionContext, {
         _serviceBrand: undefined,
@@ -973,7 +969,7 @@ describe("AgentToolDedupeService", () => {
     });
 
     it("runs with a no-op telemetry service", async () => {
-      const h = createHarness(recordingTelemetry([]));
+      const h = createHarness();
       h.registry.register(new EchoTool("Read"));
       for (let i = 0; i < 3; i += 1) {
         await runStep(h, 1, i + 1, [
@@ -1136,8 +1132,7 @@ describe("AgentToolDedupeService", () => {
       const exec = vi
         .fn<ISessionProcessRunner["exec"]>()
         .mockRejectedValue(new Error("Bash should not execute"));
-      const ctx = createTestAgent(
-        telemetryServices(recordingTelemetry(records)),
+      const ctx = createTestAgent(),
         execEnvServices({
           processRunner: createFakeProcessRunner({
             exec: exec as unknown as ISessionProcessRunner["exec"],

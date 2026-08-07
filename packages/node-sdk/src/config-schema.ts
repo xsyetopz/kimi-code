@@ -60,6 +60,5 @@ export const KimiConfigSchema = z
     defaultPlanMode: z.boolean().optional(),
     planMode: z.boolean().optional(),
     yolo: z.boolean().optional(),
-    telemetry: z.boolean().optional(),
   })
   .passthrough();

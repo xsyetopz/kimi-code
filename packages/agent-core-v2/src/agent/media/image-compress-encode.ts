@@ -2,22 +2,7 @@
  * `media` domain — image decode/encode ladder for model ingestion.
  */
 
-import { normalizeImageMime } from "./image-format-policy";
 import { decodeWebp } from "./webp-decode";
-
-export interface ImageCompressionTelemetryClient {
-  track(
-    event: string,
-    properties?: Readonly<
-      Record<string, string | number | boolean | null | undefined>
-    >,
-  ): void;
-}
-
-export interface ImageCompressionTelemetry {
-  readonly client: ImageCompressionTelemetryClient;
-  readonly source: string;
-}
 
 type CompressOutcome =
   | "compressed"
@@ -158,89 +143,4 @@ export function fitWithinEdge(image: JimpImage, edge: number): boolean {
   return true;
 }
 
-interface CropTelemetryResult {
-  readonly resized: boolean;
-  readonly originalWidth: number;
-  readonly originalHeight: number;
-  readonly region: { readonly width: number; readonly height: number };
-  readonly finalByteLength: number;
-}
-
-type CropErrorKind =
-  | "empty"
-  | "unsupported_format"
-  | "region_invalid"
-  | "too_large"
-  | "out_of_bounds"
-  | "budget"
-  | "decode_failed";
-
-interface CompressEventResult {
-  readonly mimeType: string;
-  readonly width: number;
-  readonly height: number;
-  readonly originalWidth: number;
-  readonly originalHeight: number;
-  readonly originalByteLength: number;
-  readonly finalByteLength: number;
-}
-
-export function reportCompressEvent(
-  telemetry: ImageCompressionTelemetry | undefined,
-  input: {
-    readonly outcome: CompressOutcome;
-    readonly startedAt: number;
-    readonly inputMime: string;
-    readonly exifTransposed: boolean;
-    readonly result: CompressEventResult;
-  },
-): void {
-  if (telemetry === undefined) return;
-  try {
-    telemetry.client.track("image_compress", {
-      source: telemetry.source,
-      outcome: input.outcome,
-      input_mime: input.inputMime,
-      output_mime: normalizeImageMime(input.result.mimeType),
-      original_bytes: input.result.originalByteLength,
-      final_bytes: input.result.finalByteLength,
-      original_width: input.result.originalWidth,
-      original_height: input.result.originalHeight,
-      final_width: input.result.width,
-      final_height: input.result.height,
-      exif_transposed: input.exifTransposed,
-      duration_ms: Date.now() - input.startedAt,
-    });
-  } catch {}
-}
-
-export function reportCropEvent(
-  telemetry: ImageCompressionTelemetry | undefined,
-  input: {
-    readonly startedAt: number;
-    readonly ok: boolean;
-    readonly errorKind?: CropErrorKind;
-    readonly result?: CropTelemetryResult;
-  },
-): void {
-  if (telemetry === undefined) return;
-  try {
-    const { result } = input;
-    const originalPixels =
-      result === undefined ? 0 : result.originalWidth * result.originalHeight;
-    telemetry.client.track("image_crop", {
-      source: telemetry.source,
-      ok: input.ok,
-      error_kind: input.errorKind,
-      resized: result?.resized,
-      original_width: result?.originalWidth,
-      original_height: result?.originalHeight,
-      region_area_ratio:
-        result === undefined || originalPixels === 0
-          ? undefined
-          : (result.region.width * result.region.height) / originalPixels,
-      final_bytes: result?.finalByteLength,
-      duration_ms: Date.now() - input.startedAt,
-    });
-  } catch {}
-}
+export type { CompressOutcome };

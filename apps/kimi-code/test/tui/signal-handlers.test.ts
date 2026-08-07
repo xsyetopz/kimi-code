@@ -48,8 +48,7 @@ function makeHarness() {
     listSessions: vi.fn(async () => []),
     close: vi.fn(async () => {}),
     track: vi.fn(),
-    setTelemetryContext: vi.fn(),
-    auth: {
+        auth: {
       status: vi.fn(async () => ({ providers: [] })),
       login: vi.fn(),
       logout: vi.fn(),

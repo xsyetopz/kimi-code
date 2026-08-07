@@ -85,8 +85,6 @@ import {
   IAgentUsageService,
   type UsageRecordedContext,
 } from "#/agent/usage/usage";
-import type { GoalBudgetProperties } from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IConfigService } from "#/app/config/config";
 import {
   ErrorCodes,
@@ -327,9 +325,7 @@ export class AgentGoalServiceCore
     @IWireService private readonly wire: IWireService,
     @IEventBus private readonly eventBus: IEventBus,
     @IAgentSystemReminderService
-    private readonly reminders: IAgentSystemReminderService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentContextInjectorService dynamicInjector: IAgentContextInjectorService,
+    private readonly reminders: IAgentSystemReminderService,    @IAgentContextInjectorService dynamicInjector: IAgentContextInjectorService,
     @IAgentLoopService private readonly loopService: IAgentLoopService,
     @IAgentToolExecutorService toolExecutor: IAgentToolExecutorService,
     @IAgentToolApprovalService
@@ -577,10 +573,6 @@ export class AgentGoalServiceCore
     const state = this.requireState();
     this.refreshWallClockDeadline(state);
     this.emitGoalUpdated(this.toSnapshot(state));
-    this.telemetry.track2("goal_created", {
-      actor,
-      replace: input.replace === true,
-    });
     return this.toSnapshot(state);
   }
 
@@ -690,10 +682,6 @@ export class AgentGoalServiceCore
     this.wire.dispatch(updateGoal({ budgetLimits }));
     const next = this.requireState();
     this.emitGoalUpdated(this.toSnapshot(next));
-    this.telemetry.track2("goal_budget_set", {
-      actor,
-      ...budgetTelemetryProperties(input.budgetLimits),
-    });
     const blocked = this.blockIfBudgetReached(next);
     if (blocked !== null) return blocked;
     this.refreshWallClockDeadline(next);
@@ -827,7 +815,6 @@ export class AgentGoalServiceCore
     this.wire.dispatch(updateGoal({ turnsUsed }));
     const next = this.requireState();
     this.emitGoalUpdated(this.toSnapshot(next));
-    this.telemetry.track2("goal_continued", { turns_used: next.turnsUsed });
     return this.toSnapshot(next);
   }
 

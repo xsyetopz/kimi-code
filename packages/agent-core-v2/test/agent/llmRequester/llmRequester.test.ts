@@ -423,8 +423,7 @@ describe("LLMRequester service migration coverage", () => {
       ctx = createTestAgent(
         llmGenerateServices(async () => {
           throw new APIStatusError(429, "rate limited");
-        }),
-        telemetryServices(recordingTelemetry(records)),
+        })),
       );
       const llmRequester = ctx.get(IAgentLLMRequesterService);
 
@@ -455,8 +454,7 @@ describe("LLMRequester service migration coverage", () => {
       ctx = createTestAgent(
         llmGenerateServices(async () => {
           throw new APIConnectionError("terminated");
-        }),
-        telemetryServices(recordingTelemetry(records)),
+        })),
       );
       const llmRequester = ctx.get(IAgentLLMRequesterService);
 

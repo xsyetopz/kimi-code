@@ -79,13 +79,6 @@ import { OrderedHookSlot } from "#/hooks";
 import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
 import { isVacuousContentPart } from "#/agent/contextMemory/vacuousContent";
 import { IAgentStateService } from "#/agent/state/agentState";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
-import type {
-  TurnEndedEvent as TurnEndedTelemetryEvent,
-  TurnInterruptedEvent,
-  TurnStartedEvent as TurnStartedTelemetryEvent,
-} from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IWireService } from "#/wire/wire";
 import { LOOP_CONTROL_SECTION, type LoopControl } from "./configSection";
 import {

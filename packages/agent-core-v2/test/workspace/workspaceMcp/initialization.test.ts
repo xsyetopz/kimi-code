@@ -29,8 +29,7 @@ import { IPluginService } from "#/app/plugin/plugin";
 import type { ReloadSummary } from "#/app/plugin/types";
 import {
   ITelemetryService,
-  noopTelemetryService,
-} from "#/app/telemetry/telemetry";
+  } from "#/app/telemetry/telemetry";
 import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
 import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import {
@@ -89,9 +88,7 @@ describe("Workspace MCP initialization", () => {
           onDidReload: Event.None as Event<ReloadSummary>,
         });
         reg.definePartialInstance(IMcpOAuthStore, createMemoryMcpOAuthStore());
-        reg.defineInstance(ILogService, stubLog());
-        reg.defineInstance(ITelemetryService, noopTelemetryService);
-        reg.definePartialInstance(IConfigService, {
+        reg.defineInstance(ILogService, stubLog());        reg.definePartialInstance(IConfigService, {
           ready,
           get: <T = unknown>(domain: string): T =>
             (domain === MCP_SECTION ? mcpSection : undefined) as T,

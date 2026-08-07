@@ -26,8 +26,7 @@ import { AgentToolRegistryService } from "#/agent/toolRegistry/toolRegistryServi
 import { IEventBus } from "#/app/event/eventBus";
 import {
   ITelemetryService,
-  noopTelemetryService,
-} from "#/app/telemetry/telemetry";
+  } from "#/app/telemetry/telemetry";
 import type { PathClass } from "#/_base/execEnv/environmentProbe";
 import {
   PathSecurityError,
@@ -187,8 +186,7 @@ class GrepTool extends ProductionGrepTool {
   constructor(
     kaos: FakeKaos,
     workspaceConfig: WorkspaceConfig,
-    telemetry: ITelemetryService = noopTelemetryService,
-  ) {
+      ) {
     super(
       createTestProcessService(kaos),
       createTestFs(kaos),
@@ -346,9 +344,7 @@ describe("GrepTool", () => {
           reg.defineInstance(
             ISessionWorkspaceContext,
             stubWorkspaceContext("/workspace"),
-          );
-          reg.defineInstance(ITelemetryService, noopTelemetryService);
-          reg.defineInstance(ISessionSkillCatalog, {
+          );          reg.defineInstance(ISessionSkillCatalog, {
             _serviceBrand: undefined,
             catalog: { getSkillRoots: () => [] },
           } as unknown as ISessionSkillCatalog);
@@ -1964,7 +1960,6 @@ describe("GrepTool", () => {
     const tool = new GrepTool(
       createFakeKaos({ exec }),
       workspace,
-      recordingTelemetry(records),
     );
 
     const result = await executeTool(tool, context({ pattern: "hit" }));

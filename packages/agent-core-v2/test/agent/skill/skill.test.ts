@@ -21,7 +21,6 @@ import {
   SkillToolInputSchema,
 } from "#/agent/tools/skill/skill";
 import { SkillTool } from "#/agent/tools/skill/skillTool";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
 import type { Turn } from "#/agent/loop/loop";
 import { executeTool } from "../../tools/fixtures/execute-tool";
@@ -81,12 +80,7 @@ describe("AgentSkillService", () => {
           retry: () => Promise.resolve(undefined),
           clear: () => {},
         });
-        registerTestAgentWireServices(reg, "wire/skill-test");
-        reg.definePartialInstance(ITelemetryService, {
-          track: () => {},
-          track2: () => {},
-        });
-        reg.definePartialInstance(IAgentToolRegistryService, {
+        registerTestAgentWireServices(reg, "wire/skill-test");        reg.definePartialInstance(IAgentToolRegistryService, {
           register: () => ({ dispose: () => {} }),
         });
         reg.defineInstance(ISessionContext, stubSessionContext());
@@ -188,12 +182,7 @@ describe("SkillTool", () => {
           retry: () => Promise.resolve(undefined),
           clear: () => {},
         });
-        registerTestAgentWireServices(reg, "wire/skill-test");
-        reg.definePartialInstance(ITelemetryService, {
-          track: () => {},
-          track2: () => {},
-        });
-        reg.definePartialInstance(IAgentToolRegistryService, {
+        registerTestAgentWireServices(reg, "wire/skill-test");        reg.definePartialInstance(IAgentToolRegistryService, {
           register: () => ({ dispose: () => {} }),
         });
         reg.defineInstance(ISessionContext, stubSessionContext());

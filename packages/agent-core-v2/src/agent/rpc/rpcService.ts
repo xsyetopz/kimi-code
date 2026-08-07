@@ -26,7 +26,6 @@ import { IAgentConversationUndoService } from "#/agent/undo/undo";
 import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import { IAgentSkillService } from "#/agent/skill/skill";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
 import { IAgentLoopService } from "#/agent/loop/loop";
 import type {
@@ -85,9 +84,7 @@ export class AgentRPCService implements IAgentRPCService {
     private readonly context: IAgentContextMemoryService,
     @IAgentTokenCountingService
     private readonly tokenCounting: IAgentTokenCountingService,
-    @IAgentSkillService private readonly skills: IAgentSkillService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IEventBus private readonly eventBus: IEventBus,
+    @IAgentSkillService private readonly skills: IAgentSkillService,    @IEventBus private readonly eventBus: IEventBus,
     @IEventService private readonly eventService: IEventService,
     @IPluginService private readonly plugins: IPluginService,
     @ISessionMetadata private readonly metadata: ISessionMetadata,
@@ -125,7 +122,6 @@ export class AgentRPCService implements IAgentRPCService {
   }
 
   async steer(payload: SteerPayload): Promise<PromptLaunchResult | undefined> {
-    this.telemetry.track2("input_steer", { parts: payload.input.length });
     const turn = await submitSteerInput(this.promptService, {
       role: "user",
       content: [...payload.input],
@@ -137,10 +133,6 @@ export class AgentRPCService implements IAgentRPCService {
 
   cancel({ turnId }: CancelPayload): void {
     if (this.loop.status().state === "running") {
-      this.telemetry.track2("cancel", {
-        from: "streaming",
-        trace_id: this.loop.status().activeTraceId,
-      });
     }
     this.loop.cancel(turnId);
   }
@@ -158,21 +150,15 @@ export class AgentRPCService implements IAgentRPCService {
     }
     const enabled = this.permissionMode.mode === "yolo";
     if (enabled !== wasYolo) {
-      this.telemetry.track2("yolo_toggle", { enabled });
     }
     const afkEnabled = this.permissionMode.mode === "auto";
     if (afkEnabled !== wasAuto) {
-      this.telemetry.track2("afk_toggle", { enabled: afkEnabled });
     }
   }
 
   cancelCompaction(_payload: EmptyPayload): void {
     const active = this.fullCompaction.compacting;
     if (active !== null) {
-      this.telemetry.track2("cancel", {
-        from: "compacting",
-        trace_id: active.traceId,
-      });
     }
     active?.abortController.abort();
   }

@@ -26,7 +26,7 @@ describe("undoHistory RPC", () => {
 
   it("tracks conversation_undo after undoing history", async () => {
     records = [];
-    ctx = createTestAgent(telemetryServices(recordingTelemetry(records)));
+    ctx = createTestAgent());
     ctx.appendUserTurn("undo me");
 
     const undone = await ctx.rpc.undoHistory({ count: 1 });
@@ -40,7 +40,7 @@ describe("undoHistory RPC", () => {
 
   it("rejects a fractional count without changing persisted history", async () => {
     records = [];
-    ctx = createTestAgent(telemetryServices(recordingTelemetry(records)));
+    ctx = createTestAgent());
     ctx.appendUserTurn("keep me");
     const history = ctx.context.get();
 

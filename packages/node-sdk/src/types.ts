@@ -2,9 +2,6 @@ import type {
   ExportSessionManifest,
   ResumeSessionResult,
   ShellEnvironment,
-  TelemetryClient,
-  TelemetryContextPatch,
-  TelemetryProperties,
 } from "#/compat";
 import type { Kaos } from "@moonshot-ai/kaos";
 import type {
@@ -77,7 +74,6 @@ export type {
 } from "#/compat";
 
 export type { KimiHostIdentity, OAuthRefreshOutcome };
-export type { TelemetryClient, TelemetryContextPatch, TelemetryProperties };
 export type {
   ContentPart,
   Role,
@@ -118,11 +114,9 @@ export interface KimiHarnessOptions {
   readonly autoLoadConfig?: boolean | undefined;
   readonly uiMode?: string;
   readonly skillDirs?: readonly string[];
-  readonly telemetry?: TelemetryClient | undefined;
   readonly onOAuthRefresh?:
     | ((outcome: OAuthRefreshOutcome) => void)
     | undefined;
-  readonly sessionStartedProperties?: TelemetryProperties;
 }
 
 export interface CreateSessionOptions {
@@ -146,7 +140,6 @@ export interface CreateSessionOptions {
    * highest precedence; an invalid file fails session creation.
    */
   readonly agentFiles?: readonly string[];
-  readonly sessionStartedProperties?: TelemetryProperties;
   /**
    * Print-mode (`kimi -p`) only: when the main agent ends a turn while
    * background subagents (`kind === 'agent'`) are still running, hold the turn
@@ -177,7 +170,6 @@ export interface ResumeSessionInput {
    * transferring the entire history over the RPC boundary.
    */
   readonly replayTurnLimit?: number;
-  readonly sessionStartedProperties?: TelemetryProperties;
 }
 
 export interface ReloadSessionInput extends ResumeSessionInput {

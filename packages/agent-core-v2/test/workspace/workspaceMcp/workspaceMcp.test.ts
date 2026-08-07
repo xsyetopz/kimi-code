@@ -34,8 +34,7 @@ import { MergedMcpConnectionView } from "#/session/mcp/mergedConnectionView";
 import { IMcpOAuthStore } from "#/app/mcpConfig/oauthStore";
 import {
   ITelemetryService,
-  noopTelemetryService,
-} from "#/app/telemetry/telemetry";
+  } from "#/app/telemetry/telemetry";
 import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 import {
   IWorkspaceMcpConfigService,
@@ -100,9 +99,7 @@ describe("WorkspaceMcpService", () => {
         reg.definePartialInstance(IWorkspaceContext, { cwd });
         reg.defineInstance(IWorkspaceMcpConfigService, mcpConfigStub());
         reg.definePartialInstance(IMcpOAuthStore, createMemoryMcpOAuthStore());
-        reg.defineInstance(ILogService, stubLog());
-        reg.defineInstance(ITelemetryService, noopTelemetryService);
-        registerAgentIdentityStub(reg);
+        reg.defineInstance(ILogService, stubLog());        registerAgentIdentityStub(reg);
         reg.define(IWorkspaceMcpService, WorkspaceMcpService);
       },
     });

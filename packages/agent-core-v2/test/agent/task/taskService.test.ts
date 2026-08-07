@@ -46,7 +46,6 @@ import {
 } from "#/session/sessionContext/sessionContext";
 import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
 import { IFileSystemStorageService } from "#/persistence/interface/storage";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
 import { createHooks } from "#/hooks";
 import { IWireService, type WireHooks } from "#/wire/wire";
@@ -129,9 +128,7 @@ describe("AgentTaskService", () => {
         throw new Error("ITaskService.defer is not used by this test");
       },
     });
-    ix.stub(IAgentContextMemoryService, stubContextMemory());
-    ix.stub(ITelemetryService, { track: () => {}, track2: () => {} });
-    ix.stub(IAgentToolRegistryService, {
+    ix.stub(IAgentContextMemoryService, stubContextMemory());    ix.stub(IAgentToolRegistryService, {
       register: () => toDisposable(() => {}),
     });
     ix.stub(IAgentLoopService, stubLoopWithHooks());
@@ -515,9 +512,7 @@ describe("AgentTaskService", () => {
         throw new Error("ITaskService.defer is not used by this test");
       },
     });
-    ix.stub(IAgentContextMemoryService, stubContextMemory());
-    ix.stub(ITelemetryService, { track: () => {}, track2: () => {} });
-    ix.stub(IAgentLoopService, stubLoopWithHooks());
+    ix.stub(IAgentContextMemoryService, stubContextMemory());    ix.stub(IAgentLoopService, stubLoopWithHooks());
     ix.stub(IConfigService, {
       get: (() => undefined) as IConfigService["get"],
     });

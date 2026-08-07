@@ -40,7 +40,6 @@ import type { McpServerConfig } from "#/mcpCore/config-schema";
 import { McpOAuthService } from "#/mcpCore/oauth/service";
 import { IAgentIdentity } from "#/app/agentIdentity/agentIdentity";
 import { IMcpOAuthStore } from "#/app/mcpConfig/oauthStore";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { MergedMcpConnectionView } from "#/session/mcp/mergedConnectionView";
 import type { ISessionMcpHandle } from "#/session/mcp/sessionMcpHandle";
 import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
@@ -74,9 +73,7 @@ export class WorkspaceMcpService
     @IWorkspaceMcpConfigService
     private readonly mcpConfig: IWorkspaceMcpConfigService,
     @IMcpOAuthStore oauthStore: IMcpOAuthStore,
-    @ILogService private readonly log: ILogService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentIdentity private readonly identity: IAgentIdentity,
+    @ILogService private readonly log: ILogService,    @IAgentIdentity private readonly identity: IAgentIdentity,
   ) {
     super();
     this.stdioCwd = workspace.cwd;
@@ -191,20 +188,12 @@ export class WorkspaceMcpService
       (entry) => entry.status === "connected",
     ).length;
     if (connectedCount > 0) {
-      this.telemetry.track2("mcp_connected", {
-        server_count: connectedCount,
-        total_count: totalCount,
-      });
     }
 
     const failedCount = entries.filter(
       (entry) => entry.status === "failed",
     ).length;
     if (failedCount > 0) {
-      this.telemetry.track2("mcp_failed", {
-        failed_count: failedCount,
-        total_count: totalCount,
-      });
     }
   }
 }

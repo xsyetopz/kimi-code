@@ -22,7 +22,6 @@ import {
   wireRecordPersistenceServices,
   type TestAgentContext,
 } from "../../harness";
-import { recordingTelemetry } from "../telemetry/stubs";
 import { stubSkill } from "./stubs";
 
 function makeSkill(
@@ -312,9 +311,9 @@ describe("ToolManager SkillTool restore behavior", () => {
   beforeEach(() => {
     skills = new InMemorySkillCatalog();
     skills.register(makeSkill("review"));
-    const telemetry = recordingTelemetry([]);
+    const telemetry = ;
     track = vi.spyOn(telemetry, "track2");
-    ctx = createTestAgent(skillServices(skills), telemetryServices(telemetry));
+    ctx = createTestAgent(skillServices(skills));
     context = ctx.get(IAgentContextMemoryService);
     const events = ctx.get(IEventBus);
     emit = vi.spyOn(events, "publish");

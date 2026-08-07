@@ -81,7 +81,6 @@ import { IConfigService } from "#/app/config/config";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
 import { IFileSystemStorageService } from "#/persistence/interface/storage";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IWireService } from "#/wire/wire";
 import {
   IAgentTaskService,

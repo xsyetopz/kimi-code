@@ -53,7 +53,6 @@ import {
   type ModelRequestInput,
   type ModelRequester,
 } from "#/kosong/model/modelRequester";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { ILogService } from "#/_base/log/log";
 import { Error2, ErrorCodes } from "#/errors";
 import { IWireService } from "#/wire/wire";
@@ -197,7 +196,7 @@ function createService(
   };
   const log = { info: () => undefined, warn: () => undefined };
   const telemetryRecords: TelemetryRecord[] = [];
-  const telemetry = recordingTelemetry(telemetryRecords);
+  const telemetry = ;
   const toolSelect: Partial<IAgentToolSelectService> = {
     enabled: () => false,
     shapeTools: (entries) => entries,
@@ -234,9 +233,7 @@ function createService(
   ix.stub(IAgentProfileService, profile);
   ix.stub(IAgentUsageService, usage);
   ix.stub(IConfigService, config);
-  ix.stub(ILogService, log);
-  ix.stub(ITelemetryService, telemetry);
-  ix.stub(IModelCatalog, {
+  ix.stub(ILogService, log);  ix.stub(IModelCatalog, {
     _serviceBrand: undefined,
     get: () => requester.model,
     getRequester: () => requester,

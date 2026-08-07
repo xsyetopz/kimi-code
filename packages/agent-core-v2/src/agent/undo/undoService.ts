@@ -34,7 +34,6 @@ import { promptMetadataTextFromContentParts } from "#/agent/prompt/promptMetadat
 import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
 import { IEventService } from "#/app/event/event";
 import { IEventBus } from "#/app/event/eventBus";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { ErrorCodes, Error2 } from "#/errors";
 import { MAIN_AGENT_ID } from "#/session/agentLifecycle/agentLifecycle";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
@@ -70,9 +69,7 @@ export class AgentConversationUndoService
     @ISessionContext private readonly session: ISessionContext,
     @ISessionMetadata private readonly metadata: ISessionMetadata,
     @IEventService private readonly eventService: IEventService,
-    @IEventBus private readonly eventBus: IEventBus,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IWireService private readonly wire: IWireService,
+    @IEventBus private readonly eventBus: IEventBus,    @IWireService private readonly wire: IWireService,
     @ILogService private readonly log: ILogService,
   ) {
     super();
@@ -120,7 +117,6 @@ export class AgentConversationUndoService
       await this.reconcileParticipants();
       await this.flushAfterCommit("state reconciliation");
       await this.reconcileLastPromptSafely();
-      this.telemetry.track2("conversation_undo", { count: turns });
       this.eventBus.publish({ type: "context.undone", turns });
       return turns;
     } finally {

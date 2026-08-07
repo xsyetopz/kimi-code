@@ -135,8 +135,6 @@ import type {
 import { IAgentStateService } from "#/agent/state/agentState";
 import { IAgentAgentsMdReminderService } from "#/agent/agentsMdReminder/agentsMdReminder";
 
-import { ITelemetryService } from "#/app/telemetry/telemetry";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
 import { IWireService } from "#/wire/wire";
 import type { PayloadOf } from "#/wire/types";
 import { IEventBus } from "#/app/event/eventBus";
@@ -223,11 +221,7 @@ export class AgentProfileServiceCore
 
   constructor(
     @IWireService private readonly wire: IWireService,
-    @IEventBus private readonly eventBus: IEventBus,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentTelemetryContextService
-    private readonly telemetryContext: IAgentTelemetryContextService,
-    @IConfigService private readonly config: IConfigService,
+    @IEventBus private readonly eventBus: IEventBus,    @IConfigService private readonly config: IConfigService,
     @IModelCatalog private readonly modelCatalog: IModelCatalog,
     @IProtocolAdapterRegistry
     private readonly protocolAdapters: IProtocolAdapterRegistry,
@@ -453,10 +447,8 @@ export class AgentProfileServiceCore
     const model = this.modelCatalog.get(alias);
     if (this.profileName === undefined) {
       await this.bind({ profile: DEFAULT_AGENT_PROFILE_NAME, model: alias });
-      this.telemetry.track2("model_switch", { model: alias });
     } else if (this.modelAlias !== alias) {
       this.update({ modelAlias: alias });
-      this.telemetry.track2("model_switch", { model: alias });
     }
     return {
       model: alias,
@@ -475,11 +467,6 @@ export class AgentProfileServiceCore
     this.update({ thinkingLevel: normalized ?? level });
     const effort = this.thinkingLevel;
     if (effort !== previousEffort) {
-      this.telemetry.track2("thinking_toggle", {
-        enabled: effort !== "off",
-        effort,
-        from: previousEffort,
-      });
     }
   }
 

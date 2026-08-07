@@ -41,7 +41,6 @@
  */
 
 import type { ContentPart } from "#/kosong/contract/message";
-import type { ITelemetryService } from "#/app/telemetry/telemetry";
 
 import { compressImageContentParts } from "#/agent/media/image-compress";
 import {
@@ -52,9 +51,7 @@ import { persistOriginalImage } from "#/agent/media/image-originals";
 import type { MCPContentBlock, MCPToolResult } from "#/mcpCore/types";
 
 export interface McpOutputOptions {
-  readonly originalsDir?: string;
-  readonly telemetry?: ITelemetryService;
-}
+  readonly originalsDir?: string;}
 
 export const MCP_MAX_OUTPUT_CHARS = 100_000;
 const MCP_OUTPUT_TRUNCATED_TEXT = `\n\n[Output truncated: exceeded ${String(

@@ -35,7 +35,6 @@ import {
   type SkillDefinition,
 } from "#/app/skillCatalog/types";
 import { IAgentPromptService } from "#/agent/prompt/prompt";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { Turn } from "#/agent/loop/loop";
 import { IWireService } from "#/wire/wire";
 import { IAgentSkillService, type SkillActivationInput } from "./skill";
@@ -52,9 +51,7 @@ export class AgentSkillService
   constructor(
     @ISessionSkillCatalog private readonly skillCatalog: ISessionSkillCatalog,
     @IAgentPromptService private readonly prompt: IAgentPromptService,
-    @IWireService private readonly wire: IWireService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @ISessionContext private readonly sessionContext: ISessionContext,
+    @IWireService private readonly wire: IWireService,    @ISessionContext private readonly sessionContext: ISessionContext,
     @IAgentContextMemoryService
     private readonly context: IAgentContextMemoryService,
   ) {
@@ -238,14 +235,7 @@ export class AgentSkillService
   }
 
   private publishActivation(origin: SkillActivationOrigin): void {
-    this.telemetry.track2("skill_invoked", {
-      skill_name: origin.skillName,
-      trigger: origin.trigger,
-    });
     if (origin.skillType === "flow") {
-      this.telemetry.track2("flow_invoked", {
-        flow_name: origin.skillName,
-      });
     }
   }
 }

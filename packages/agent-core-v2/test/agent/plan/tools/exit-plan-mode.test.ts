@@ -8,7 +8,6 @@ import {
 import { ExitPlanModeTool } from "#/agent/tools/plan/exit-plan-mode/exitPlanModeTool";
 import type { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
 import type { PermissionMode } from "#/agent/permissionPolicy/types";
-import type { ITelemetryService } from "#/app/telemetry/telemetry";
 
 import { executeTool } from "../../../tools/fixtures/execute-tool";
 
@@ -33,22 +32,6 @@ function planService(): IAgentPlanService {
         content: "# Plan",
         path: "/tmp/kimi-plan.md",
       }) satisfies NonNullable<PlanData>,
-  };
-}
-
-function recordingTelemetry(): ITelemetryService {
-  return {
-    _serviceBrand: undefined,
-    track: vi.fn(),
-    track2: vi.fn(),
-    withContext: () => recordingTelemetry(),
-    setContext: () => {},
-    addAppender: () => ({ dispose: () => {} }),
-    removeAppender: () => {},
-    setAppender: () => {},
-    setEnabled: () => {},
-    flush: () => Promise.resolve(),
-    shutdown: () => Promise.resolve(),
   };
 }
 
@@ -143,14 +126,9 @@ describe("ExitPlanMode options schema", () => {
 describe("ExitPlanMode option output", () => {
   it("treats a single option as plain plan approval", async () => {
     const exit = vi.fn();
-    const telemetry = recordingTelemetry();
 
     const result = await executeTool(
-      new ExitPlanModeTool(
-        { ...planService(), exit },
-        permissionMode(),
-        telemetry,
-      ),
+      new ExitPlanModeTool({ ...planService(), exit }, permissionMode()),
       {
         turnId: 7,
         toolCallId: "call_exit_plan",
@@ -165,10 +143,8 @@ describe("ExitPlanMode option output", () => {
   });
 
   it("marks the direct-execution output as auto-approved, not user-reviewed, in auto mode", async () => {
-    const telemetry = recordingTelemetry();
-
     const result = await executeTool(
-      new ExitPlanModeTool(planService(), permissionMode("auto"), telemetry),
+      new ExitPlanModeTool(planService(), permissionMode("auto")),
       {
         turnId: 7,
         toolCallId: "call_exit_plan_auto",
@@ -189,10 +165,8 @@ describe("ExitPlanMode option output", () => {
   });
 
   it("keeps the user-approved output when a rule lets the call through outside auto mode", async () => {
-    const telemetry = recordingTelemetry();
-
     const result = await executeTool(
-      new ExitPlanModeTool(planService(), permissionMode("manual"), telemetry),
+      new ExitPlanModeTool(planService(), permissionMode("manual")),
       {
         turnId: 7,
         toolCallId: "call_exit_plan_rule",
@@ -207,16 +181,11 @@ describe("ExitPlanMode option output", () => {
     // so the output keeps the user-approved wording.
     expect(result.output).toContain("## Approved Plan:");
     expect(result.output).not.toContain("auto-approved");
-    expect(telemetry.track2).toHaveBeenCalledWith("plan_resolved", {
-      outcome: "approved",
-    });
   });
 
   it('returns success without a "User feedback:" prefix when revise has no feedback', async () => {
-    const telemetry = recordingTelemetry();
-
     const result = await executeTool(
-      new ExitPlanModeTool(planService(), permissionMode(), telemetry),
+      new ExitPlanModeTool(planService(), permissionMode()),
       {
         turnId: 7,
         toolCallId: "call_exit_plan",
@@ -234,7 +203,7 @@ describe("ExitPlanMode option output", () => {
     const service: IAgentPlanService = { ...planService(), recordRevision };
 
     const result = await executeTool(
-      new ExitPlanModeTool(service, permissionMode(), recordingTelemetry()),
+      new ExitPlanModeTool(service, permissionMode()),
       {
         turnId: 7,
         toolCallId: "call_exit_record",
@@ -254,7 +223,7 @@ describe("ExitPlanMode option output", () => {
     const service: IAgentPlanService = { ...planService(), recordRevision };
 
     const result = await executeTool(
-      new ExitPlanModeTool(service, permissionMode(), recordingTelemetry()),
+      new ExitPlanModeTool(service, permissionMode()),
       {
         turnId: 7,
         toolCallId: "call_exit_record_failure",
@@ -281,7 +250,7 @@ describe("ExitPlanMode option output", () => {
     };
 
     const result = await executeTool(
-      new ExitPlanModeTool(service, permissionMode(), recordingTelemetry()),
+      new ExitPlanModeTool(service, permissionMode()),
       {
         turnId: 7,
         toolCallId: "call_exit_empty",

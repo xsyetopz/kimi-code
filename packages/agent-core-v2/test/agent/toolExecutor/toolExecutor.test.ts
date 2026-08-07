@@ -31,7 +31,6 @@ import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
 import { AgentToolRegistryService } from "#/agent/toolRegistry/toolRegistryService";
 import { IEventBus } from "#/app/event/eventBus";
 import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { registerLogServices } from "../../_base/log/stubs";
 import {
   recordingTelemetry,
@@ -73,7 +72,6 @@ beforeEach(() => {
       );
       reg.defineInstance(
         ITelemetryService,
-        recordingTelemetry(telemetryEvents),
       );
       reg.defineInstance(IAgentToolResultTruncationService, {
         _serviceBrand: undefined,

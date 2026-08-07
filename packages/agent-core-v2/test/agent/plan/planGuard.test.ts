@@ -43,8 +43,6 @@ import type {
   BeforeExecuteDecision,
   ResolvedToolExecutionHookContext,
 } from "#/agent/toolExecutor/toolHooks";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { ToolCall } from "#/kosong/contract/message";
 import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
@@ -216,7 +214,7 @@ describe("AgentPlanService plan-guard listener", () => {
           IAgentPermissionModeService,
           stubPermissionModeService(() => mode),
         );
-        reg.defineInstance(ITelemetryService, recordingTelemetry(records));
+        reg.defineInstance(ITelemetryService);
         reg.defineInstance(IAgentStateService, new AgentStateService());
         reg.define(IAgentPlanService, AgentPlanService);
       },

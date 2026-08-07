@@ -31,7 +31,6 @@ import { AgentStateService } from "#/agent/state/agentStateService";
 import { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
 import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
 import { IAgentUsageService } from "#/agent/usage/usage";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { AppendLogStore } from "#/persistence/backends/node-fs/appendLogStore";
 import { InMemoryStorageService } from "#/persistence/backends/memory/inMemoryStorageService";
 import { IAppendLogStore } from "#/persistence/interface/appendLogStore";
@@ -85,14 +84,6 @@ function createRemindersStub(): IAgentSystemReminderService {
   } as unknown as IAgentSystemReminderService;
 }
 
-function createTelemetryStub(): ITelemetryService {
-  return {
-    _serviceBrand: undefined,
-    track: () => undefined,
-    track2: () => undefined,
-  } as unknown as ITelemetryService;
-}
-
 function createToolExecutorStub(): IAgentToolExecutorService {
   return {
     _serviceBrand: undefined,
@@ -131,9 +122,7 @@ function buildHost(key: string): {
   } as unknown as IAgentUsageService);
   ix.stub(IAgentContextMemoryService, createContextStub());
   ix.stub(IAgentContextInjectorService, createInjectorStub());
-  ix.stub(IAgentSystemReminderService, createRemindersStub());
-  ix.stub(ITelemetryService, createTelemetryStub());
-  ix.stub(IAgentToolExecutorService, createToolExecutorStub());
+  ix.stub(IAgentSystemReminderService, createRemindersStub());  ix.stub(IAgentToolExecutorService, createToolExecutorStub());
   ix.stub(IConfigService, createConfigStub());
   ix.set(IAgentStateService, new AgentStateService());
   ix.set(

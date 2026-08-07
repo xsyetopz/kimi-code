@@ -23,7 +23,6 @@ import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
 import { IHostFsWatchService } from "#/os/interface/hostFsWatch";
 import { IProjectLocalConfigService } from "#/app/projectLocalConfig/projectLocalConfig";
 import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IAppendLogStore } from "#/persistence/interface/appendLogStore";
 import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
 import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
@@ -53,7 +52,6 @@ import { ISessionLifecycleService } from "#/workspace/sessionLifecycle/sessionLi
 import { SessionLifecycleService } from "#/workspace/sessionLifecycle/sessionLifecycleService";
 import { IWorkspaceToolPolicy } from "#/workspace/workspaceToolPolicy/workspaceToolPolicy";
 import { WorkspaceToolPolicyService } from "#/workspace/workspaceToolPolicy/workspaceToolPolicyService";
-import { recordingTelemetry, type TelemetryRecord } from "../telemetry/stubs";
 import { stubLog } from "../../_base/log/stubs";
 
 import { IWorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycle";
@@ -382,7 +380,7 @@ describe("WorkspaceLifecycleService", () => {
         watch: () => ({ onDidChange: Event.None, dispose: () => {} }),
       } as unknown as IHostFsWatchService),
       stubPair(ILogService, stubLog()),
-      stubPair(ITelemetryService, recordingTelemetry(telemetryRecords)),
+      stubPair(ITelemetryService),
       stubPair(ICronTaskPersistence, {
         _serviceBrand: undefined,
         get: () => Promise.resolve(undefined),

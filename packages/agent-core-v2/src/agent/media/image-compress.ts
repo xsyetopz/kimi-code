@@ -56,14 +56,7 @@ import {
   FALLBACK_EDGES_PX,
   MAX_DECODE_PIXELS,
   RECODABLE_MIME,
-  reportCompressEvent,
-  reportCropEvent,
 } from "./image-compress-encode";
-import {
-  buildImageCompressionCaption,
-  formatByteSize,
-} from "./image-compress-caption";
-import type { ImageCompressionTelemetry } from "./image-compress-encode";
 
 export type {
   ImageCompressionCaptionExtraction,
@@ -111,16 +104,11 @@ function isPositiveInt(value: number): boolean {
 }
 
 export { MAX_IMAGE_DECODE_BYTES } from "./image-compress-encode";
-export type {
-  ImageCompressionTelemetry,
-  ImageCompressionTelemetryClient,
-} from "./image-compress-encode";
 
 export interface CompressImageOptions {
   readonly maxEdge?: number;
   readonly byteBudget?: number;
   readonly maxDecodeBytes?: number;
-  readonly telemetry?: ImageCompressionTelemetry;
 }
 
 type CompressOutcome =
@@ -170,13 +158,6 @@ export async function compressImageForModel(
     outcome: CompressOutcome,
     result: CompressImageResult,
   ): CompressImageResult => {
-    reportCompressEvent(options.telemetry, {
-      outcome,
-      startedAt,
-      inputMime: normalizedMime,
-      exifTransposed: dims?.transposed === true,
-      result,
-    });
     return result;
   };
 
@@ -270,13 +251,6 @@ export async function compressBase64ForModel(
       originalByteLength: approxBytes,
       finalByteLength: approxBytes,
     };
-    reportCompressEvent(options.telemetry, {
-      outcome: "passthrough_guard",
-      startedAt,
-      inputMime: normalizeImageMime(mimeType),
-      exifTransposed: false,
-      result,
-    });
     return result;
   }
   let bytes: Buffer;
@@ -294,13 +268,6 @@ export async function compressBase64ForModel(
       originalByteLength: 0,
       finalByteLength: 0,
     };
-    reportCompressEvent(options.telemetry, {
-      outcome: "passthrough_error",
-      startedAt,
-      inputMime: normalizeImageMime(mimeType),
-      exifTransposed: false,
-      result,
-    });
     return result;
   }
   const result = await compressImageForModel(bytes, mimeType, options);
@@ -503,11 +470,9 @@ export async function cropImageForModel(
   const normalizedMime = normalizeImageMime(mimeType);
 
   const fail = (errorKind: CropErrorKind, error: string): CropImageFailure => {
-    reportCropEvent(options.telemetry, { startedAt, ok: false, errorKind });
     return { ok: false, error };
   };
   const succeed = (result: CropImageSuccess): CropImageSuccess => {
-    reportCropEvent(options.telemetry, { startedAt, ok: true, result });
     return result;
   };
 

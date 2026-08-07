@@ -6,7 +6,6 @@ import { buildKimiFileUrl, parseKimiFileUrl } from "#/agent/media/kimiFileUrl";
 import { AgentVideoResolverService } from "#/agent/media/videoResolverService";
 import { AgentStateService } from "#/agent/state/agentStateService";
 import type { GetResult, IFileService } from "#/app/file/fileService";
-import type { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { ModelCapability } from "#/kosong/contract/capability";
 import type { Message, VideoURLPart } from "#/kosong/contract/message";
 import type { ModelRequester } from "#/kosong/model/modelRequester";

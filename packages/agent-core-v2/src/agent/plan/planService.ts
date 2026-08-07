@@ -47,8 +47,6 @@ import type {
   ResolvedToolExecutionHookContext,
 } from "#/agent/toolExecutor/toolHooks";
 import { IEventBus } from "#/app/event/eventBus";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import { IBlobStore } from "#/persistence/interface/blobStore";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
@@ -74,10 +72,7 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
     private readonly context: IAgentContextMemoryService,
     @IHostFileSystem private readonly hostFs: IHostFileSystem,
     @IBlobStore private readonly blobs: IBlobStore,
-    @IAgentContextInjectorService dynamicInjector: IAgentContextInjectorService,
-    @IAgentTelemetryContextService
-    private readonly telemetryContext: IAgentTelemetryContextService,
-    @IEventBus eventBus: IEventBus,
+    @IAgentContextInjectorService dynamicInjector: IAgentContextInjectorService,    @IEventBus eventBus: IEventBus,
     @IWireService private readonly wire: IWireService,
     @ISessionContext private readonly sessionCtx: ISessionContext,
     @IAgentScopeContext private readonly agentCtx: IAgentScopeContext,
@@ -85,23 +80,19 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
     @IAgentToolApprovalService
     private readonly toolApproval: IAgentToolApprovalService,
     @IAgentPermissionModeService
-    private readonly modeService: IAgentPermissionModeService,
-    @ITelemetryService telemetry: ITelemetryService,
-    @IAgentStateService states: IAgentStateService,
+    private readonly modeService: IAgentPermissionModeService,    @IAgentStateService states: IAgentStateService,
   ) {
     super();
 
-    this.review = new ExitPlanModeReview(this, this.toolApproval, telemetry);
+    this.review = new ExitPlanModeReview(this, this.toolApproval);
 
     this._register(
       this.wire.hooks.onDidRestore.register("plan", async (_ctx, next) => {
-        this.restoreTelemetryMode();
         await next();
       }),
     );
     this._register(
       eventBus.subscribe("context.undone", () => {
-        this.restoreTelemetryMode();
         eventBus.publish({
           type: "agent.status.updated",
           planMode: this.isActive,
@@ -188,10 +179,6 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
     return this.planFilePathFor(state.id);
   }
 
-  private restoreTelemetryMode(): void {
-    this.telemetryContext.set({ mode: this.isActive ? "plan" : "agent" });
-  }
-
   private createPlanId(): string {
     return generateHeroSlug(randomUUID(), new Set());
   }
@@ -209,7 +196,6 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
     try {
       await this.ensurePlanDirectory(planFilePath);
       this.wire.dispatch(planModeEnter({ id }));
-      this.telemetryContext.set({ mode: "plan" });
       enterRecorded = true;
       if (createFile) {
         await this.writeEmptyPlanFile(planFilePath);
@@ -224,7 +210,6 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
 
   cancel(id?: string): void {
     this.wire.dispatch(planModeCancel({ id }));
-    this.telemetryContext.set({ mode: "agent" });
   }
 
   async clear(): Promise<void> {
@@ -235,7 +220,6 @@ export class AgentPlanService extends Disposable implements IAgentPlanService {
 
   exit(id?: string): void {
     this.wire.dispatch(planModeExit({ id }));
-    this.telemetryContext.set({ mode: "agent" });
   }
 
   async recordRevision(): Promise<void> {

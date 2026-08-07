@@ -48,10 +48,8 @@ interface TelemetryRecord {
   readonly properties: Readonly<Record<string, unknown>> | undefined;
 }
 
-function recordingTelemetry(records: TelemetryRecord[]): ITelemetryService {
-  const telemetry: ITelemetryService = {
-    _serviceBrand: undefined,
-    track(event, properties) {
+function : ITelemetryService {
+  const     track(event, properties) {
       records.push({ event, properties });
     },
     track2: (event, properties) =>
@@ -601,7 +599,7 @@ describe("mcpResultToExecutableOutput", () => {
     await mcpResultToExecutableOutput(
       result([{ type: "image", data: big, mimeType: "image/png" }]),
       "mcp__s__shot",
-      { telemetry: recordingTelemetry(records) },
+      {},
     );
 
     const events = records.filter(

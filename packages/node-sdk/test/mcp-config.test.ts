@@ -345,7 +345,6 @@ function oauthHarness(rpc: OAuthRpc): KimiHarness {
       }),
       logout: async () => ({ logged_out: true as const, provider: "opencode" }),
     },
-    telemetry: { track: () => undefined },
     ensureConfigFile: async () => undefined,
     onClose: async () => undefined,
   });

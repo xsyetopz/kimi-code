@@ -27,11 +27,6 @@ import { toInputJsonSchema } from "#/tool/input-schema";
 import { isAbortError } from "#/_base/utils/abort";
 import { IAgentTaskService } from "#/agent/task/task";
 import { IAgentScopeContext } from "#/agent/scopeContext/scopeContext";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
-import type {
-  QuestionAnsweredEvent,
-  QuestionDismissedEvent,
-} from "#/app/telemetry/events";
 import type {
   ExecutableToolContext,
   ExecutableToolResult,
@@ -68,9 +63,7 @@ export class AskUserQuestionTool implements IAskUserQuestionTool {
   readonly parameters: Record<string, unknown>;
 
   constructor(
-    @ISessionQuestionService private readonly question: ISessionQuestionService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentTaskService private readonly tasks: IAgentTaskService,
+    @ISessionQuestionService private readonly question: ISessionQuestionService,    @IAgentTaskService private readonly tasks: IAgentTaskService,
     @IAgentScopeContext private readonly scopeContext: IAgentScopeContext,
   ) {
     this.description = `${DESCRIPTION}- Set background=true when you can keep working without the answer. This starts a background question task and returns a task_id immediately. The answer arrives automatically in a later turn — you do not need to poll, sleep, or check on it. Continue with other work; never fabricate or predict the answer.`;
@@ -200,20 +193,9 @@ export class AskUserQuestionTool implements IAskUserQuestionTool {
 
       const normalized = normalizeQuestionResult(result);
       if (normalized === null || Object.keys(normalized.answers).length === 0) {
-        const properties: QuestionDismissedEvent = {
-          trace_id: trace?.traceId,
-        };
-        this.telemetry.track2("question_dismissed", properties);
         return dismissedQuestionResult();
       }
 
-      const properties: QuestionAnsweredEvent = {
-        answered: Object.keys(normalized.answers).length,
-        trace_id: trace?.traceId,
-      };
-      if (normalized.method !== undefined)
-        properties.method = normalized.method;
-      this.telemetry.track2("question_answered", properties);
       return {
         isError: false,
         output: JSON.stringify({ answers: normalized.answers }),

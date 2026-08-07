@@ -18,7 +18,6 @@ import type {
   IWorkspaceScopeHandle,
 } from "#/_base/di/scope";
 import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { ErrorCodes, isError2 } from "#/errors";
 import {
   ISessionLifecycleService,
@@ -53,16 +52,6 @@ export async function resumeSessionById(
   try {
     handler = await handlerForSession(accessor, sessionId);
   } catch (error) {
-    accessor
-      .get(ITelemetryService)
-      .withContext({ sessionId })
-      .track2("session_load_failed", {
-        reason: isError2(error)
-          ? error.code
-          : error instanceof Error
-            ? error.name
-            : "unknown",
-      });
     throw error;
   }
   if (handler === undefined) return undefined;

@@ -13,7 +13,6 @@ import {
   APIStatusError,
 } from "#/kosong/contract/errors";
 import { inputTotal, type TokenUsage } from "#/kosong/contract/usage";
-import type { CompactionFinishedEvent } from "#/app/telemetry/events";
 import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
 import type { FullCompactionTask } from "./fullCompaction";
 

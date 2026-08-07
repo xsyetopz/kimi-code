@@ -839,7 +839,7 @@ describe("Agent loop", () => {
 describe("turn telemetry", () => {
   it("emits turn_started and turn_ended with mode and protocol on completion", async () => {
     const records: TelemetryRecord[] = [];
-    const local = createTestAgent({ telemetry: recordingTelemetry(records) });
+    const local = createTestAgent({});
     try {
       local.get(IAgentProfileService).update({ activeToolNames: [] });
       local.mockNextResponse({ type: "text", text: "hi" });
@@ -879,7 +879,7 @@ describe("turn telemetry", () => {
 
   it("keeps turn telemetry aligned with the request config across pre-step changes", async () => {
     const records: TelemetryRecord[] = [];
-    const local = createTestAgent({ telemetry: recordingTelemetry(records) });
+    const local = createTestAgent({});
     try {
       const localLoop = local.get(IAgentLoopService);
       const localProfile = local.get(IAgentProfileService);
@@ -932,7 +932,7 @@ describe("turn telemetry", () => {
 
   it("attaches the latest request trace id to turn_ended", async () => {
     const records: TelemetryRecord[] = [];
-    const local = createTestAgent({ telemetry: recordingTelemetry(records) });
+    const local = createTestAgent({});
     try {
       local.get(IAgentProfileService).update({ activeToolNames: [] });
       local.mockNextProviderResponse({
@@ -957,7 +957,7 @@ describe("turn telemetry", () => {
 
   it("does not reuse the previous step trace when a step hook fails before a request", async () => {
     const records: TelemetryRecord[] = [];
-    const local = createTestAgent({ telemetry: recordingTelemetry(records) });
+    const local = createTestAgent({});
     try {
       const localLoop = local.get(IAgentLoopService);
       local.get(IAgentProfileService).update({ activeToolNames: [] });
@@ -1003,7 +1003,7 @@ describe("turn telemetry", () => {
 
   it("emits turn_interrupted with interrupt_reason filtered and turn_ended failed", async () => {
     const records: TelemetryRecord[] = [];
-    const local = createTestAgent({ telemetry: recordingTelemetry(records) });
+    const local = createTestAgent({});
     try {
       local.mockNextProviderResponse({
         parts: [{ type: "text", text: "blocked" }],
@@ -1046,7 +1046,7 @@ describe("turn telemetry", () => {
     "emits turn_interrupted with interrupt_reason %s on cancellation",
     async (expected, makeReason) => {
       const records: TelemetryRecord[] = [];
-      const local = createTestAgent({ telemetry: recordingTelemetry(records) });
+      const local = createTestAgent({});
       try {
         const localLoop = local.get(IAgentLoopService);
         let stepStarted!: () => void;

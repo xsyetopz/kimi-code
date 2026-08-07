@@ -52,8 +52,6 @@ import { createWireMetadataRecord, type WireRecord } from "#/wire/record";
 import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
 import { IAgentLoopService } from "#/agent/loop/loop";
 import { IAgentFullCompactionService } from "#/agent/fullCompaction/fullCompaction";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
 import { IHostEnvironment } from "#/os/interface/hostEnvironment";
 import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import { ISessionAgentProfileCatalog } from "#/session/sessionAgentProfileCatalog/sessionAgentProfileCatalog";
@@ -303,17 +301,7 @@ describe("AgentLifecycleService", () => {
       }),
       cancel: loopCancel,
       settled: loopSettled,
-    } as unknown as IAgentLoopService);
-    ix.stub(ITelemetryService, {
-      _serviceBrand: undefined,
-      track2: () => {},
-      withContext: () =>
-        ({
-          _serviceBrand: undefined,
-          track2: () => {},
-        }) as unknown as ITelemetryService,
-    } as unknown as ITelemetryService);
-    ix.stub(IAgentTelemetryContextService, {
+    } as unknown as IAgentLoopService);    ix.stub(IAgentTelemetryContextService, {
       _serviceBrand: undefined,
       get: () => ({ mode: "agent" }),
       set: () => {},
@@ -521,18 +509,12 @@ describe("AgentLifecycleService", () => {
 
   it("seeds each agent scope with a telemetry view bound to its own agent id", async () => {
     const records: TelemetryRecord[] = [];
-    ix.stub(ITelemetryService, recordingTelemetry(records));
+    ix.stub(ITelemetryService);
     const svc = ix.get(IAgentLifecycleService);
     const main = await svc.create({ agentId: "main" });
     const sub = await svc.create({});
 
-    main.accessor
-      .get(ITelemetryService)
-      .track2("yolo_toggle", { enabled: true });
-    sub.accessor
-      .get(ITelemetryService)
-      .track2("yolo_toggle", { enabled: false });
-
+    main.accessor    sub.accessor
     expect(records).toContainEqual({
       event: "yolo_toggle",
       properties: { agent_id: "main", enabled: true },

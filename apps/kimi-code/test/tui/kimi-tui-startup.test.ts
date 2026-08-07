@@ -205,8 +205,7 @@ function makeHarness(
     listSessions: vi.fn(async () => []),
     close: vi.fn(async () => {}),
     track: vi.fn(),
-    setTelemetryContext: vi.fn(),
-    getExperimentalFeatures: vi.fn(async () => []),
+        getExperimentalFeatures: vi.fn(async () => []),
     supportsAtomicSectionReplace: vi.fn(() => false),
     auth: {
       status: vi.fn(async () => ({ providers: [] })),

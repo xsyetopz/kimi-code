@@ -78,13 +78,6 @@ import { OrderedHookSlot } from "#/hooks";
 import { IAgentContextMemoryService } from "#/agent/contextMemory/contextMemory";
 import { isVacuousContentPart } from "#/agent/contextMemory/vacuousContent";
 import { IAgentStateService } from "#/agent/state/agentState";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
-import type {
-  TurnEndedEvent as TurnEndedTelemetryEvent,
-  TurnInterruptedEvent,
-  TurnStartedEvent as TurnStartedTelemetryEvent,
-} from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IWireService } from "#/wire/wire";
 import { LOOP_CONTROL_SECTION, type LoopControl } from "./configSection";
 import {
@@ -164,9 +157,6 @@ export class AgentLoopServiceCore
     private readonly toolExecutor: IAgentToolExecutorService,
     @IConfigService private readonly config: IConfigService,
     @IWireService private readonly wire: IWireService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentTelemetryContextService
-    private readonly telemetryContext: IAgentTelemetryContextService,
     @IAgentStateService private readonly states: IAgentStateService,
   ) {
     super();
@@ -574,24 +564,8 @@ export class AgentLoopServiceCore
     ready: ReturnType<typeof createControlledPromise<void>>,
   ): Promise<TurnResult> {
     const startedAt = Date.now();
-    this.telemetryContext.set({ turn_id: turn.id });
-    const telemetryContext = this.telemetryContext.get();
-    const turnTelemetry = this.telemetry.withContext(telemetryContext);
-    const { mode, provider_type, protocol } = telemetryContext;
-    let thinkingEffort: string | undefined;
     let result: TurnResult | undefined;
     try {
-      thinkingEffort = this.llmRequester.prepareTurnConfig(
-        turn.id,
-      )?.thinkingEffort;
-      const started: TurnStartedTelemetryEvent = {
-        turn_id: turn.id,
-        mode,
-        provider_type,
-        protocol,
-        thinking_effort: thinkingEffort,
-      };
-      turnTelemetry.track2("turn_started", started);
       result = await this.run({
         turnId: turn.id,
         signal: turn.signal,
@@ -604,10 +578,6 @@ export class AgentLoopServiceCore
     } finally {
       this.settleTurnReady(ready, result);
       this.releaseActiveTurn(turn, result);
-      const traceId =
-        result?.type === "completed"
-          ? this.lastRequestTraceId
-          : this.activeRequestTrace?.traceId;
       if (result !== undefined) {
         const error =
           result.type === "failed"
@@ -631,31 +601,7 @@ export class AgentLoopServiceCore
         });
         if (error !== undefined)
           this.eventBus.publish({ type: "error", ...error });
-        if (interruptReason !== undefined) {
-          const interrupted: TurnInterruptedEvent = {
-            turn_id: turn.id,
-            at_step: result.steps,
-            mode,
-            interrupt_reason: interruptReason,
-            provider_type,
-            protocol,
-            thinking_effort: thinkingEffort,
-            trace_id: traceId,
-          };
-          turnTelemetry.track2("turn_interrupted", interrupted);
-        }
       }
-      const ended: TurnEndedTelemetryEvent = {
-        turn_id: turn.id,
-        reason: result?.type ?? "failed",
-        duration_ms: Date.now() - startedAt,
-        mode,
-        provider_type,
-        protocol,
-        thinking_effort: thinkingEffort,
-        trace_id: traceId,
-      };
-      turnTelemetry.track2("turn_ended", ended);
       this.activeRequestTrace = undefined;
       this.lastRequestTraceId = undefined;
       this.pumpTurns();

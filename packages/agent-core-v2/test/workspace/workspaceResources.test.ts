@@ -49,8 +49,7 @@ import { IProjectLocalConfigService } from "#/app/projectLocalConfig/projectLoca
 import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
 import {
   ITelemetryService,
-  noopTelemetryService,
-} from "#/app/telemetry/telemetry";
+  } from "#/app/telemetry/telemetry";
 import { FileSkillDiscovery } from "#/app/skillCatalog/fileSkillDiscovery";
 import { InMemorySkillDiscovery } from "#/app/skillCatalog/inMemorySkillDiscovery";
 import { ISkillDiscovery } from "#/app/skillCatalog/skillDiscovery";
@@ -428,9 +427,7 @@ describe("workspace resource sharing (handler chain)", () => {
         ready: Promise.resolve(),
         get: () => undefined,
         onDidSectionChange: () => ({ dispose: () => {} }),
-      } as unknown as IConfigService),
-      stubPair(ITelemetryService, noopTelemetryService),
-      stubPair(ISkillDiscovery, discovery),
+      } as unknown as IConfigService),      stubPair(ISkillDiscovery, discovery),
       stubPair(IPluginService, pluginStub()),
       stubPair(IWorkspaceService, workspaceCatalogStub()),
       stubPair(ISessionIndex, {

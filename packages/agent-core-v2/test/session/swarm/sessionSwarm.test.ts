@@ -22,8 +22,7 @@ import { APIProviderRateLimitError } from "#/kosong/contract/errors";
 import { IModelCatalog, type Model } from "#/kosong/model/catalog";
 import {
   ITelemetryService,
-  noopTelemetryService,
-} from "#/app/telemetry/telemetry";
+  } from "#/app/telemetry/telemetry";
 import {
   IAgentLifecycleService,
   type CreateAgentOptions,
@@ -1940,9 +1939,7 @@ function agentHandle(
           } as unknown as IAgentLoopService;
         }
         if (serviceId === IAgentUserToolService) return userToolServiceStub();
-        if (serviceId === IEventBus) return eventBus;
-        if (serviceId === ITelemetryService) return noopTelemetryService;
-        if (serviceId === IAgentLifecycleService) return lifecycle;
+        if (serviceId === IEventBus) return eventBus;        if (serviceId === IAgentLifecycleService) return lifecycle;
         return undefined;
       }) as IAgentScopeHandle["accessor"]["get"],
     },

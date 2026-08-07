@@ -43,8 +43,6 @@ import type {
 import { IAgentStateService } from "#/agent/state/agentState";
 import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
 import { ILogService } from "#/_base/log/log";
-import type { ToolCallEvent } from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { OrderedHookSlot } from "#/hooks";
 import { IAgentToolResultTruncationService } from "#/agent/toolResultTruncation/toolResultTruncation";
 import { BeforeToolExecuteEmitter } from "./beforeToolExecuteEvent";
@@ -171,9 +169,7 @@ export class AgentToolExecutorService implements IAgentToolExecutorService {
   constructor(
     @IAgentToolRegistryService
     private readonly toolRegistry: IAgentToolRegistryService,
-    @IEventBus private readonly eventBus: IEventBus,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentToolResultTruncationService
+    @IEventBus private readonly eventBus: IEventBus,    @IAgentToolResultTruncationService
     private readonly resultTruncation: IAgentToolResultTruncationService,
     @IAgentStateService private readonly states: IAgentStateService,
     @ILogService private readonly log?: ILogService,
@@ -333,37 +329,12 @@ export class AgentToolExecutorService implements IAgentToolExecutorService {
     );
 
     this.dispatchToolResult(call, finalized, options);
-    this.trackToolCall(call, finalized, timedResult.durationMs, options);
 
     return {
       toolCallId: call.toolCall.id,
       toolName: call.toolName,
       result: finalized,
     };
-  }
-
-  private trackToolCall(
-    call: PreflightedToolCall,
-    result: ToolResult,
-    durationMs: number,
-    options: ToolExecutorExecuteOptions,
-  ): void {
-    const outcome = toolTelemetryOutcome(result);
-    const toolCallId = call.toolCall.id;
-    const dupType = this.toolCallDupTypes.get(toolCallId) ?? "normal";
-    this.toolCallDupTypes.delete(toolCallId);
-    const properties: ToolCallEvent = {
-      turn_id: options.turnId,
-      tool_call_id: toolCallId,
-      tool_name: call.toolName,
-      outcome,
-      duration_ms: durationMs,
-      dup_type: dupType,
-      trace_id: options.trace?.traceId,
-    };
-    if (result.isError === true)
-      properties["error_type"] = toolTelemetryErrorType(outcome);
-    this.telemetry.track2("tool_call", properties);
   }
 
   private async prepareToolCall(

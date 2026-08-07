@@ -71,8 +71,6 @@ import {
 import { defineState } from "#/_base/state/stateRegistry";
 import { IBashParserService } from "#/app/bashParser/bashParser";
 import { IBootstrapService } from "#/app/bootstrap/bootstrap";
-import type { AgentsMdReminderShownEvent } from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { ContentPart } from "#/kosong/contract/message";
 import { IHostEnvironment } from "#/os/interface/hostEnvironment";
 import { IHostFileSystem } from "#/os/interface/hostFileSystem";
@@ -132,9 +130,7 @@ export class AgentAgentsMdReminderService
     @IHostFileSystem private readonly fs: IHostFileSystem,
     @IHostEnvironment private readonly env: IHostEnvironment,
     @IBootstrapService private readonly bootstrap: IBootstrapService,
-    @IBashParserService private readonly bashParser: IBashParserService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IWireService private readonly wire: IWireService,
+    @IBashParserService private readonly bashParser: IBashParserService,    @IWireService private readonly wire: IWireService,
   ) {
     super();
     this.states.register(agentsMdReminderKnownKey);
@@ -238,7 +234,6 @@ export class AgentAgentsMdReminderService
         reminded_count: discovered.length,
         trace_id: ctx.trace?.traceId,
       };
-      this.telemetry.track2("agents_md_reminder_shown", properties);
       this.publishKnown([...selfKnown, ...discovered]);
       return result;
     } catch {

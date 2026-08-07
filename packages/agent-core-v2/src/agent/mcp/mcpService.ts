@@ -34,7 +34,6 @@ import { ErrorCodes, makeErrorPayload } from "#/errors";
 import { abortable } from "#/_base/utils/abort";
 import { IAgentStateService } from "#/agent/state/agentState";
 import { IEventBus } from "#/app/event/eventBus";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { sessionMediaOriginalsDir } from "#/agent/media/image-originals";
 import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
 import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
@@ -122,9 +121,7 @@ export class AgentMcpService extends Disposable implements IAgentMcpService {
     @IEventBus private readonly eventBus: IEventBus,
     @IAgentToolExecutorService toolExecutor: IAgentToolExecutorService,
     @IAgentLoopService loop: IAgentLoopService,
-    @IWireService private readonly wire: IWireService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentStateService private readonly states: IAgentStateService,
+    @IWireService private readonly wire: IWireService,    @IAgentStateService private readonly states: IAgentStateService,
   ) {
     super();
     this.states.register(mcpMcpToolsByServerKey);

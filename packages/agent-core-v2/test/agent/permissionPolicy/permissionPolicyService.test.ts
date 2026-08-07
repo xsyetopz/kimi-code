@@ -36,7 +36,6 @@ import {
 } from "#/agent/scopeContext/scopeContext";
 import { IGitService } from "#/app/git/git";
 import { findGitWorkTree } from "#/app/git/workTree";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
 import {
   ToolAccesses,
@@ -47,7 +46,6 @@ import { IWorkspaceLeaseService } from "#/workspace/workspaceLease/workspaceLeas
 import { WorkspaceLeaseService } from "#/workspace/workspaceLease/workspaceLeaseService";
 
 import { stubPermissionModeService } from "../permissionMode/stubs";
-import { recordingTelemetry } from "../../app/telemetry/stubs";
 
 const signal = new AbortController().signal;
 
@@ -86,7 +84,7 @@ describe("AgentPermissionPolicyService chain", () => {
         );
         reg.defineInstance(ISessionWorkspaceContext, workspace.stub);
         reg.defineInstance(IHostEnvironment, kaosStub());
-        reg.defineInstance(ITelemetryService, recordingTelemetry([]));
+        reg.defineInstance(ITelemetryService);
         reg.definePartialInstance(IGitService, {
           findWorkTree: async () => null,
         });
@@ -247,7 +245,7 @@ describe("AgentPermissionPolicyService git cwd write approval", () => {
         );
         reg.defineInstance(ISessionWorkspaceContext, workspace.stub);
         reg.defineInstance(IHostEnvironment, kaosStub());
-        reg.defineInstance(ITelemetryService, recordingTelemetry([]));
+        reg.defineInstance(ITelemetryService);
         reg.definePartialInstance(IGitService, {
           findWorkTree: (cwd: string) => findGitWorkTree(hostFs, cwd),
         });
@@ -449,7 +447,7 @@ describe("AgentPermissionPolicyService workspace lease write deny", () => {
           workspaceStub("/workspace").stub,
         );
         reg.defineInstance(IHostEnvironment, kaosStub());
-        reg.defineInstance(ITelemetryService, recordingTelemetry([]));
+        reg.defineInstance(ITelemetryService);
         reg.defineInstance(IWorkspaceLeaseService, leases);
         reg.definePartialInstance(IGitService, {
           findWorkTree: async () => null,

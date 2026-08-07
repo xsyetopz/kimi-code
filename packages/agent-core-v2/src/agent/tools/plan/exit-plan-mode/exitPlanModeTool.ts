@@ -22,7 +22,6 @@ import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
 import type { ExecutableToolResult, ToolExecution } from "#/tool/toolContract";
 import { registerAgentToolService } from "#/agent/toolRegistry/toolContribution";
 import { toInputJsonSchema } from "#/tool/input-schema";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IAgentPlanService } from "#/agent/plan/plan";
 import type { PlanData } from "#/agent/plan/plan";
 import { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
@@ -54,9 +53,7 @@ export class ExitPlanModeTool implements IExitPlanModeTool {
   constructor(
     @IAgentPlanService private readonly planMode: IAgentPlanService,
     @IAgentPermissionModeService
-    private readonly permissionMode: IAgentPermissionModeService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-  ) {}
+    private readonly permissionMode: IAgentPermissionModeService,  ) {}
 
   async resolveExecution(args: ExitPlanModeInput): Promise<ToolExecution> {
     return {
@@ -106,26 +103,15 @@ export class ExitPlanModeTool implements IExitPlanModeTool {
     const resolvedPlan = await this.resolvePlan();
     if (!resolvedPlan.ok) return resolvedPlan.error;
 
-    this.telemetry.track2("plan_submitted", {
-      has_options: args.options !== undefined && args.options.length >= 2,
-    });
-
     const failed = this.exitPlanMode();
     if (failed !== undefined) return failed;
 
     if (this.permissionMode.mode === "auto") {
-      this.telemetry.track2("plan_resolved", {
-        outcome: "auto_approved",
-      });
       return {
         isError: false,
         output: `Exited plan mode. ${formatAutoApprovedPlanForOutput(resolvedPlan.plan, resolvedPlan.path)}`,
       };
     }
-
-    this.telemetry.track2("plan_resolved", {
-      outcome: "approved",
-    });
     return {
       isError: false,
       output: `Exited plan mode. ${formatPlanForOutput(resolvedPlan.plan, resolvedPlan.path)}`,

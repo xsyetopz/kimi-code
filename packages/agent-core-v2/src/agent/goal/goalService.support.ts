@@ -12,13 +12,11 @@ import {
 } from "#/errors";
 import { LoopErrors } from "#/agent/loop/errors";
 import type { EnqueueReceipt } from "#/agent/loop/loop";
-import type { TurnEndedEvent, TurnStartedEvent } from "#/app/telemetry/events";
 import type { ContextMessage, PromptOrigin } from "#/agent/contextMemory/types";
 import type { PermissionMode } from "#/agent/permissionMode/permissionMode";
 import type { ExecutableToolResult } from "#/agent/toolExecutor/toolExecutor";
 import type {
   GoalBudgetLimits,
-  GoalBudgetProperties,
   GoalBudgetReport,
   GoalState,
 } from "./types";
@@ -159,7 +157,7 @@ function isGoalForkClearedReminder(
   );
 }
 
-function isGoalContinuationOrigin(origin: TurnStartedEvent["origin"]): boolean {
+function isGoalContinuationOrigin(origin: PromptOrigin): boolean {
   return (
     origin.kind === "system_trigger" && origin.name === "goal_continuation"
   );
@@ -282,16 +280,6 @@ function goalBudgetBlockReason(budget: GoalBudgetReport): string | undefined {
   return reached.length === 0
     ? undefined
     : `${GOAL_BUDGET_BLOCK_PREFIX}: ${reached.join(", ")}`;
-}
-
-function budgetTelemetryProperties(
-  limits: GoalBudgetLimits,
-): GoalBudgetProperties {
-  return {
-    has_token_budget: limits.tokenBudget !== undefined,
-    has_turn_budget: limits.turnBudget !== undefined,
-    has_wall_clock_budget: limits.wallClockBudgetMs !== undefined,
-  };
 }
 
 function normalizeCompletionCriterion(

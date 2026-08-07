@@ -46,8 +46,7 @@ import { IProjectLocalConfigService } from "#/app/projectLocalConfig/projectLoca
 import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
 import {
   ITelemetryService,
-  noopTelemetryService,
-} from "#/app/telemetry/telemetry";
+  } from "#/app/telemetry/telemetry";
 import { IWorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycle";
 import { WorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycleService";
 import { IWorkspaceService, type Workspace } from "#/app/workspace/workspace";
@@ -304,9 +303,7 @@ describe("workspace add-dir (handler chain)", () => {
         ready: Promise.resolve(),
         get: () => undefined,
         onDidSectionChange: () => ({ dispose: () => {} }),
-      } as unknown as IConfigService),
-      stubPair(ITelemetryService, noopTelemetryService),
-      stubPair(IWorkspaceService, workspaceCatalogStub()),
+      } as unknown as IConfigService),      stubPair(IWorkspaceService, workspaceCatalogStub()),
       stubPair(ISessionIndex, {
         _serviceBrand: undefined,
         list: () => Promise.resolve({ items: [], total: 0, hasMore: false }),

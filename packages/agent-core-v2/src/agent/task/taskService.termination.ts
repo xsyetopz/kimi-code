@@ -81,7 +81,6 @@ import { IConfigService } from "#/app/config/config";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
 import { IFileSystemStorageService } from "#/persistence/interface/storage";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IWireService } from "#/wire/wire";
 import {
   IAgentTaskService,
@@ -621,19 +620,9 @@ export class AgentTaskServiceTermination extends AgentTaskServiceCore {
 
   private recordTaskStarted(info: AgentTaskInfo): void {
     this.wire.dispatch(taskStarted({ info }));
-    this.telemetry.track2("background_task_created", {
-      task_id: info.taskId,
-      kind: info.kind === "process" ? "bash" : info.kind,
-    });
   }
 
   private recordTaskTerminated(info: AgentTaskInfo, outputTail?: string): void {
     this.wire.dispatch(taskTerminated({ info, outputTail }));
-    this.telemetry.track2("background_task_completed", {
-      task_id: info.taskId,
-      kind: info.kind,
-      duration_ms: info.endedAt !== null ? info.endedAt - info.startedAt : null,
-      status: info.status,
-    });
   }
 }

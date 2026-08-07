@@ -26,7 +26,6 @@ export {
   sessionServices,
   skillServices,
   swarmServices,
-  telemetryServices,
   testAgent,
   wireRecordPersistenceServices,
   type TestAgentContext,

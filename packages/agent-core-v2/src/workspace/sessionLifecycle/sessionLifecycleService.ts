@@ -88,7 +88,6 @@ import {
   ISessionIndex,
   PARENT_SESSION_ID_KEY,
 } from "#/app/sessionIndex/sessionIndex";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { ErrorCodes, Error2, isError2 } from "#/errors";
 import { createHooks } from "#/hooks";
 import { IHostEnvironment } from "#/os/interface/hostEnvironment";
@@ -219,9 +218,7 @@ export class SessionLifecycleService
     @IAtomicDocumentStore private readonly docs: IAtomicDocumentStore,
     @IHostFileSystem private readonly hostFs: IHostFileSystem,
     @ICronTaskPersistence private readonly cronStore: ICronTaskPersistence,
-    @IEventService private readonly event: IEventService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IWorkspaceSkillCatalog
+    @IEventService private readonly event: IEventService,    @IWorkspaceSkillCatalog
     private readonly skillCatalog: IWorkspaceSkillCatalog,
     @IWorkspaceAgentProfileLoader
     private readonly workspaceAgentProfileLoader: IWorkspaceAgentProfileLoader,
@@ -337,12 +334,7 @@ export class SessionLifecycleService
       {
         extra: [
           ...sessionContextSeed(ctx),
-          ...sessionLifecycleHooksSeed(hooks),
-          [
-            ITelemetryService,
-            this.telemetry.withContext({ sessionId: opts.sessionId }),
-          ],
-          ...sessionSkillCatalogDataSeed(this.skillCatalog.sessionData()),
+          ...sessionLifecycleHooksSeed(hooks),          ...sessionSkillCatalogDataSeed(this.skillCatalog.sessionData()),
           ...sessionAgentProfileCatalogSeed({
             _serviceBrand: undefined,
             workspaceKey: workspaceId,
@@ -416,10 +408,7 @@ export class SessionLifecycleService
       .get(ISessionLifecycleHooks)
       .onDidCreateSession.run({ source: event.source });
     this._onDidCreateSession.fire(event);
-    event.handle.accessor
-      .get(ITelemetryService)
-      .track2("session_started", { resumed: event.source === "resume" });
-  }
+    event.handle.accessor  }
 
   get(sessionId: string): ISessionScopeHandle | undefined {
     if (this.resuming.has(sessionId)) return undefined;
@@ -434,20 +423,9 @@ export class SessionLifecycleService
     if (inflight !== undefined) return inflight;
     const live = this.sessions.get(sessionId);
     if (live !== undefined) return Promise.resolve(live);
-    const promise = this.doResume(sessionId, opts)
-      .catch((error: unknown) => {
-        this.telemetry
-          .withContext({ sessionId })
-          .track2("session_load_failed", {
-            reason: isError2(error)
-              ? error.code
-              : error instanceof Error
-                ? error.name
-                : "unknown",
-          });
-        throw error;
-      })
-      .finally(() => this.resuming.delete(sessionId));
+    const promise = this.doResume(sessionId, opts).finally(() =>
+      this.resuming.delete(sessionId),
+    );
     this.resuming.set(sessionId, promise);
     return promise;
   }

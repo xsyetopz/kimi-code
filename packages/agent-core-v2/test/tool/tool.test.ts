@@ -65,8 +65,7 @@ import {
 } from "#/app/agentProfileCatalog/agentProfileCatalog";
 import {
   ITelemetryService,
-  noopTelemetryService,
-} from "#/app/telemetry/telemetry";
+  } from "#/app/telemetry/telemetry";
 import { ISessionCronService } from "#/session/cron/sessionCronService";
 import {
   ISessionMetadata,
@@ -1328,11 +1327,8 @@ describe("Agent tool execution contract", () => {
       accessor: {
         get: ((serviceId: unknown) => {
           if (serviceId === IEventBus) return eventBus;
-          if (serviceId === IAgentLifecycleService) return lifecycle;
-          if (serviceId === ITelemetryService) {
-            return {
-              ...noopTelemetryService,
-              track2: (event: string, properties: unknown) => {
+          if (serviceId === IAgentLifecycleService) return lifecycle;            return {
+              ...              track2: (event: string, properties: unknown) => {
                 telemetryRecords.push({ event, properties });
               },
             };

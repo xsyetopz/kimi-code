@@ -134,7 +134,6 @@ import {
   HookDefSchema,
   KimiError,
   limitAgentReplayByTurns,
-  disabledTelemetryClient,
   type AgentContextData,
   type BeginGlobalMcpServerAuthResult,
   type ExperimentalFeatureState,
@@ -196,7 +195,6 @@ import {
   ISessionSecondaryModelWarningService,
   ISessionSkillCatalog,
   ISessionWorkspaceContext,
-  ITelemetryService,
   IWorkspaceAliases,
   IWorkspaceDirs,
   IWorkspaceMcpService,
@@ -205,7 +203,6 @@ import {
   IWorkspaceSkillCatalog,
   IWorkspaceTrust,
   closeSessionById,
-  createCloudAppender,
   followWorkspaceHandlers,
   getLiveSessionById,
   handlerForSession,
@@ -238,8 +235,6 @@ import { createKlient } from "@moonshot-ai/klient/memory";
 import {
   assertKimiHostIdentity,
   createKimiDefaultHeaders,
-  createKimiDeviceId,
-  KIMI_CODE_PROVIDER_NAME,
 } from "@moonshot-ai/kimi-code-oauth";
 
 import { KimiAuthFacade } from "#/auth";
@@ -307,7 +302,6 @@ import type {
   SessionSummary,
   SessionUsage,
   SkillSummary,
-  TelemetryClient,
   WorkspaceTrustInfo,
 } from "#/types";
 import {
@@ -346,7 +340,6 @@ export interface SDKRpcClientV2Options {
    * source. Passed into the engine through `BootstrapInput.args.skillDirs`.
    */
   readonly skillDirs?: readonly string[];
-  readonly telemetry?: TelemetryClient;
   readonly onOAuthRefresh?: (outcome: OAuthRefreshOutcome) => void;
   readonly uiMode?: string;
 }
@@ -365,7 +358,6 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   readonly homeDir: string;
   readonly configPath: string;
   readonly identity: KimiHostIdentity | undefined;
-  readonly telemetry: TelemetryClient;
   readonly auth: KimiAuthFacade;
   readonly engineAuth: KimiEngineAuthFacade;
   readonly klient: Klient;
@@ -441,7 +433,6 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       configPath: options.configPath,
     });
     ensureKimiHome(this.homeDir);
-    this.telemetry = options.telemetry ?? disabledTelemetryClient;
     this.auth = new KimiAuthFacade({
       homeDir: this.homeDir,
       configPath: this.configPath,
@@ -479,7 +470,6 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     this.engineAuth = createKimiEngineAuthFacade(this.klient.global.auth);
     this.globalMcpConfig = new GlobalMcpConfigStore(this.homeDir);
     this.configReady = app.accessor.get(IConfigService).ready;
-    this.installEngineTelemetry(options);
     this.modelReady = Promise.all([
       this.configReady,
       app.accessor.get(IModelService).ready,
@@ -522,53 +512,6 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     }
     await this.klient.close();
     this.app.dispose();
-  }
-
-  /**
-   * Forward engine telemetry to the host-supplied client. Without this the
-   * client only served `KimiHarness`-level events and every engine-side event
-   * (`track2` facts from agent/session scopes) was dropped on the v2 route.
-   * The `ITelemetryAppender` shape is a structural superset of the v1
-   * `TelemetryClient`, so the client installs directly. The `telemetry`
-   * config section gates engine events the same way the v2 print runner
-   * gates them; the host keeps owning the client's lifecycle (flush /
-   * shutdown stay with the host, matching the v1 core's arrangement).
-   */
-  private installEngineTelemetry(options: SDKRpcClientV2Options): void {
-    const telemetry = this.app.accessor.get(ITelemetryService);
-    const hostClient = options.telemetry;
-
-    if (hostClient !== undefined && hostClient !== disabledTelemetryClient) {
-      telemetry.setAppender(hostClient);
-      void this.configReady.then(() => {
-        if (this.disposed) return;
-        telemetry.setEnabled(
-          this.engineAccessor.get(IConfigService).get("telemetry") !== false,
-        );
-      });
-      return;
-    }
-
-    void this.configReady.then(() => {
-      if (this.disposed) return;
-      const enabled =
-        this.engineAccessor.get(IConfigService).get("telemetry") !== false;
-      telemetry.setEnabled(enabled);
-      if (!enabled) return;
-
-      const identity = assertKimiHostIdentity(this.identity);
-      const deviceId = createKimiDeviceId(this.homeDir);
-      telemetry.addAppender(
-        createCloudAppender(this.engineAccessor, {
-          deviceId,
-          appName: identity.productName,
-          version: identity.version,
-          uiMode: options.uiMode,
-          getAccessToken: () =>
-            this.auth.getCachedAccessToken(KIMI_CODE_PROVIDER_NAME),
-        }),
-      );
-    });
   }
 
   /**
@@ -2526,11 +2469,9 @@ export function createKimiHarnessV2(options: KimiHarnessOptions): KimiHarness {
     configPath: rpc.configPath,
     auth: rpc.auth,
     engineAuth: rpc.engineAuth,
-    telemetry: rpc.telemetry,
     ensureConfigFile: () => rpc.ensureConfigFile(),
     onClose: () => rpc.close(),
     imageLimits: resolveHarnessImageLimits(rpc.configPath),
-    sessionStartedProperties: options.sessionStartedProperties,
   });
 }
 

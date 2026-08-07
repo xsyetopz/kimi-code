@@ -183,7 +183,7 @@ function createAgentTaskService(
   } = {},
 ): TaskServiceFixture {
   const records: TelemetryRecord[] = [];
-  const telemetry = recordingTelemetry(records);
+  const telemetry = ;
   const hookEngine:
     | Pick<
         IExternalHooksRunnerService,
@@ -197,7 +197,7 @@ function createAgentTaskService(
           triggerBlock: vi.fn().mockResolvedValue(undefined),
           fireAndForgetTrigger: options.hooks.fireAndForgetTrigger,
         };
-  const overrides: TestAgentServiceOverride[] = [telemetryServices(telemetry)];
+  const overrides: TestAgentServiceOverride[] = [];
   if (options.sessionDir !== undefined) {
     overrides.push(homeDirServices(options.sessionDir));
   }

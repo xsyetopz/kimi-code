@@ -26,7 +26,6 @@ import { foldAgentWireReplay } from "#/v2/resume-replay";
 import { IHostRequestHeaders } from "@moonshot-ai/agent-core-v2";
 
 import { TEST_IDENTITY } from "./test-identity";
-import { recordingTelemetry, type TelemetryRecord } from "./telemetry";
 
 const tempDirs: string[] = [];
 
@@ -422,59 +421,6 @@ describe("foldAgentWireReplay", () => {
     expect(folded.replay).toEqual([
       { type: "permission_updated", mode: "auto", time: 2 },
     ]);
-  });
-});
-
-describe("SDKRpcClientV2 engine telemetry", () => {
-  it("forwards engine-side events to the host-supplied telemetry client", async () => {
-    const homeDir = await mkdtemp(join(tmpdir(), "kimi-sdk-v2-tel-"));
-    tempDirs.push(homeDir);
-    const workDir = await mkdtemp(join(tmpdir(), "kimi-sdk-v2-tel-work-"));
-    tempDirs.push(workDir);
-    const records: TelemetryRecord[] = [];
-    const harness = createKimiHarnessV2({
-      homeDir,
-      identity: TEST_IDENTITY,
-      telemetry: recordingTelemetry(records),
-    });
-    try {
-      const session = await harness.createSession({ workDir });
-      await session.setPermission("yolo");
-      expect(records.some((record) => record.event === "yolo_toggle")).toBe(
-        true,
-      );
-      await session.close();
-    } finally {
-      await harness.close();
-    }
-  });
-
-  it("honors telemetry = false for engine-side events", async () => {
-    const homeDir = await mkdtemp(join(tmpdir(), "kimi-sdk-v2-tel-off-"));
-    tempDirs.push(homeDir);
-    const workDir = await mkdtemp(join(tmpdir(), "kimi-sdk-v2-tel-off-work-"));
-    tempDirs.push(workDir);
-    await writeFile(
-      join(homeDir, "config.toml"),
-      "telemetry = false\n",
-      "utf-8",
-    );
-    const records: TelemetryRecord[] = [];
-    const harness = createKimiHarnessV2({
-      homeDir,
-      identity: TEST_IDENTITY,
-      telemetry: recordingTelemetry(records),
-    });
-    try {
-      const session = await harness.createSession({ workDir });
-      await session.setPermission("yolo");
-      expect(records.some((record) => record.event === "yolo_toggle")).toBe(
-        false,
-      );
-      await session.close();
-    } finally {
-      await harness.close();
-    }
   });
 });
 

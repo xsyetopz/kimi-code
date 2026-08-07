@@ -20,9 +20,6 @@ import {
   IProtocolAdapterRegistry,
   type Protocol,
 } from "#/kosong/protocol/protocol";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
-import { AgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContextService";
 import {
   IAgentScopeContext,
   makeAgentScopeContext,
@@ -55,14 +52,6 @@ import {
 
 const SCOPE = "wire";
 const KEY = "profile-test";
-
-function createTelemetryStub(): ITelemetryService {
-  return {
-    _serviceBrand: undefined,
-    track: () => undefined,
-    track2: () => undefined,
-  } as unknown as ITelemetryService;
-}
 
 function createConfigStub(): IConfigService {
   return {
@@ -226,9 +215,7 @@ function buildHost(key: string): {
 } {
   const host = disposables.add(new TestInstantiationService());
   host.stub(IFileSystemStorageService, new InMemoryStorageService());
-  host.set(IAppendLogStore, new SyncDescriptor(AppendLogStore));
-  host.stub(ITelemetryService, createTelemetryStub());
-  host.stub(
+  host.set(IAppendLogStore, new SyncDescriptor(AppendLogStore));  host.stub(
     IAgentScopeContext,
     makeAgentScopeContext({ agentId: "main", agentScope: "" }),
   );

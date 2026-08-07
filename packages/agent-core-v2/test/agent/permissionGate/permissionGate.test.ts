@@ -22,7 +22,6 @@ import {
 } from "#/agent/permissionRules/permissionRules";
 import { IAgentToolApprovalService } from "#/agent/toolApproval/toolApproval";
 import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { ToolCall } from "#/kosong/contract/message";
 
 import { stubPermissionModeService } from "../permissionMode/stubs";
@@ -107,7 +106,7 @@ describe("AgentPermissionGate", () => {
           stubPermissionPolicyService(() => policyResult),
         );
         reg.defineInstance(IAgentToolApprovalService, toolApproval);
-        reg.defineInstance(ITelemetryService, recordingTelemetry(records));
+        reg.defineInstance(ITelemetryService);
         reg.defineInstance(IAgentToolExecutorService, executorEvents.executor);
         reg.define(IAgentPermissionGate, AgentPermissionGate);
       },

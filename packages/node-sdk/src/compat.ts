@@ -430,17 +430,6 @@ export {
   resolveAgentPath,
 } from "@moonshot-ai/agent-core-v2";
 
-/** Explicitly disabled host telemetry sink (engine events dropped unless a client is passed). */
-export const disabledTelemetryClient = {
-  track: () => {},
-  sendEvent: () => {},
-  flush: () => Promise.resolve(),
-  close: () => Promise.resolve(),
-} as const;
-
-/** @deprecated Use `disabledTelemetryClient`. */
-export const noopTelemetryClient = disabledTelemetryClient;
-
 // ── Constants ──
 export const COMPACTION_ELISION_VARIANT = "standard" as const;
 export const COMPACT_USER_MESSAGE_MAX_TOKENS = 4000;
@@ -503,9 +492,3 @@ export type {
   ToolCallRequest,
   ToolCallResponse,
 } from "#/sdk-api-types";
-export type TelemetryClient = typeof disabledTelemetryClient;
-export type TelemetryProperties = Record<string, unknown>;
-export type TelemetryContextPatch = Record<string, unknown>;
-export function withTelemetryContext(tc: unknown, _ctx?: unknown) {
-  return (tc as TelemetryClient) ?? disabledTelemetryClient;
-}

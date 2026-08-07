@@ -53,7 +53,6 @@ import { IAgentFullCompactionService } from "#/agent/fullCompaction/fullCompacti
 import { IAgentToolActivationService } from "#/agent/toolActivation/toolActivation";
 import { ISessionInteractionService } from "#/session/interaction/interaction";
 import { IWireService } from "#/wire/wire";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   type AgentListFilter,
   type CreateAgentOptions,
@@ -91,9 +90,7 @@ export class AgentLifecycleService
     @IBootstrapService private readonly bootstrap: IBootstrapService,
     @IConfigService private readonly config: IConfigService,
     @ISessionInteractionService
-    private readonly interaction: ISessionInteractionService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-  ) {
+    private readonly interaction: ISessionInteractionService,  ) {
     super();
     this._register(
       this.onDidCreate((handle) => this.subscribeInteractionBus(handle)),
@@ -168,12 +165,7 @@ export class AgentLifecycleService
       agentId,
       {
         extra: [
-          [IAgentScopeContext, makeAgentScopeContext({ agentId, agentScope })],
-          [
-            ITelemetryService,
-            this.telemetry.withContext({ agent_id: agentId }),
-          ],
-        ],
+          [IAgentScopeContext, makeAgentScopeContext({ agentId, agentScope })],        ],
       },
     ) as IAgentScopeHandle;
     this.handles.set(agentId, handle);

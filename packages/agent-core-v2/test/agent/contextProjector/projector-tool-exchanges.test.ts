@@ -27,7 +27,6 @@ import {
   DEEPSEEK_PROTOCOL_PROFILE,
   KIMI_K2_PROTOCOL_PROFILE,
 } from "#/kosong/protocol/presets";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   recordingTelemetry,
   type TelemetryRecord,
@@ -143,7 +142,7 @@ describe("projector tool-exchange normalization", () => {
     telemetryRecords = [];
     const ix = disposables.add(new TestInstantiationService());
     ix.set(ILogService, createCapturingLog(warnings));
-    ix.set(ITelemetryService, recordingTelemetry(telemetryRecords));
+    ix.set(ITelemetryService);
     ix.set(IAgentStateService, new AgentStateService());
     ix.set(
       IAgentScopeContext,

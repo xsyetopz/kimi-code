@@ -30,13 +30,11 @@ import { HarnessInterceptorRegistryService } from "#/app/harnessInterceptor/harn
 import { IHarnessInterceptorRegistry } from "#/app/harnessInterceptor/harnessInterceptorRegistry";
 import { IEventBus } from "#/app/event/eventBus";
 import { EventBusService } from "#/app/event/eventBusService";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { BugIndicatingError } from "#/errors";
 import { createHooks } from "#/hooks";
 import { IWireService } from "#/wire/wire";
 
 import { registerLogServices } from "../../_base/log/stubs";
-import { recordingTelemetry } from "../../app/telemetry/stubs";
 import { stubContextMemory } from "../../agent/contextMemory/stubs";
 import { stubLoopWithHooks } from "../../agent/loop/stubs";
 import { stubToolExecutorEvents } from "../../agent/toolExecutor/stubs";
@@ -83,7 +81,7 @@ function createPromptHarness(registry: IHarnessInterceptorRegistry) {
         seal: async () => {},
         hooks: createHooks(["onDidRestore"]),
       } as unknown as IWireService);
-      reg.defineInstance(ITelemetryService, recordingTelemetry([]));
+      reg.defineInstance(ITelemetryService);
       reg.defineInstance(IAgentFullCompactionService, fullCompaction);
       reg.define(IEventBus, EventBusService);
       reg.define(IAgentSystemReminderService, AgentSystemReminderService);

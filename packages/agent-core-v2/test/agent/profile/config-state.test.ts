@@ -42,8 +42,7 @@ describe("ConfigState model capabilities", () => {
     records = [];
     ctx = createTestAgent(
       configServices(() => kimiConfig),
-      llmGenerateServices((...args) => generate(...args)),
-      telemetryServices(recordingTelemetry(records)),
+      llmGenerateServices((...args) => generate(...args))),
     );
     profile = ctx.get(IAgentProfileService);
     requester = ctx.get(IAgentLLMRequesterService);

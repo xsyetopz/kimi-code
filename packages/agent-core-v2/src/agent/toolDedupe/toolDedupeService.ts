@@ -25,11 +25,6 @@ import {
 } from "#/_base/di/scope";
 import { defineState } from "#/_base/state/stateRegistry";
 import { canonicalTelemetryArgs } from "#/_base/utils/canonical-args";
-import type {
-  ToolCallDedupDetectedEvent,
-  ToolCallRepeatEvent,
-} from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
 import { parseToolCallArguments } from "#/tool/tool-args-parse";
 import { IAgentLoopService } from "#/agent/loop/loop";
@@ -176,9 +171,7 @@ export class AgentToolDedupeService
     Deferred<ToolDedupeResult>
   >();
 
-  constructor(
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentLoopService loop: IAgentLoopService,
+  constructor(    @IAgentLoopService loop: IAgentLoopService,
     @IAgentToolExecutorService
     private readonly toolExecutor: IAgentToolExecutorService,
     @IAgentStateService private readonly states: IAgentStateService,
@@ -373,16 +366,6 @@ export class AgentToolDedupeService
     trace: LLMRequestTrace | undefined,
   ): void {
     this.toolExecutor.recordDupType(toolCallId, dupType);
-    const properties: ToolCallDedupDetectedEvent = {
-      turn_id: this.activeTurnId,
-      step_no: this.activeStep,
-      tool_call_id: toolCallId,
-      tool_name: toolName,
-      dup_type: dupType,
-      args_hash: argsHash(args),
-      trace_id: trace?.traceId,
-    };
-    this.telemetry.track2("tool_call_dedup_detected", properties);
   }
 
   private async finalizeResult(
@@ -431,17 +414,6 @@ export class AgentToolDedupeService
     } else if (streak >= REPEAT_REMINDER_1_START) {
       finalResult = appendReminder(result, REMINDER_TEXT_1);
       action = "r1";
-    }
-
-    if (streak >= 2) {
-      const properties: ToolCallRepeatEvent = {
-        turn_id: this.activeTurnId,
-        tool_name: toolName,
-        repeat_count: streak,
-        action,
-        trace_id: trace?.traceId,
-      };
-      this.telemetry.track2("tool_call_repeat", properties);
     }
 
     this.stepDeferreds.get(key)?.resolve(finalResult);

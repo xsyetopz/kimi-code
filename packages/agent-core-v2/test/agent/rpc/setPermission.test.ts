@@ -26,7 +26,7 @@ describe("setPermission RPC", () => {
 
   it("applies the mode to the agent and tracks the afk toggle", async () => {
     records = [];
-    ctx = createTestAgent(telemetryServices(recordingTelemetry(records)));
+    ctx = createTestAgent());
 
     await ctx.rpc.setPermission({ mode: "auto" });
 
@@ -39,7 +39,7 @@ describe("setPermission RPC", () => {
 
   it("tracks the yolo toggle on enter and exit", async () => {
     records = [];
-    ctx = createTestAgent(telemetryServices(recordingTelemetry(records)));
+    ctx = createTestAgent());
 
     await ctx.rpc.setPermission({ mode: "yolo" });
     await ctx.rpc.setPermission({ mode: "manual" });

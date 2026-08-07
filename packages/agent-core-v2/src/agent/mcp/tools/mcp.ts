@@ -24,7 +24,6 @@
  */
 
 import type { Tool as KosongTool } from "#/kosong/contract/tool";
-import type { ITelemetryService } from "#/app/telemetry/telemetry";
 import { Error2, ErrorCodes, toErrorMessage } from "#/errors";
 import { isAbortError } from "#/_base/utils/abort";
 
@@ -43,9 +42,7 @@ import {
 } from "#/mcpCore/client-shared";
 
 interface McpToolOptions {
-  readonly originalsDir?: string;
-  readonly telemetry?: ITelemetryService;
-  readonly reconnect?: (signal?: AbortSignal) => Promise<MCPClient | undefined>;
+  readonly originalsDir?: string;  readonly reconnect?: (signal?: AbortSignal) => Promise<MCPClient | undefined>;
 }
 
 export function createMcpTool(

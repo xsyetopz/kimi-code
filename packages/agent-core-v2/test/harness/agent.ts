@@ -155,7 +155,6 @@ import {
   AgentSwarmService,
   IAgentTokenCountingService,
   IAppStateService,
-  ITelemetryService,
   IHostTerminalService,
   IAgentToolRegistryService,
   IAgentToolActivationService,
@@ -432,8 +431,7 @@ export type TestAgentContext = AgentTestContext;
 
 export interface TestAgentOptions {
   readonly generate?: GenerateFn | undefined;
-  readonly telemetry?: ITelemetryService | undefined;
-  readonly persistence?: WireRecordPersistence | undefined;
+    readonly persistence?: WireRecordPersistence | undefined;
   readonly hookEngine?:
     | Pick<
         IExternalHooksRunnerService,
@@ -705,12 +703,6 @@ export function llmGenerateServices(
     IProtocolAdapterRegistry,
     createGenerateBackedProtocolRegistry(generate),
   );
-}
-
-export function telemetryServices(
-  telemetry: ITelemetryService,
-): TestAgentServiceOverride {
-  return appService(ITelemetryService, telemetry);
 }
 
 export function questionServices(
@@ -1254,9 +1246,6 @@ export class AgentTestContext {
             IModelCatalog,
             new SyncDescriptor(ConfigBackedModelCatalog, [{}]),
           );
-          if (options.telemetry !== undefined) {
-            reg.defineInstance(ITelemetryService, options.telemetry);
-          }
           if (options.hookEngine !== undefined) {
             reg.defineInstance(
               IExternalHooksRunnerService,
@@ -1306,9 +1295,6 @@ export class AgentTestContext {
 
     const bootstrap = this.root.accessor.get(IBootstrapService);
     const workspaceId = "test-workspace";
-    const agentTelemetry = this.root.accessor
-      .get(ITelemetryService)
-      .withContext({ agent_id: agentId });
     const sessionScope = `${bootstrap.scope("sessions")}/${workspaceId}/${sessionId}`;
     this.session = this.root.createChild(LifecycleScope.Session, sessionId, {
       extra: collectScopeSeed(
@@ -1484,9 +1470,7 @@ export class AgentTestContext {
                 subKey === undefined || subKey === ""
                   ? agentScope
                   : `${agentScope}/${subKey}`,
-            });
-            reg.defineInstance(ITelemetryService, agentTelemetry);
-          },
+            });          },
         ],
         this.serviceOverrides,
         "agent",

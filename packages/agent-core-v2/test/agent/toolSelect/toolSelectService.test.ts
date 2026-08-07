@@ -73,9 +73,7 @@ import { IAgentToolSelectAnnouncementsService } from "#/agent/toolSelect/toolSel
 import { AgentToolSelectAnnouncementsService } from "#/agent/toolSelect/toolSelectAnnouncementsService";
 import { AgentToolSelectService } from "#/agent/toolSelect/toolSelectService";
 import { SelectToolsTool } from "#/agent/tools/select-tools/selectToolsTool";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { registerLogServices } from "../../_base/log/stubs";
-import { recordingTelemetry } from "../../app/telemetry/stubs";
 import { registerStateServices } from "../../state/stubs";
 import { stubToolExecutor } from "../loop/stubs";
 import { registerToolResultTruncationServices } from "../toolResultTruncation/stubs";
@@ -415,7 +413,7 @@ function createExecutorHarness(): ExecutorHarness {
   const ix = createServices(disposables, {
     additionalServices: (reg) => {
       registerSharedServices(reg, contextMemory, loop, eventBus);
-      reg.defineInstance(ITelemetryService, recordingTelemetry([]));
+      reg.defineInstance(ITelemetryService);
       reg.defineInstance(
         IAgentScopeContext,
         makeAgentScopeContext({ agentId: "main", agentScope: "" }),

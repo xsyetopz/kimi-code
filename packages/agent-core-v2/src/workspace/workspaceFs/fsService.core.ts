@@ -72,7 +72,6 @@ import {
   guessMime,
 } from "#/_base/utils/fileMeta";
 import { ErrorCodes, Error2, isError2, unwrapErrorCause } from "#/errors";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   IHostFileSystem,
   type HostDirEntry,
@@ -136,9 +135,7 @@ export class WorkspaceFsServiceCore implements IWorkspaceFsService {
     @IWorkspaceContext workspace: IWorkspaceContext,
     @IWorkspaceDirs private readonly workspaceDirs: IWorkspaceDirs,
     @IHostFileSystem private readonly hostFs: IHostFileSystem,
-    @ISessionProcessRunner private readonly runner: ISessionProcessRunner,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IWorkspaceGitService private readonly git: IWorkspaceGitService,
+    @ISessionProcessRunner private readonly runner: ISessionProcessRunner,    @IWorkspaceGitService private readonly git: IWorkspaceGitService,
   ) {
     this.workDir = resolve(workspace.cwd);
   }

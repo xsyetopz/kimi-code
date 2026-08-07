@@ -65,7 +65,6 @@ import {
 import "#/kosong/provider/providers/kimi/kimi.contrib";
 
 import { registerBootstrapServices } from "../bootstrap/stubs";
-import { registerTelemetryServices } from "../telemetry/stubs";
 import { stubAgentIdentity } from "../../app/agentIdentity/stubs";
 
 const OAUTH_PROVIDER = KIMI_CODE_PROVIDER_NAME;

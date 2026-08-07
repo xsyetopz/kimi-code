@@ -78,7 +78,6 @@ import { IHostProcessService } from "#/os/interface/hostProcess";
 import { unwrapErrorCause } from "#/_base/errors/errors";
 import { ISessionSkillCatalog } from "#/session/sessionSkillCatalog/skillCatalog";
 import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   ToolAccesses,
   type ExecutableToolResult,
@@ -139,9 +138,7 @@ export class GlobTool implements IGlobTool {
     @IHostEnvironment private readonly env: IHostEnvironment,
     @IHostProcessService private readonly processService: IHostProcessService,
     @ISessionWorkspaceContext
-    private readonly workspaceCtx: ISessionWorkspaceContext,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @ISessionSkillCatalog private readonly skillCatalog?: ISessionSkillCatalog,
+    private readonly workspaceCtx: ISessionWorkspaceContext,    @ISessionSkillCatalog private readonly skillCatalog?: ISessionSkillCatalog,
   ) {
     this.description =
       this.env.pathClass === "win32"
@@ -235,16 +232,11 @@ export class GlobTool implements IGlobTool {
       );
       rgPath = resolution.path;
       if (resolution.source !== "system-path") {
-        this.telemetry.track2("glob_tool_rg_fallback", {
-          source: resolution.source,
-          outcome: "resolved",
-        });
       }
     } catch (error) {
       if (signal.aborted) {
         return { isError: true, output: "Glob aborted" };
       }
-      this.telemetry.track2("glob_tool_rg_fallback", { outcome: "failed" });
       return { isError: true, output: rgUnavailableMessage(error) };
     }
 

@@ -77,7 +77,6 @@ import {
 import { IAgentLoopService } from "#/agent/loop/loop";
 import { IAgentTokenCountingService } from "#/agent/tokenCounting/tokenCounting";
 import { IAgentGoalService } from "#/agent/goal/goal";
-import { IAgentTelemetryContextService } from "#/app/telemetry/agentTelemetryContext";
 import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
 
 type GenerateFn = NonNullable<TestAgentOptions["generate"]>;
@@ -272,7 +271,7 @@ describe("FullCompaction", () => {
 
   it("runs manual compaction and applies the compacted context", async () => {
     const records: TelemetryRecord[] = [];
-    const ctx = testAgent({ telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({});
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -711,7 +710,7 @@ describe("FullCompaction", () => {
       }
       return textResult("Recovered compacted summary.", "trace-compact-1");
     };
-    const ctx = testAgent({ generate, telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({ generate });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -1009,7 +1008,7 @@ describe("FullCompaction", () => {
         { type: "think", think: "Still only thinking, no summary produced." },
       ]);
     });
-    const ctx = testAgent({ generate, telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({ generate });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -1094,7 +1093,7 @@ describe("FullCompaction", () => {
         "trace-compact-retry",
       );
     };
-    const ctx = testAgent({ generate, telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({ generate });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -1137,7 +1136,7 @@ describe("FullCompaction", () => {
     const generate: GenerateFn = async () => {
       throw new Error("compaction exploded");
     };
-    const ctx = testAgent({ generate, telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({ generate });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -1202,7 +1201,7 @@ describe("FullCompaction", () => {
         "trace-compact-fail",
       );
     };
-    const ctx = testAgent({ generate, telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({ generate });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -1243,7 +1242,7 @@ describe("FullCompaction", () => {
         },
       };
     });
-    const ctx = testAgent({ generate, telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({ generate });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -1411,7 +1410,7 @@ describe("FullCompaction", () => {
       }
       throw new APIConnectionError("socket hang up");
     };
-    const ctx = testAgent({ generate, telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({ generate });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -1779,7 +1778,7 @@ describe("FullCompaction", () => {
 
   it("blocks the turn until auto compaction finishes", async () => {
     const records: TelemetryRecord[] = [];
-    const ctx = testAgent({ telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({});
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -1890,7 +1889,6 @@ describe("FullCompaction", () => {
     };
     ctx = testAgent({
       generate,
-      telemetry: recordingTelemetry(records),
     });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
@@ -2967,7 +2965,7 @@ describe("FullCompaction", () => {
       }
       throw new Error(`Unexpected generate call ${String(callCount)}`);
     };
-    const ctx = testAgent({ generate, telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({ generate });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,
@@ -3885,7 +3883,7 @@ describe("goal reminder re-injection after full compaction", () => {
 
   it("counts the re-injected goal reminder into the post-compaction token floor", async () => {
     const records: TelemetryRecord[] = [];
-    const ctx = testAgent({ telemetry: recordingTelemetry(records) });
+    const ctx = testAgent({});
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: CATALOGUED_MODEL_CAPABILITIES,

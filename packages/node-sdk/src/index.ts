@@ -164,7 +164,6 @@ export type {
   CompressImageResult,
   CompressBase64Result,
   ImageCompressionCaptionInput,
-  ImageCompressionTelemetry,
 } from "#/compat";
 
 // Experimental feature flags — types only. Resolved values come from

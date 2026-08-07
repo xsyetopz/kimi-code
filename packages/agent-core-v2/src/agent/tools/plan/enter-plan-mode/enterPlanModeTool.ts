@@ -11,7 +11,6 @@
 import type { ToolExecution } from "#/tool/toolContract";
 import { registerAgentToolService } from "#/agent/toolRegistry/toolContribution";
 import { toInputJsonSchema } from "#/tool/input-schema";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IAgentPlanService } from "#/agent/plan/plan";
 
 import DESCRIPTION from "./enter-plan-mode.md?raw";
@@ -30,9 +29,7 @@ export class EnterPlanModeTool implements IEnterPlanModeTool {
   );
 
   constructor(
-    @IAgentPlanService private readonly planMode: IAgentPlanService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-  ) {}
+    @IAgentPlanService private readonly planMode: IAgentPlanService,  ) {}
 
   resolveExecution(_args: EnterPlanModeInput): ToolExecution {
     return {
@@ -60,10 +57,6 @@ export class EnterPlanModeTool implements IEnterPlanModeTool {
             output: `Failed to enter plan mode: ${message}`,
           };
         }
-
-        this.telemetry.track2("plan_enter_resolved", {
-          outcome: "auto_approved",
-        });
         const after = await this.planMode.status();
         return { output: enteredPlanModeMessage(after?.path ?? null) };
       },

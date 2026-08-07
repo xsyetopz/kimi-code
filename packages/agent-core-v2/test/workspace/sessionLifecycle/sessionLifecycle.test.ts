@@ -92,7 +92,6 @@ import { IWorkspaceService, type Workspace } from "#/app/workspace/workspace";
 import { encodeWorkDirKey } from "#/_base/utils/workdir-slug";
 import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import { ISessionMcpHandle } from "#/session/mcp/sessionMcpHandle";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { Error2, ErrorCodes } from "#/errors";
 import {
   recordingTelemetry,
@@ -640,7 +639,7 @@ describe("SessionLifecycleService", () => {
         watch: () => ({ onDidChange: Event.None, dispose: () => {} }),
       } as unknown as IHostFsWatchService),
       stubPair(ILogService, stubLog()),
-      stubPair(ITelemetryService, recordingTelemetry(telemetryRecords)),
+      stubPair(ITelemetryService),
       stubPair(ICronTaskPersistence, cronStoreStub()),
       ...extra,
     ]);

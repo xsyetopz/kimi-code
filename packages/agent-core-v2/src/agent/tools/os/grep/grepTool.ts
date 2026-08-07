@@ -40,7 +40,6 @@ import {
   type ExecutableToolResult,
   type ToolExecution,
 } from "#/tool/toolContract";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { registerAgentToolService } from "#/agent/toolRegistry/toolContribution";
 import { IHostEnvironment } from "#/os/interface/hostEnvironment";
 import { IHostFileSystem } from "#/os/interface/hostFileSystem";
@@ -115,9 +114,7 @@ export class GrepTool implements IGrepTool {
     @IHostFileSystem private readonly fs: IHostFileSystem,
     @IHostEnvironment private readonly env: IHostEnvironment,
     @ISessionWorkspaceContext
-    private readonly workspaceCtx: ISessionWorkspaceContext,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @ISessionSkillCatalog private readonly skillCatalog?: ISessionSkillCatalog,
+    private readonly workspaceCtx: ISessionWorkspaceContext,    @ISessionSkillCatalog private readonly skillCatalog?: ISessionSkillCatalog,
   ) {}
 
   private get workspace(): WorkspaceConfig {
@@ -174,16 +171,11 @@ export class GrepTool implements IGrepTool {
       });
       rgPath = resolution.path;
       if (resolution.source !== "system-path") {
-        this.telemetry.track2("grep_tool_rg_fallback", {
-          source: resolution.source,
-          outcome: "resolved",
-        });
       }
     } catch (error) {
       if (signal.aborted) {
         return { isError: true, output: "Grep aborted" };
       }
-      this.telemetry.track2("grep_tool_rg_fallback", { outcome: "failed" });
       return { isError: true, output: rgUnavailableMessage(error) };
     }
 

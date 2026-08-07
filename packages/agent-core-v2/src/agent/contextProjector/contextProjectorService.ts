@@ -39,7 +39,6 @@ import { isVacuousContentPart } from "#/agent/contextMemory/vacuousContent";
 import { IAgentStateService } from "#/agent/state/agentState";
 import { ErrorCodes, Error2 } from "#/errors";
 import type { ContentPart, Message } from "#/kosong/contract/message";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   IAgentContextProjectorService,
   type ContextProjectionOptions,
@@ -60,9 +59,7 @@ export class AgentContextProjectorService
   declare readonly _serviceBrand: undefined;
 
   constructor(
-    @ILogService private readonly log: ILogService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IAgentStateService private readonly states: IAgentStateService,
+    @ILogService private readonly log: ILogService,    @IAgentStateService private readonly states: IAgentStateService,
   ) {
     this.states.register(contextProjectorLastRepairSignatureKey);
   }
@@ -199,17 +196,6 @@ export class AgentContextProjectorService
       whitespaceDropped,
       vacuousDropped,
       toolCallIds,
-    });
-    this.telemetry.track2("context_projection_repaired", {
-      reordered,
-      synthesized,
-      dropped_orphan: droppedOrphan,
-      duplicate_calls_dropped: duplicateCallsDropped,
-      duplicate_results_dropped: duplicateResultsDropped,
-      leading_dropped: leadingDropped,
-      assistants_merged: assistantsMerged,
-      whitespace_dropped: whitespaceDropped,
-      vacuous_dropped: vacuousDropped,
     });
   }
 }

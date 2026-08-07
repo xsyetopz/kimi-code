@@ -28,7 +28,6 @@ import {
   type RgProbe,
 } from "#/os/backends/node-local/tools/rgLocator";
 import { PathSecurityError, type PathClass } from "#/tool/path-access";
-import { noopTelemetryService } from "#/app/telemetry/telemetry";
 import type { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
 import { stubWorkspaceContext } from "../../../../session/workspaceContext/stub-workspace-context";
 import {
@@ -262,8 +261,7 @@ function makeTool(
     exec?: ReturnType<typeof vi.fn>;
     stat?: ReturnType<typeof vi.fn>;
     readdir?: ReturnType<typeof vi.fn>;
-    telemetry?: ITelemetryService;
-  } = {},
+      } = {},
 ): {
   tool: GlobTool;
   exec: ReturnType<typeof vi.fn>;
@@ -278,8 +276,7 @@ function makeTool(
     env,
     processService,
     workspaceConfig,
-    opts.telemetry ?? noopTelemetryService,
-  );
+    opts.telemetry ??   );
   return { tool, exec, withCwd: withCwdOf(exec) };
 }
 
@@ -1032,8 +1029,7 @@ describe("GlobTool integration (real ripgrep)", () => {
       realEnv,
       realProcessService,
       ws(),
-      noopTelemetryService,
-    );
+          );
 
     const result = await execute(tool, { pattern: "*.ts", path: tmpDir! });
 
@@ -1049,8 +1045,7 @@ describe("GlobTool integration (real ripgrep)", () => {
       realEnv,
       realProcessService,
       ws(),
-      noopTelemetryService,
-    );
+          );
 
     const result = await execute(tool, { pattern: "*.ts", path: tmpDir! });
 
@@ -1068,8 +1063,7 @@ describe("GlobTool integration (real ripgrep)", () => {
       realEnv,
       realProcessService,
       ws(),
-      noopTelemetryService,
-    );
+          );
 
     const result = await execute(tool, {
       pattern: "{src,test}/*.ts",
@@ -1090,8 +1084,7 @@ describe("GlobTool integration (real ripgrep)", () => {
       realEnv,
       realProcessService,
       ws(),
-      noopTelemetryService,
-    );
+          );
 
     const result = await execute(tool, {
       pattern: "src/**/*.ts",
@@ -1110,8 +1103,7 @@ describe("GlobTool integration (real ripgrep)", () => {
       realEnv,
       realProcessService,
       ws(),
-      noopTelemetryService,
-    );
+          );
 
     const result = await execute(tool, {
       pattern: "\\{a,b\\}.ts",
@@ -1131,8 +1123,7 @@ describe("GlobTool integration (real ripgrep)", () => {
         realEnv,
         realProcessService,
         ws(),
-        noopTelemetryService,
-      );
+              );
 
       const result = await execute(tool, {
         pattern: "*.ts",

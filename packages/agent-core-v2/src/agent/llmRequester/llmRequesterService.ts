@@ -90,8 +90,6 @@ import {
 } from "#/kosong/model/thinking";
 import { THINKING_SECTION } from "#/app/kosongConfig/configSection";
 import type { Protocol } from "#/kosong/protocol/protocol";
-import type { ApiErrorEvent } from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import { IWireService } from "#/wire/wire";
 import type { PayloadOf } from "#/wire/types";
 
@@ -214,9 +212,7 @@ export class AgentLLMRequesterService implements IAgentLLMRequesterService {
     @IConfigService private readonly config: IConfigService,
     @IModelService private readonly modelService: IModelService,
     @IModelCatalog private readonly modelCatalog: IModelCatalog,
-    @ILogService private readonly log: ILogService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IWireService private readonly wire: IWireService,
+    @ILogService private readonly log: ILogService,    @IWireService private readonly wire: IWireService,
     @IEventBus private readonly eventBus: IEventBus,
     @IAgentStateService private readonly states: IAgentStateService,
   ) {
@@ -332,32 +328,7 @@ export class AgentLLMRequesterService implements IAgentLLMRequesterService {
     requestTraceId?: string,
   ): string | undefined {
     if (isAbortError(error) || signal?.aborted === true) return requestTraceId;
-    const modelAlias = this.profile.data().modelAlias;
-    const model = this.tryGetModel();
-    const traceId = requestTraceId ?? apiTraceId(error);
-    const classification = classifyApiError(unwrapErrorCause(error));
-    const properties: ApiErrorEvent = {
-      error_type: classification.kind,
-      model: model?.id ?? modelAlias ?? "unknown",
-      alias: modelAlias,
-      provider_type: model?.providerType ?? model?.protocol,
-      protocol: model?.protocol,
-      retryable: isRetryableGenerateError(error),
-      duration_ms: Math.max(0, Date.now() - startedAt),
-      turn_id: source?.turnId,
-      request_kind: requestKindForTelemetry(source),
-      trace_id: traceId,
-    };
-    if (source?.type === "turn") {
-      if (source.step !== undefined) properties["step_no"] = source.step;
-    }
-    const statusCode = apiStatusCode(error);
-    if (statusCode !== undefined) properties["status_code"] = statusCode;
-    const currentTurn = this.usage.status().currentTurn;
-    if (currentTurn !== undefined)
-      properties["input_tokens"] = inputTotal(currentTurn);
-    this.telemetry.track2("api_error", properties);
-    return traceId;
+    return requestTraceId ?? apiTraceId(error);
   }
 
   private tryGetModel(): Model | undefined {

@@ -36,11 +36,6 @@ import { defineState } from "#/_base/state/stateRegistry";
 import { IntervalTimer } from "#/_base/utils/timer";
 
 import { IConfigService } from "#/app/config/config";
-import type {
-  CronDeletedEvent,
-  CronScheduledEvent,
-} from "#/app/telemetry/events";
-import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   type ClockSources,
   resolveClockSources,
@@ -136,9 +131,7 @@ export class SessionCronServiceImpl
     @ISessionContext private readonly ctx: ISessionContext,
     @ICronTaskPersistence private readonly store: ICronTaskPersistence,
     @IAgentLifecycleService
-    private readonly agentLifecycle: IAgentLifecycleService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
-    @IConfigService private readonly config: IConfigService,
+    private readonly agentLifecycle: IAgentLifecycleService,    @IConfigService private readonly config: IConfigService,
   ) {
     super();
 
@@ -471,22 +464,12 @@ export class SessionCronServiceImpl
       origin,
     };
     void promptService.inject(message).catch(() => {});
-    this.telemetry.track2(CRON_MISSED, { count: tasks.length });
     return undefined;
   }
 
-  emitScheduled(task: CronTask, agentId?: string): void {
-    const properties: CronScheduledEvent = {
-      recurring: task.recurring !== false,
-      agent_id: agentId,
-    };
-    this.telemetry.track2(CRON_SCHEDULED, properties);
-  }
+  emitScheduled(_task: CronTask, _agentId?: string): void {}
 
-  emitDeleted(taskId: string, agentId?: string): void {
-    const properties: CronDeletedEvent = { task_id: taskId, agent_id: agentId };
-    this.telemetry.track2(CRON_DELETED, properties);
-  }
+  emitDeleted(_taskId: string, _agentId?: string): void {}
 
   private async deliverDue(
     task: CronTask,
@@ -548,12 +531,6 @@ export class SessionCronServiceImpl
     return launched.then(
       () => {
         this.signalCron({ type: "cron.fired", origin, prompt: task.prompt });
-        this.telemetry.track2(CRON_FIRED, {
-          recurring: task.recurring !== false,
-          coalesced_count: ctx.coalescedCount,
-          stale: origin.stale,
-          buffered,
-        });
         return true;
       },
       (error: unknown) => {
