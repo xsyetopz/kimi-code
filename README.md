@@ -105,9 +105,11 @@ pnpm install
 ```sh
 pnpm dev:cli    # run the CLI in dev mode
 pnpm test       # run tests
-pnpm typecheck  # TypeScript check
-pnpm lint       # TypeScript check (alias for typecheck)
-pnpm build      # build all packages
+pnpm typecheck    # TypeScript check
+pnpm lint         # TypeScript check (alias for typecheck)
+pnpm format       # format with Biome
+pnpm format:check # verify formatting (local)
+pnpm build        # build all packages
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guide.

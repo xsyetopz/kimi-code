@@ -50,8 +50,9 @@ Useful scripts:
 - `bun test` — run tests (vitest)
 - `bun typecheck` — TypeScript check (note: builds packages first)
 - `bun lint` — TypeScript check (alias for `bun typecheck`)
-- `bun lint:fix` — format and organize imports (Biome, no lint rules)
-- `bun format` — format only (Biome)
+- `bun format` — format staged or all files (Biome)
+- `bun format:check` — verify formatting without writing (Biome; local only until repo is fully formatted)
+- `bun lint:fix` — alias for `bun format` (legacy name)
 - `bun build` — build all packages
 
 ## Commit Convention
@@ -86,13 +87,13 @@ This repo uses [changesets](https://github.com/changesets/changesets) to manage 
 
 Use the [PR template](.github/pull_request_template.md) when opening a feature pull request.
 
-PR titles must follow [Conventional Commits](#commit-convention); CI runs `bun lint`, `bun typecheck`, and `bun test` on every PR. Update user-facing docs in `docs/` when behavior changes — use the `gen-docs` skill when working with coding agents.
+PR titles must follow [Conventional Commits](#commit-convention); CI runs `bun lint` (typecheck), `bun typecheck` (native preview), and `bun test` on every PR. Update user-facing docs in `docs/` when behavior changes — use the `gen-docs` skill when working with coding agents.
 
 ## Code Style
 
 - TypeScript across the codebase.
 - CI gates on `bun typecheck` (strict `tsconfig.base.json`: unused locals/parameters, implicit returns, and related checks).
-- Formatting and import organization via Biome (config in `biome.jsonc`); run `bun format` or `bun lint:fix` on demand — not enforced in CI.
+- Formatting via Biome (config in `biome.jsonc`); run `bun format` on demand. Use `bun format:check` locally; not enforced in CI until the repo is fully formatted. Type checking is separate (`bun typecheck` / `bun lint`).
 - Follow existing local patterns when formatting does not cover a style choice.
 
 ## Reporting Security Issues

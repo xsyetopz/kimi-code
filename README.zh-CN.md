@@ -109,9 +109,11 @@ pnpm install
 ```sh
 pnpm dev:cli    # 以开发模式运行 CLI
 pnpm test       # 运行测试
-pnpm typecheck  # TypeScript 检查
-pnpm lint       # TypeScript 检查（typecheck 别名）
-pnpm build      # 构建所有包
+pnpm typecheck    # TypeScript 检查
+pnpm lint         # TypeScript 检查（typecheck 别名）
+pnpm format       # Biome 格式化
+pnpm format:check # 校验格式（本地）
+pnpm build        # 构建所有包
 ```
 
 完整贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
