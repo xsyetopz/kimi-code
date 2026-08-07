@@ -14,6 +14,8 @@ import { CronMessage } from "./CronMessage";
 import { BackgroundAgentStatus } from "./BackgroundAgentStatus";
 import { Compaction } from "./Compaction";
 import { AgentSwarm } from "./AgentSwarm";
+import { AgentGroup } from "./AgentGroup";
+import { ReadGroup } from "./ReadGroup";
 import { ShellRun } from "./ShellRun";
 
 export interface TranscriptEntryProps {
@@ -45,6 +47,12 @@ export function TranscriptEntryView({
       return <AssistantMessage entry={entry} />;
 
     case "tool_call":
+      if (entry.agentGroupData) {
+        return <AgentGroup entry={entry} />;
+      }
+      if (entry.readGroupData) {
+        return <ReadGroup entry={entry} />;
+      }
       if (entry.backgroundAgentStatus) {
         return <BackgroundAgentStatus entry={entry} />;
       }

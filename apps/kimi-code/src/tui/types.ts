@@ -16,6 +16,8 @@ import type {
 } from "./config";
 import type { PendingApproval, PendingQuestion } from "./reverse-rpc/types";
 import type { ColorToken, ThemeName } from "./theme";
+import type { AgentGroupViewState } from "#/tui/projections/tool-call/agent-group";
+import type { ReadGroupViewState } from "#/tui/projections/tool-call/read-group";
 
 export type BannerDisplay = "always" | "once" | "cooldown";
 
@@ -296,6 +298,8 @@ export interface TranscriptEntry {
   /** Optional override for the leading bullet of a 'user' message entry. An empty string suppresses the bullet entirely (used by shell-command echoes so `$` replaces the sparkles marker). */
   bullet?: string;
   toolCallData?: ToolCallBlockData;
+  agentGroupData?: AgentGroupViewState;
+  readGroupData?: ReadGroupViewState;
   backgroundAgentStatus?: BackgroundAgentStatusData;
   compactionData?: CompactionTranscriptData;
   shellRunData?: ShellRunViewState;

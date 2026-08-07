@@ -66,6 +66,8 @@ import {
   currentTheme,
   getColorPalette,
 } from "./theme/index.ts";
+import type { AgentGroupViewState } from "./projections/tool-call/agent-group.ts";
+import type { ReadGroupViewState } from "./projections/tool-call/read-group.ts";
 import { createTUIState, type TUIState } from "./tui-state.ts";
 import {
   type AppState,
@@ -911,6 +913,30 @@ export class KimiTUI {
     data: CompactionTranscriptData,
   ): void {
     this.transcriptCoordinator.syncCompactionTranscriptEntry(entryId, data);
+  }
+
+  syncAgentGroupTranscriptEntry(
+    entryId: string,
+    data: AgentGroupViewState,
+    memberToolCallIds: readonly string[],
+  ): void {
+    this.transcriptCoordinator.syncAgentGroupTranscriptEntry(
+      entryId,
+      data,
+      memberToolCallIds,
+    );
+  }
+
+  syncReadGroupTranscriptEntry(
+    entryId: string,
+    data: ReadGroupViewState,
+    memberToolCallIds: readonly string[],
+  ): void {
+    this.transcriptCoordinator.syncReadGroupTranscriptEntry(
+      entryId,
+      data,
+      memberToolCallIds,
+    );
   }
 
   removeToolCallTranscriptEntry(toolCallId: string): void {

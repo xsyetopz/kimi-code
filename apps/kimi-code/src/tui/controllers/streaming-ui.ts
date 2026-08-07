@@ -51,6 +51,16 @@ export interface StreamingUIHost {
     entryId: string,
     data: CompactionTranscriptData,
   ): void;
+  syncAgentGroupTranscriptEntry(
+    entryId: string,
+    data: import("../projections/tool-call/agent-group").AgentGroupViewState,
+    memberToolCallIds: readonly string[],
+  ): void;
+  syncReadGroupTranscriptEntry(
+    entryId: string,
+    data: import("../projections/tool-call/read-group").ReadGroupViewState,
+    memberToolCallIds: readonly string[],
+  ): void;
 }
 
 export class StreamingUIController {
@@ -93,6 +103,8 @@ export class StreamingUIController {
     solo?: ToolCallComponent;
     group?: ReadGroupComponent;
   } | null = null;
+  private _agentGroupInkEntryId: string | undefined = undefined;
+  private _readGroupInkEntryId: string | undefined = undefined;
 
   constructor(private readonly host: StreamingUIHost) {}
 
@@ -861,8 +873,72 @@ export class StreamingUIController {
 
   private mirrorToolCallToInk(tc: ToolCallComponent): void {
     if (this.host.terminalRenderer !== "ink") return;
+    const agentGroup = this.findActiveAgentGroupFor(tc.toolCallView.id);
+    if (agentGroup !== undefined) {
+      this.mirrorAgentGroupToInk(agentGroup);
+      return;
+    }
+    const readGroup = this.findActiveReadGroupFor(tc.toolCallView.id);
+    if (readGroup !== undefined) {
+      this.mirrorReadGroupToInk(readGroup);
+      return;
+    }
     const data = tc.captureToolCallProjection();
     this.host.syncToolCallTranscriptEntry(data.id, data);
+  }
+
+  private findActiveAgentGroupFor(
+    toolCallId: string,
+  ): AgentGroupComponent | undefined {
+    const group = this._pendingAgentGroup?.group;
+    if (group === undefined) return undefined;
+    return group.containsToolCall(toolCallId) ? group : undefined;
+  }
+
+  private findActiveReadGroupFor(
+    toolCallId: string,
+  ): ReadGroupComponent | undefined {
+    const group = this._pendingReadGroup?.group;
+    if (group === undefined) return undefined;
+    return group.containsToolCall(toolCallId) ? group : undefined;
+  }
+
+  private wireInkAgentGroupMirror(group: AgentGroupComponent): void {
+    if (this._agentGroupInkEntryId === undefined) {
+      this._agentGroupInkEntryId = nextTranscriptId();
+    }
+    group.setInkMirrorListener(() => {
+      this.mirrorAgentGroupToInk(group);
+    });
+  }
+
+  private mirrorAgentGroupToInk(group: AgentGroupComponent): void {
+    if (this.host.terminalRenderer !== "ink") return;
+    if (this._agentGroupInkEntryId === undefined) return;
+    this.host.syncAgentGroupTranscriptEntry(
+      this._agentGroupInkEntryId,
+      group.captureAgentGroupViewState(),
+      group.getToolCallIds(),
+    );
+  }
+
+  private wireInkReadGroupMirror(group: ReadGroupComponent): void {
+    if (this._readGroupInkEntryId === undefined) {
+      this._readGroupInkEntryId = nextTranscriptId();
+    }
+    group.setInkMirrorListener(() => {
+      this.mirrorReadGroupToInk(group);
+    });
+  }
+
+  private mirrorReadGroupToInk(group: ReadGroupComponent): void {
+    if (this.host.terminalRenderer !== "ink") return;
+    if (this._readGroupInkEntryId === undefined) return;
+    this.host.syncReadGroupTranscriptEntry(
+      this._readGroupInkEntryId,
+      group.captureReadGroupViewState(),
+      group.getToolCallIds(),
+    );
   }
 
   private flushToolCallPreview(id: string): void {
@@ -910,6 +986,7 @@ export class StreamingUIController {
       (pending.step !== step || pending.turnId !== turnId)
     ) {
       this._pendingAgentGroup = null;
+      this._agentGroupInkEntryId = undefined;
     }
 
     const cur = this._pendingAgentGroup;
@@ -922,6 +999,7 @@ export class StreamingUIController {
 
     if (cur.group !== undefined) {
       cur.group.attach(toolCall.id, tc);
+      this.mirrorAgentGroupToInk(cur.group);
       return true;
     }
 
@@ -935,6 +1013,7 @@ export class StreamingUIController {
     const group = this.upgradeSoloAgentToGroup(solo);
     group.attach(toolCall.id, tc);
     this._pendingAgentGroup = { step, turnId, group };
+    this.mirrorAgentGroupToInk(group);
     this.host.requestTerminalRender();
     return true;
   }
@@ -954,6 +1033,7 @@ export class StreamingUIController {
       state.transcriptContainer.addChild(group);
     }
     group.attach(solo.toolCallView.id, solo);
+    this.wireInkAgentGroupMirror(group);
     return group;
   }
 
@@ -976,6 +1056,7 @@ export class StreamingUIController {
       (pending.step !== step || pending.turnId !== turnId)
     ) {
       this._pendingReadGroup = null;
+      this._readGroupInkEntryId = undefined;
     }
 
     const cur = this._pendingReadGroup;
@@ -988,6 +1069,7 @@ export class StreamingUIController {
 
     if (cur.group !== undefined) {
       cur.group.attach(toolCall.id, tc);
+      this.mirrorReadGroupToInk(cur.group);
       return true;
     }
 
@@ -1001,6 +1083,7 @@ export class StreamingUIController {
     const group = this.upgradeSoloReadToGroup(solo);
     group.attach(toolCall.id, tc);
     this._pendingReadGroup = { step, turnId, group };
+    this.mirrorReadGroupToInk(group);
     this.host.requestTerminalRender();
     return true;
   }
@@ -1018,6 +1101,7 @@ export class StreamingUIController {
       state.transcriptContainer.addChild(group);
     }
     group.attach(solo.toolCallView.id, solo);
+    this.wireInkReadGroupMirror(group);
     return group;
   }
 }

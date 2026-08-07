@@ -43,12 +43,14 @@ import type { StreamingUIController } from "#/tui/controllers/streaming-ui";
 import type { ColorToken } from "#/tui/theme";
 import { currentTheme } from "#/tui/theme";
 import type {
-  LoginProgressSpinnerHandle,
   CompactionTranscriptData,
+  LoginProgressSpinnerHandle,
   ShellRunViewState,
   ToolCallBlockData,
   TranscriptEntry,
 } from "#/tui/types";
+import type { AgentGroupViewState } from "#/tui/projections/tool-call/agent-group";
+import type { ReadGroupViewState } from "#/tui/projections/tool-call/read-group";
 import { hasDispose } from "#/tui/utils/component-capabilities";
 import {
   type ImageAttachment,
@@ -240,6 +242,68 @@ export class TranscriptCoordinator {
     );
     if (entry === undefined) return;
     entry.compactionData = data;
+    this.host.updateInkRenderer();
+  }
+
+  syncAgentGroupTranscriptEntry(
+    entryId: string,
+    data: AgentGroupViewState,
+    memberToolCallIds: readonly string[],
+  ): void {
+    const entries = this.host.state.transcriptEntries;
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const entry = entries[index]!;
+      const toolCallId = entry.toolCallData?.id;
+      if (toolCallId !== undefined && memberToolCallIds.includes(toolCallId)) {
+        entries.splice(index, 1);
+      }
+    }
+    const existing = entries.find((candidate) => candidate.id === entryId);
+    if (existing !== undefined) {
+      existing.agentGroupData = data;
+      existing.readGroupData = undefined;
+      existing.toolCallData = undefined;
+      existing.kind = "tool_call";
+    } else {
+      entries.push({
+        id: entryId,
+        kind: "tool_call",
+        renderMode: "plain",
+        content: "",
+        agentGroupData: data,
+      });
+    }
+    this.host.updateInkRenderer();
+  }
+
+  syncReadGroupTranscriptEntry(
+    entryId: string,
+    data: ReadGroupViewState,
+    memberToolCallIds: readonly string[],
+  ): void {
+    const entries = this.host.state.transcriptEntries;
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const entry = entries[index]!;
+      const toolCallId = entry.toolCallData?.id;
+      if (toolCallId !== undefined && memberToolCallIds.includes(toolCallId)) {
+        entries.splice(index, 1);
+      }
+    }
+    const existing = entries.find((candidate) => candidate.id === entryId);
+    if (existing !== undefined) {
+      existing.readGroupData = data;
+      existing.agentGroupData = undefined;
+      existing.toolCallData = undefined;
+      existing.kind = "tool_call";
+    } else {
+      entries.push({
+        id: entryId,
+        kind: "tool_call",
+        renderMode: "plain",
+        content: "",
+        readGroupData: data,
+      });
+    }
     this.host.updateInkRenderer();
   }
 

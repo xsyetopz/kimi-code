@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentGroupComponent } from "#/tui/components/messages/agent-group";
 import { ToolCallComponent } from "#/tui/components/messages/tool-call";
+import { projectAgentGroupLines } from "#/tui/projections/tool-call/agent-group";
 
 const ESC = String.fromCodePoint(0x1b);
 const BEL = String.fromCodePoint(0x07);
@@ -287,5 +288,34 @@ describe("AgentGroupComponent", () => {
     group.dispose();
     a.dispose();
     b.dispose();
+  });
+});
+
+describe("projectAgentGroupLines", () => {
+  it("matches the live grouped agent card", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const ui = stubTui();
+    const group = new AgentGroupComponent(ui);
+    const running = createAgent(
+      "call_agent_1",
+      "inspect project",
+      "explore",
+      ui,
+    );
+    const waiting = createAgent("call_agent_2", "write tests", "coder", ui);
+    startAgent(running, "call_agent_1", "explore");
+    group.attach("call_agent_1", running);
+    group.attach("call_agent_2", waiting);
+
+    const projected = projectAgentGroupLines(group.captureAgentGroupViewState());
+    const live = renderText(group);
+    for (const line of projected) {
+      expect(live).toContain(strip(line).trimEnd());
+    }
+
+    group.dispose();
+    running.dispose();
+    waiting.dispose();
   });
 });

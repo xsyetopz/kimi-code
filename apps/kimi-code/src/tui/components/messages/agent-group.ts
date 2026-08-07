@@ -18,29 +18,20 @@
 import type { TUI } from "@moonshot-ai/kimi-tui";
 import { Container, Spacer, Text } from "@moonshot-ai/kimi-tui";
 
-import { STATUS_BULLET } from "#/tui/constant/symbols";
-import { currentTheme } from "#/tui/theme";
-import { formatTokenCount } from "#/utils/usage/usage-format";
+import {
+  type AgentGroupViewState,
+  projectAgentGroupLines,
+  shouldShowAgentGroupDetachHint,
+} from "#/tui/projections/tool-call/agent-group";
+import type { ToolCallSubagentSnapshot } from "./tool-call";
 
-import type { ToolCallComponent, ToolCallSubagentSnapshot } from "./tool-call";
+import type { ToolCallComponent } from "./tool-call";
 
 const THROTTLE_MS = 200;
-
-const DETACH_HINT_TEXT = "Press Ctrl+B to run in background";
 
 interface AgentEntry {
   readonly toolCallId: string;
   readonly tc: ToolCallComponent;
-}
-
-interface PhaseCounts {
-  readonly done: number;
-  readonly failed: number;
-  readonly backgrounded: number;
-  readonly running: number;
-  readonly waiting: number;
-  readonly starting: number;
-  readonly terminal: number;
 }
 
 export class AgentGroupComponent extends Container {
@@ -53,6 +44,7 @@ export class AgentGroupComponent extends Container {
     ToolCallSubagentSnapshot["phase"]
   >();
   private _invalidating = false;
+  private onInkMirror: (() => void) | undefined;
 
   constructor(private readonly ui: TUI | undefined) {
     super();
@@ -67,6 +59,14 @@ export class AgentGroupComponent extends Container {
     return this.entries.length;
   }
 
+  getToolCallIds(): readonly string[] {
+    return this.entries.map((entry) => entry.toolCallId);
+  }
+
+  containsToolCall(toolCallId: string): boolean {
+    return this.entries.some((entry) => entry.toolCallId === toolCallId);
+  }
+
   /**
    * Exposes the borrowed tool call components so external code (e.g.
    * routing background task terminal events back to the corresponding
@@ -78,13 +78,25 @@ export class AgentGroupComponent extends Container {
     return this.entries.map((entry) => entry.tc);
   }
 
+  setInkMirrorListener(listener: (() => void) | undefined): void {
+    this.onInkMirror = listener;
+  }
+
+  captureAgentGroupViewState(): AgentGroupViewState {
+    const agents = this.entries.map((entry) => entry.tc.getSubagentSnapshot());
+    return {
+      agents,
+      showDetachHint: shouldShowAgentGroupDetachHint(agents),
+    };
+  }
+
   /**
    * Borrows a standalone `ToolCallComponent` into the group as a hidden state
    * container. Snapshot changes trigger throttled refreshes. Re-attaching the
    * same toolCallId is a no-op.
    */
   attach(toolCallId: string, tc: ToolCallComponent): void {
-    if (this.entries.some((e) => e.toolCallId === toolCallId)) return;
+    if (this.entries.some((entry) => entry.toolCallId === toolCallId)) return;
     this.entries.push({ toolCallId, tc });
     tc.setSnapshotListener(() => {
       this.scheduleRender();
@@ -114,9 +126,9 @@ export class AgentGroupComponent extends Container {
    */
   private detectPhaseTransition(): boolean {
     let changed = false;
-    for (const e of this.entries) {
-      const phase = e.tc.getSubagentSnapshot().phase;
-      if (this.lastFlushPhases.get(e.toolCallId) !== phase) {
+    for (const entry of this.entries) {
+      const phase = entry.tc.getSubagentSnapshot().phase;
+      if (this.lastFlushPhases.get(entry.toolCallId) !== phase) {
         changed = true;
         break;
       }
@@ -130,117 +142,25 @@ export class AgentGroupComponent extends Container {
       this.throttleTimer = null;
     }
 
-    const snapshots = this.entries.map((e) => e.tc.getSubagentSnapshot());
-    this.headerText.setText(this.buildHeader(snapshots));
+    const state = this.captureAgentGroupViewState();
+    const lines = projectAgentGroupLines(state);
+    this.headerText.setText(lines[1] ?? "");
     this.bodyContainer.clear();
-    snapshots.forEach((snap, idx) => {
-      const isLast = idx === snapshots.length - 1;
-      this.appendLines(snap, isLast);
-    });
-    if (this.shouldShowDetachHint(snapshots)) {
-      this.bodyContainer.addChild(
-        new Text(currentTheme.dim(DETACH_HINT_TEXT), 2, 0),
-      );
+    for (let index = 2; index < lines.length; index += 1) {
+      this.bodyContainer.addChild(new Text(lines[index] ?? "", 0, 0));
     }
 
     this.lastFlushPhases.clear();
-    this.entries.forEach((entry, i) => {
-      const snap = snapshots[i];
-      if (snap !== undefined)
-        this.lastFlushPhases.set(entry.toolCallId, snap.phase);
+    this.entries.forEach((entry, index) => {
+      const snapshot = state.agents[index];
+      if (snapshot !== undefined) {
+        this.lastFlushPhases.set(entry.toolCallId, snapshot.phase);
+      }
     });
 
+    this.onInkMirror?.();
     this.invalidate();
     this.ui?.requestRender();
-  }
-
-  private buildHeader(snapshots: readonly ToolCallSubagentSnapshot[]): string {
-    const total = snapshots.length;
-    const counts = countPhases(snapshots);
-    const allDone = counts.terminal === total;
-    const bullet = allDone
-      ? currentTheme.fg("success", STATUS_BULLET)
-      : currentTheme.fg("text", STATUS_BULLET);
-    const elapsedSeconds = maxElapsedSeconds(snapshots);
-
-    if (allDone) {
-      const types = new Set(
-        snapshots.map((s) => s.agentName).filter((n) => n !== undefined),
-      );
-      const headerLabel =
-        types.size === 1
-          ? `${String(total)} ${[...types][0]} agents finished`
-          : `${String(total)} agents finished`;
-      const totalTools = snapshots.reduce((acc, s) => acc + s.toolCount, 0);
-      const totalTokens = snapshots.reduce((acc, s) => acc + s.tokens, 0);
-      const tail = formatHeaderTail({
-        toolCount: totalTools,
-        tokens: totalTokens,
-        elapsedSeconds,
-      });
-      return `${bullet}${currentTheme.boldFg("primary", headerLabel)}${tail}`;
-    }
-
-    const parts = formatBreakdownParts(counts);
-    const headerText =
-      parts.length > 0
-        ? `Running ${String(total)} agents (${parts.join(", ")})`
-        : `Running ${String(total)} agents`;
-    const tail = formatHeaderTail({ toolCount: 0, tokens: 0, elapsedSeconds });
-    return `${bullet}${currentTheme.boldFg("primary", headerText)}${tail}`;
-  }
-
-  private appendLines(snap: ToolCallSubagentSnapshot, isLast: boolean): void {
-    const dim = (text: string) => currentTheme.dim(text);
-
-    // First-level branch line.
-    const branch1 = isLast ? "└─" : "├─";
-    const agentType = snap.agentName ?? "agent";
-    const desc = snap.toolCallDescription || "(no description)";
-    const tail = formatLineTail(snap);
-    const namePart = currentTheme.fg("primary", agentType);
-    const descPart = dim(`· ${desc}`);
-    const stats = formatStats(snap);
-    const line1 = `  ${branch1} ${namePart} ${descPart}${stats}${tail}`;
-    this.bodyContainer.addChild(new Text(line1, 0, 0));
-
-    // Second-level line: latest activity, or Error for failures.
-    const branch2 = isLast ? "   " : "│  ";
-    if (snap.phase === "failed") {
-      // Show one error line; error messages can be long.
-      const errLine =
-        (snap.errorText ?? "Failed").split("\n").at(0) ?? "Failed";
-      const errStr = currentTheme.fg("error", `Error: ${errLine}`);
-      this.bodyContainer.addChild(new Text(`  ${branch2}    ${errStr}`, 0, 0));
-      return;
-    }
-    if (snap.phase === "done" || snap.phase === "backgrounded") {
-      // Terminal states omit the second line.
-      return;
-    }
-    // Running or not-yet-started agents show latest activity, with a fallback.
-    const activity =
-      snap.latestActivity ?? fallbackActivityForPhase(snap.phase);
-    this.bodyContainer.addChild(
-      new Text(`  ${branch2}    ${dim(activity)}`, 0, 0),
-    );
-  }
-
-  /**
-   * Show the Ctrl+B hint while at least one agent in the group is still
-   * running in the foreground (i.e. can be detached). Hide it once every
-   * agent is done, failed, or already backgrounded.
-   */
-  private shouldShowDetachHint(
-    snapshots: readonly ToolCallSubagentSnapshot[],
-  ): boolean {
-    return snapshots.some(
-      (s) =>
-        s.phase === "running" ||
-        s.phase === "queued" ||
-        s.phase === "spawning" ||
-        s.phase === undefined,
-    );
   }
 
   /** Releases throttle timers so destroyed components cannot refresh later. */
@@ -259,153 +179,8 @@ export class AgentGroupComponent extends Container {
       clearTimeout(this.throttleTimer);
       this.throttleTimer = null;
     }
-    for (const e of this.entries) {
-      e.tc.setSnapshotListener(undefined);
+    for (const entry of this.entries) {
+      entry.tc.setSnapshotListener(undefined);
     }
   }
-}
-
-function countPhases(
-  snapshots: readonly ToolCallSubagentSnapshot[],
-): PhaseCounts {
-  let done = 0;
-  let failed = 0;
-  let backgrounded = 0;
-  let running = 0;
-  let waiting = 0;
-  let starting = 0;
-
-  for (const snap of snapshots) {
-    switch (snap.phase) {
-      case "done":
-        done += 1;
-        break;
-      case "failed":
-        failed += 1;
-        break;
-      case "backgrounded":
-        backgrounded += 1;
-        break;
-      case "queued":
-        waiting += 1;
-        break;
-      case "running":
-        running += 1;
-        break;
-      case "spawning":
-      case undefined:
-        starting += 1;
-        break;
-    }
-  }
-
-  return {
-    done,
-    failed,
-    backgrounded,
-    running,
-    waiting,
-    starting,
-    terminal: done + failed + backgrounded,
-  };
-}
-
-function formatBreakdownParts(counts: PhaseCounts): string[] {
-  const parts: string[] = [];
-  if (counts.done > 0) parts.push(`${String(counts.done)} done`);
-  if (counts.failed > 0) parts.push(`${String(counts.failed)} failed`);
-  if (counts.backgrounded > 0)
-    parts.push(`${String(counts.backgrounded)} backgrounded`);
-  if (counts.running > 0) parts.push(`${String(counts.running)} running`);
-  if (counts.waiting > 0) parts.push(`${String(counts.waiting)} waiting`);
-  if (counts.starting > 0) parts.push(`${String(counts.starting)} starting`);
-  return parts;
-}
-
-function formatStats(snap: ToolCallSubagentSnapshot): string {
-  const parts: string[] = [];
-  if (snap.model !== undefined) parts.push(snap.model);
-  parts.push(
-    `${String(snap.toolCount)} tool${snap.toolCount === 1 ? "" : "s"}`,
-  );
-  if (snap.elapsedSeconds !== undefined)
-    parts.push(formatElapsed(snap.elapsedSeconds));
-  if (snap.tokens > 0) parts.push(formatTokens(snap.tokens));
-  return currentTheme.dim(` · ${parts.join(" · ")}`);
-}
-
-function formatLineTail(snap: ToolCallSubagentSnapshot): string {
-  const separator = currentTheme.dim(" · ");
-  switch (snap.phase) {
-    case "done":
-      return separator + currentTheme.fg("success", "✓ Completed");
-    case "failed":
-      return separator + currentTheme.fg("error", "✗ Failed");
-    case "backgrounded":
-      return separator + currentTheme.dim("◐ backgrounded");
-    case "queued":
-      return separator + currentTheme.fg("primary", "Waiting");
-    case "running":
-      return separator + currentTheme.fg("primary", "Running");
-    case "spawning":
-    case undefined:
-      return separator + currentTheme.fg("primary", "Starting");
-  }
-}
-
-function fallbackActivityForPhase(
-  phase: ToolCallSubagentSnapshot["phase"],
-): string {
-  switch (phase) {
-    case "queued":
-      return "Waiting to start…";
-    case "running":
-      return "Still working…";
-    case "spawning":
-    case undefined:
-      return "Starting…";
-    case "done":
-    case "failed":
-    case "backgrounded":
-      return "";
-  }
-}
-
-function formatHeaderTail(args: {
-  readonly toolCount: number;
-  readonly tokens: number;
-  readonly elapsedSeconds: number | undefined;
-}): string {
-  const parts: string[] = [];
-  if (args.toolCount > 0)
-    parts.push(
-      `${String(args.toolCount)} tool${args.toolCount === 1 ? "" : "s"}`,
-    );
-  if (args.tokens > 0) parts.push(formatTokens(args.tokens));
-  if (args.elapsedSeconds !== undefined)
-    parts.push(formatElapsed(args.elapsedSeconds));
-  return parts.length > 0 ? currentTheme.dim(` · ${parts.join(" · ")}`) : "";
-}
-
-function maxElapsedSeconds(
-  snapshots: readonly ToolCallSubagentSnapshot[],
-): number | undefined {
-  let max: number | undefined;
-  for (const snap of snapshots) {
-    const elapsed = snap.elapsedSeconds;
-    if (elapsed === undefined) continue;
-    max = max === undefined ? elapsed : Math.max(max, elapsed);
-  }
-  return max;
-}
-
-function formatElapsed(seconds: number): string {
-  if (seconds < 60) return `${String(seconds)}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return `${String(minutes)}m ${String(remainder)}s`;
-}
-
-function formatTokens(n: number): string {
-  return `${formatTokenCount(n)} tok`;
 }
