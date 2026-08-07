@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "foreground": "tsx scripts/foreground.ts",
     "test": "vitest run",
     "clean": "rm -rf dist"
   },

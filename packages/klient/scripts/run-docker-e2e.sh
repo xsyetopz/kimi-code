@@ -46,15 +46,11 @@ NM_ROOT="${STATE_ROOT}/docker-e2e/${RUN_ID}/nm"
 workspace_node_modules=(
   "root:/workspace/kimi-code/node_modules"
   "apps_kimi-code:/workspace/kimi-code/apps/kimi-code/node_modules"
-  "apps_kimi-web:/workspace/kimi-code/apps/kimi-web/node_modules"
-  "apps_vis:/workspace/kimi-code/apps/vis/node_modules"
-  "apps_vis_server:/workspace/kimi-code/apps/vis/server/node_modules"
-  "apps_vis_web:/workspace/kimi-code/apps/vis/web/node_modules"
   "docs:/workspace/kimi-code/docs/node_modules"
   "pkg_acp-adapter:/workspace/kimi-code/packages/acp-adapter/node_modules"
   "pkg_agent-core-v2:/workspace/kimi-code/packages/agent-core-v2/node_modules"
   "pkg_kap-server:/workspace/kimi-code/packages/kap-server/node_modules"
-  "pkg_server-e2e:/workspace/kimi-code/packages/klient/node_modules"
+  "pkg_klient:/workspace/kimi-code/packages/klient/node_modules"
   "pkg_kaos:/workspace/kimi-code/packages/kaos/node_modules"
   "pkg_kosong:/workspace/kimi-code/packages/kosong/node_modules"
   "pkg_node-sdk:/workspace/kimi-code/packages/node-sdk/node_modules"
@@ -107,7 +103,7 @@ server_log="/data/server-e2e-reports/docker/server.log"
 : > "${server_log}"
 
 echo "[server-e2e:docker] starting server on container-local ${KIMI_SERVER_URL}"
-pnpm dev:server -- \
+pnpm --filter @moonshot-ai/kap-server foreground -- \
   --host 127.0.0.1 \
   --port "${KIMI_SERVER_E2E_PORT}" \
   --log-level debug \
