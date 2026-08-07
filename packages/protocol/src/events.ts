@@ -1000,7 +1000,7 @@ export const tokenUsageSchema = z.object({
   output: z.number(),
   inputCacheRead: z.number(),
   inputCacheCreation: z.number(),
-}) satisfies z.ZodType<TokenUsage>;
+});
 
 export const finishReasonSchema = z.enum([
   "completed",
@@ -1009,30 +1009,30 @@ export const finishReasonSchema = z.enum([
   "filtered",
   "paused",
   "other",
-]) satisfies z.ZodType<FinishReason>;
+]);
 
 export const usageStatusSchema = z.object({
   byModel: z.record(z.string(), tokenUsageSchema).optional(),
   currentTurn: tokenUsageSchema.optional(),
   total: tokenUsageSchema.optional(),
-}) satisfies z.ZodType<UsageStatus>;
+});
 
 export const permissionModeSchema = z.enum([
   "manual",
   "yolo",
   "auto",
-]) satisfies z.ZodType<PermissionMode>;
+]);
 
 export const skillSourceSchema = z.enum([
   "project",
   "user",
   "extra",
   "builtin",
-]) satisfies z.ZodType<SkillSource>;
+]);
 
 export const userPromptOriginSchema = z.object({
   kind: z.literal("user"),
-}) satisfies z.ZodType<UserPromptOrigin>;
+});
 
 export const skillActivationOriginSchema = z.object({
   kind: z.literal("skill_activation"),
@@ -1043,7 +1043,7 @@ export const skillActivationOriginSchema = z.object({
   skillType: z.string().optional(),
   skillPath: z.string().optional(),
   skillSource: skillSourceSchema.optional(),
-}) satisfies z.ZodType<SkillActivationOrigin>;
+});
 
 export const pluginCommandOriginSchema = z.object({
   kind: z.literal("plugin_command"),
@@ -1052,27 +1052,27 @@ export const pluginCommandOriginSchema = z.object({
   commandName: z.string(),
   commandArgs: z.string().optional(),
   trigger: z.literal("user-slash"),
-}) satisfies z.ZodType<PluginCommandOrigin>;
+});
 
 export const injectionOriginSchema = z.object({
   kind: z.literal("injection"),
   variant: z.string(),
-}) satisfies z.ZodType<InjectionOrigin>;
+});
 
 export const shellCommandOriginSchema = z.object({
   kind: z.literal("shell_command"),
   phase: z.enum(["input", "output"]),
   isError: z.boolean().optional(),
-}) satisfies z.ZodType<ShellCommandOrigin>;
+});
 
 export const compactionSummaryOriginSchema = z.object({
   kind: z.literal("compaction_summary"),
-}) satisfies z.ZodType<CompactionSummaryOrigin>;
+});
 
 export const systemTriggerOriginSchema = z.object({
   kind: z.literal("system_trigger"),
   name: z.string(),
-}) satisfies z.ZodType<SystemTriggerOrigin>;
+});
 
 export const taskLifecycleStatusSchema = z.enum([
   "running",
@@ -1081,21 +1081,21 @@ export const taskLifecycleStatusSchema = z.enum([
   "timed_out",
   "killed",
   "lost",
-]) satisfies z.ZodType<TaskLifecycleStatus>;
+]);
 
 export const taskOriginSchema = z.object({
   kind: z.literal("task"),
   taskId: z.string(),
   status: taskLifecycleStatusSchema,
   notificationId: z.string(),
-}) satisfies z.ZodType<TaskOrigin>;
+});
 
 export const backgroundTaskOriginSchema = z.object({
   kind: z.literal("background_task"),
   taskId: z.string(),
   status: taskLifecycleStatusSchema,
   notificationId: z.string(),
-}) satisfies z.ZodType<BackgroundTaskOrigin>;
+});
 
 export const cronJobOriginSchema = z.object({
   kind: z.literal("cron_job"),
@@ -1104,23 +1104,23 @@ export const cronJobOriginSchema = z.object({
   recurring: z.boolean(),
   coalescedCount: z.number(),
   stale: z.boolean(),
-}) satisfies z.ZodType<CronJobOrigin>;
+});
 
 export const cronMissedOriginSchema = z.object({
   kind: z.literal("cron_missed"),
   count: z.number(),
-}) satisfies z.ZodType<CronMissedOrigin>;
+});
 
 export const hookResultOriginSchema = z.object({
   kind: z.literal("hook_result"),
   event: z.string(),
   blocked: z.boolean().optional(),
-}) satisfies z.ZodType<HookResultOrigin>;
+});
 
 export const retryOriginSchema = z.object({
   kind: z.literal("retry"),
   trigger: z.string().optional(),
-}) satisfies z.ZodType<RetryOrigin>;
+});
 
 export const promptOriginSchema = z.discriminatedUnion("kind", [
   userPromptOriginSchema,
@@ -1136,27 +1136,27 @@ export const promptOriginSchema = z.discriminatedUnion("kind", [
   cronMissedOriginSchema,
   hookResultOriginSchema,
   retryOriginSchema,
-]) satisfies z.ZodType<PromptOrigin>;
+]);
 
 export const goalStatusSchema = z.enum([
   "active",
   "paused",
   "blocked",
   "complete",
-]) satisfies z.ZodType<GoalStatus>;
+]);
 
 export const goalActorSchema = z.enum([
   "user",
   "model",
   "runtime",
   "system",
-]) satisfies z.ZodType<GoalActor>;
+]);
 
 export const goalBudgetLimitsSchema = z.object({
   tokenBudget: z.number().optional(),
   turnBudget: z.number().optional(),
   wallClockBudgetMs: z.number().optional(),
-}) satisfies z.ZodType<GoalBudgetLimits>;
+});
 
 export const goalBudgetReportSchema = z.object({
   tokenBudget: z.number().nullable(),
@@ -1169,7 +1169,7 @@ export const goalBudgetReportSchema = z.object({
   turnBudgetReached: z.boolean(),
   wallClockBudgetReached: z.boolean(),
   overBudget: z.boolean(),
-}) satisfies z.ZodType<GoalBudgetReport>;
+});
 
 export const goalSnapshotSchema = z.object({
   goalId: z.string(),
@@ -1181,22 +1181,22 @@ export const goalSnapshotSchema = z.object({
   wallClockMs: z.number(),
   budget: goalBudgetReportSchema,
   terminalReason: z.string().optional(),
-}) satisfies z.ZodType<GoalSnapshot>;
+});
 
 export const goalToolResultSchema = z.object({
   goal: goalSnapshotSchema.nullable(),
-}) satisfies z.ZodType<GoalToolResult>;
+});
 
 export const goalChangeStatsSchema = z.object({
   turnsUsed: z.number(),
   tokensUsed: z.number(),
   wallClockMs: z.number(),
-}) satisfies z.ZodType<GoalChangeStats>;
+});
 
 export const goalChangeKindSchema = z.enum([
   "lifecycle",
   "completion",
-]) satisfies z.ZodType<GoalChangeKind>;
+]);
 
 export const goalChangeSchema = z.object({
   kind: goalChangeKindSchema,
@@ -1204,7 +1204,7 @@ export const goalChangeSchema = z.object({
   reason: z.string().optional(),
   stats: goalChangeStatsSchema.optional(),
   actor: goalActorSchema.optional(),
-}) satisfies z.ZodType<GoalChange>;
+});
 
 export const kimiErrorCodeSchema = z.enum([
   "config.invalid",
@@ -1335,11 +1335,11 @@ export const kimiErrorCodeSchema = z.enum([
   "validation.failed",
   "not_implemented",
   "internal",
-]) satisfies z.ZodType<KimiErrorCode>;
+]);
 
-export const kimiErrorPayloadSchema: z.ZodType<KimiErrorPayload> = z.lazy(
+export const kimiErrorPayloadSchema = z.lazy(
   () => kimiErrorPayloadObjectSchema,
-);
+) as z.ZodType<KimiErrorPayload>;
 
 const kimiErrorPayloadObjectSchema = z.object({
   code: kimiErrorCodeSchema,
@@ -1348,7 +1348,7 @@ const kimiErrorPayloadObjectSchema = z.object({
   details: z.record(z.string(), z.unknown()).optional(),
   retryable: z.boolean(),
   cause: kimiErrorPayloadSchema.optional(),
-}) satisfies z.ZodType<KimiErrorPayload>;
+});
 
 export const taskInfoBaseSchema = z.object({
   taskId: z.string(),
@@ -1360,32 +1360,32 @@ export const taskInfoBaseSchema = z.object({
   stopReason: z.string().optional(),
   terminalNotificationSuppressed: z.boolean().optional(),
   timeoutMs: z.number().optional(),
-}) satisfies z.ZodType<TaskInfoBase>;
+});
 
 export const processTaskInfoSchema = taskInfoBaseSchema.extend({
   kind: z.literal("process"),
   command: z.string(),
   pid: z.number(),
   exitCode: z.number().nullable(),
-}) satisfies z.ZodType<ProcessTaskInfo>;
+});
 
 export const agentTaskInfoSchema = taskInfoBaseSchema.extend({
   kind: z.literal("agent"),
   agentId: z.string().optional(),
   subagentType: z.string().optional(),
-}) satisfies z.ZodType<AgentTaskInfo>;
+});
 
 export const questionTaskInfoSchema = taskInfoBaseSchema.extend({
   kind: z.literal("question"),
   questionCount: z.number(),
   toolCallId: z.string().optional(),
-}) satisfies z.ZodType<QuestionTaskInfo>;
+});
 
 export const taskInfoSchema = z.discriminatedUnion("kind", [
   processTaskInfoSchema,
   agentTaskInfoSchema,
   questionTaskInfoSchema,
-]) satisfies z.ZodType<TaskInfo>;
+]);
 
 export const compactionResultSchema = z.object({
   summary: z.string(),
@@ -1395,7 +1395,7 @@ export const compactionResultSchema = z.object({
   keptUserMessageCount: z.number().optional(),
   keptHeadUserMessageCount: z.number().optional(),
   droppedCount: z.number().optional(),
-}) satisfies z.ZodType<CompactionResult>;
+});
 
 export const toolUpdateSchema = z.object({
   kind: z.enum(["stdout", "stderr", "progress", "status", "custom"]),
@@ -1403,20 +1403,20 @@ export const toolUpdateSchema = z.object({
   percent: z.number().optional(),
   customKind: z.string().optional(),
   customData: z.unknown().optional(),
-}) satisfies z.ZodType<ToolUpdate>;
+});
 
 export const mcpOAuthAuthorizationUrlUpdateDataSchema = z.object({
   serverName: z.string(),
   authorizationUrl: z.string(),
   expiresAt: z.number().optional(),
-}) satisfies z.ZodType<McpOAuthAuthorizationUrlUpdateData>;
+});
 
 export const turnEndReasonSchema = z.enum([
   "completed",
   "cancelled",
   "failed",
   "blocked",
-]) satisfies z.ZodType<TurnEndReason>;
+]);
 
 export const agentPhaseSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("idle") }),
@@ -1480,7 +1480,7 @@ export const agentPhaseSchema = z.discriminatedUnion("kind", [
     durationMs: z.number().optional(),
     at: z.number(),
   }),
-]) satisfies z.ZodType<AgentPhase>;
+]);
 
 export const agentStatusUpdatedEventSchema = z.object({
   type: z.literal("agent.status.updated"),
@@ -1494,34 +1494,34 @@ export const agentStatusUpdatedEventSchema = z.object({
   permission: permissionModeSchema.optional(),
   usage: usageStatusSchema.optional(),
   phase: agentPhaseSchema.optional(),
-}) satisfies z.ZodType<AgentStatusUpdatedEvent>;
+});
 
 export const sessionMetaUpdatedEventSchema = z.object({
   type: z.literal("session.meta.updated"),
   title: z.string().optional(),
   patch: z.record(z.string(), z.unknown()).optional(),
-}) satisfies z.ZodType<SessionMetaUpdatedEvent>;
+});
 
 export const sessionCreatedEventSchema = z.object({
   type: z.literal("event.session.created"),
   session: sessionSchema,
-}) satisfies z.ZodType<SessionCreatedEvent>;
+});
 
 export const workspaceCreatedEventSchema = z.object({
   type: z.literal("event.workspace.created"),
   workspace: workspaceSchema,
-}) satisfies z.ZodType<WorkspaceCreatedEvent>;
+});
 
 export const workspaceUpdatedEventSchema = z.object({
   type: z.literal("event.workspace.updated"),
   workspace: workspaceSchema,
-}) satisfies z.ZodType<WorkspaceUpdatedEvent>;
+});
 
 export const workspaceDeletedEventSchema = z.object({
   type: z.literal("event.workspace.deleted"),
   workspace_id: z.string().min(1),
   root: z.string().min(1),
-}) satisfies z.ZodType<WorkspaceDeletedEvent>;
+});
 
 export const sessionWorkChangedEventSchema = z.object({
   type: z.literal("event.session.work_changed"),
@@ -1529,7 +1529,7 @@ export const sessionWorkChangedEventSchema = z.object({
   main_turn_active: z.boolean().optional(),
   pending_interaction: sessionPendingInteractionSchema.optional(),
   last_turn_reason: z.enum(["completed", "cancelled", "failed"]).optional(),
-}) satisfies z.ZodType<SessionWorkChangedEvent>;
+});
 
 /** @deprecated See {@link SessionStatusChangedEvent}. */
 export const sessionStatusChangedEventSchema = z.object({
@@ -1549,26 +1549,26 @@ export const sessionStatusChangedEventSchema = z.object({
     "aborted",
   ]),
   current_prompt_id: z.string().min(1).optional(),
-}) satisfies z.ZodType<SessionStatusChangedEvent>;
+});
 
 export const configChangedEventSchema = z.object({
   type: z.literal("event.config.changed"),
   changedFields: z.array(z.string()),
   config: configResponseSchema,
-}) satisfies z.ZodType<ConfigChangedEvent>;
+});
 
 export const modelCatalogChangedEventSchema = z.object({
   type: z.literal("event.model_catalog.changed"),
   changed: z.array(providerRefreshChangeSchema),
   unchanged: z.array(z.string().min(1)),
   failed: z.array(providerRefreshFailureSchema),
-}) satisfies z.ZodType<ModelCatalogChangedEvent>;
+});
 
 export const goalUpdatedEventSchema = z.object({
   type: z.literal("goal.updated"),
   snapshot: goalSnapshotSchema.nullable(),
   change: goalChangeSchema.optional(),
-}) satisfies z.ZodType<GoalUpdatedEvent>;
+});
 
 export const skillActivatedEventSchema = z.object({
   type: z.literal("skill.activated"),
@@ -1578,7 +1578,7 @@ export const skillActivatedEventSchema = z.object({
   trigger: z.enum(["user-slash", "model-tool", "nested-skill"]),
   skillPath: z.string().optional(),
   skillSource: skillSourceSchema.optional(),
-}) satisfies z.ZodType<SkillActivatedEvent>;
+});
 
 export const pluginCommandActivatedEventSchema = z.object({
   type: z.literal("plugin_command.activated"),
@@ -1587,24 +1587,24 @@ export const pluginCommandActivatedEventSchema = z.object({
   commandName: z.string(),
   commandArgs: z.string().optional(),
   trigger: z.literal("user-slash"),
-}) satisfies z.ZodType<PluginCommandActivatedEvent>;
+});
 
 export const errorEventSchema = kimiErrorPayloadObjectSchema.extend({
   type: z.literal("error"),
-}) satisfies z.ZodType<ErrorEvent>;
+});
 
 export const warningEventSchema = z.object({
   type: z.literal("warning"),
   message: z.string(),
   code: z.string().optional(),
-}) satisfies z.ZodType<WarningEvent>;
+});
 
 export const turnStartedEventSchema = z.object({
   type: z.literal("turn.started"),
   turnId: z.number(),
   origin: promptOriginSchema,
   prompt: z.string().optional(),
-}) satisfies z.ZodType<TurnStartedEvent>;
+});
 
 export const turnEndedEventSchema = z.object({
   type: z.literal("turn.ended"),
@@ -1612,14 +1612,14 @@ export const turnEndedEventSchema = z.object({
   reason: turnEndReasonSchema,
   error: kimiErrorPayloadSchema.optional(),
   durationMs: z.number().optional(),
-}) satisfies z.ZodType<TurnEndedEvent>;
+});
 
 export const turnStepStartedEventSchema = z.object({
   type: z.literal("turn.step.started"),
   turnId: z.number(),
   step: z.number(),
   stepId: z.string().optional(),
-}) satisfies z.ZodType<TurnStepStartedEvent>;
+});
 
 export const turnStepCompletedEventSchema = z.object({
   type: z.literal("turn.step.completed"),
@@ -1636,7 +1636,7 @@ export const turnStepCompletedEventSchema = z.object({
   llmClientConsumeMs: z.number().optional(),
   providerFinishReason: finishReasonSchema.optional(),
   rawFinishReason: z.string().optional(),
-}) satisfies z.ZodType<TurnStepCompletedEvent>;
+});
 
 export const turnStepRetryingEventSchema = z.object({
   type: z.literal("turn.step.retrying"),
@@ -1650,7 +1650,7 @@ export const turnStepRetryingEventSchema = z.object({
   errorName: z.string(),
   errorMessage: z.string(),
   statusCode: z.number().optional(),
-}) satisfies z.ZodType<TurnStepRetryingEvent>;
+});
 
 export const turnStepInterruptedEventSchema = z.object({
   type: z.literal("turn.step.interrupted"),
@@ -1659,13 +1659,13 @@ export const turnStepInterruptedEventSchema = z.object({
   stepId: z.string().optional(),
   reason: z.string(),
   message: z.string().optional(),
-}) satisfies z.ZodType<TurnStepInterruptedEvent>;
+});
 
 export const assistantDeltaEventSchema = z.object({
   type: z.literal("assistant.delta"),
   turnId: z.number(),
   delta: z.string(),
-}) satisfies z.ZodType<AssistantDeltaEvent>;
+});
 
 export const hookResultEventSchema = z.object({
   type: z.literal("hook.result"),
@@ -1673,13 +1673,13 @@ export const hookResultEventSchema = z.object({
   hookEvent: z.string(),
   content: z.string(),
   blocked: z.boolean().optional(),
-}) satisfies z.ZodType<HookResultEvent>;
+});
 
 export const thinkingDeltaEventSchema = z.object({
   type: z.literal("thinking.delta"),
   turnId: z.number(),
   delta: z.string(),
-}) satisfies z.ZodType<ThinkingDeltaEvent>;
+});
 
 export const toolCallDeltaEventSchema = z.object({
   type: z.literal("tool.call.delta"),
@@ -1687,7 +1687,7 @@ export const toolCallDeltaEventSchema = z.object({
   toolCallId: z.string(),
   name: z.string().optional(),
   argumentsPart: z.string().optional(),
-}) satisfies z.ZodType<ToolCallDeltaEvent>;
+});
 
 export const toolCallStartedEventSchema = z.object({
   type: z.literal("tool.call.started"),
@@ -1697,34 +1697,34 @@ export const toolCallStartedEventSchema = z.object({
   args: z.unknown(),
   description: z.string().optional(),
   display: ToolInputDisplaySchema.optional(),
-}) satisfies z.ZodType<ToolCallStartedEvent>;
+});
 
 export const toolProgressEventSchema = z.object({
   type: z.literal("tool.progress"),
   turnId: z.number(),
   toolCallId: z.string(),
   update: toolUpdateSchema,
-}) satisfies z.ZodType<ToolProgressEvent>;
+});
 
 export const shellOutputEventSchema = z.object({
   type: z.literal("shell.output"),
   commandId: z.string(),
   update: toolUpdateSchema,
   taskId: z.string().optional(),
-}) satisfies z.ZodType<ShellOutputEvent>;
+});
 
 export const shellStartedEventSchema = z.object({
   type: z.literal("shell.started"),
   commandId: z.string(),
   taskId: z.string(),
-}) satisfies z.ZodType<ShellStartedEvent>;
+});
 
 export const shellCompletedEventSchema = z.object({
   type: z.literal("shell.completed"),
   commandId: z.string(),
   isError: z.boolean(),
   taskId: z.string().optional(),
-}) satisfies z.ZodType<ShellCompletedEvent>;
+});
 
 export const toolResultEventSchema = z.object({
   type: z.literal("tool.result"),
@@ -1733,7 +1733,7 @@ export const toolResultEventSchema = z.object({
   output: z.unknown(),
   isError: z.boolean().optional(),
   synthetic: z.boolean().optional(),
-}) satisfies z.ZodType<ToolResultEvent>;
+});
 
 export const subagentSpawnedEventSchema = z.object({
   type: z.literal("subagent.spawned"),
@@ -1746,18 +1746,18 @@ export const subagentSpawnedEventSchema = z.object({
   description: z.string().optional(),
   swarmIndex: z.number().optional(),
   runInBackground: z.boolean(),
-}) satisfies z.ZodType<SubagentSpawnedEvent>;
+});
 
 export const subagentStartedEventSchema = z.object({
   type: z.literal("subagent.started"),
   subagentId: z.string(),
-}) satisfies z.ZodType<SubagentStartedEvent>;
+});
 
 export const subagentSuspendedEventSchema = z.object({
   type: z.literal("subagent.suspended"),
   subagentId: z.string(),
   reason: z.string(),
-}) satisfies z.ZodType<SubagentSuspendedEvent>;
+});
 
 export const subagentCompletedEventSchema = z.object({
   type: z.literal("subagent.completed"),
@@ -1765,59 +1765,59 @@ export const subagentCompletedEventSchema = z.object({
   resultSummary: z.string(),
   usage: tokenUsageSchema.optional(),
   contextTokens: z.number().optional(),
-}) satisfies z.ZodType<SubagentCompletedEvent>;
+});
 
 export const subagentFailedEventSchema = z.object({
   type: z.literal("subagent.failed"),
   subagentId: z.string(),
   error: z.string(),
-}) satisfies z.ZodType<SubagentFailedEvent>;
+});
 
 export const compactionStartedEventSchema = z.object({
   type: z.literal("compaction.started"),
   trigger: z.enum(["manual", "auto"]),
   instruction: z.string().optional(),
-}) satisfies z.ZodType<CompactionStartedEvent>;
+});
 
 export const compactionBlockedEventSchema = z.object({
   type: z.literal("compaction.blocked"),
   turnId: z.number().optional(),
-}) satisfies z.ZodType<CompactionBlockedEvent>;
+});
 
 export const compactionCancelledEventSchema = z.object({
   type: z.literal("compaction.cancelled"),
-}) satisfies z.ZodType<CompactionCancelledEvent>;
+});
 
 export const compactionCompletedEventSchema = z.object({
   type: z.literal("compaction.completed"),
   result: compactionResultSchema,
-}) satisfies z.ZodType<CompactionCompletedEvent>;
+});
 
 export const taskStartedEventSchema = z.object({
   type: z.literal("task.started"),
   info: taskInfoSchema,
-}) satisfies z.ZodType<TaskStartedEvent>;
+});
 
 export const taskTerminatedEventSchema = z.object({
   type: z.literal("task.terminated"),
   info: taskInfoSchema,
-}) satisfies z.ZodType<TaskTerminatedEvent>;
+});
 
 export const backgroundTaskStartedEventSchema = z.object({
   type: z.literal("background.task.started"),
   info: taskInfoSchema,
-}) satisfies z.ZodType<BackgroundTaskStartedEvent>;
+});
 
 export const backgroundTaskTerminatedEventSchema = z.object({
   type: z.literal("background.task.terminated"),
   info: taskInfoSchema,
-}) satisfies z.ZodType<BackgroundTaskTerminatedEvent>;
+});
 
 export const cronFiredEventSchema = z.object({
   type: z.literal("cron.fired"),
   origin: cronJobOriginSchema,
   prompt: z.string(),
-}) satisfies z.ZodType<CronFiredEvent>;
+});
 
 export const promptSubmittedEventSchema = z.object({
   type: z.literal("prompt.submitted"),
@@ -1826,20 +1826,20 @@ export const promptSubmittedEventSchema = z.object({
   status: z.enum(["running", "queued", "blocked"]),
   content: z.array(messageContentSchema),
   createdAt: isoDateTimeSchema,
-}) satisfies z.ZodType<PromptSubmittedEvent>;
+});
 
 export const promptCompletedEventSchema = z.object({
   type: z.literal("prompt.completed"),
   promptId: z.string(),
   finishedAt: isoDateTimeSchema,
   reason: z.enum(["completed", "failed", "blocked"]).optional(),
-}) satisfies z.ZodType<PromptCompletedEvent>;
+});
 
 export const promptAbortedEventSchema = z.object({
   type: z.literal("prompt.aborted"),
   promptId: z.string(),
   abortedAt: isoDateTimeSchema,
-}) satisfies z.ZodType<PromptAbortedEvent>;
+});
 
 export const promptSteeredEventSchema = z.object({
   type: z.literal("prompt.steered"),
@@ -1847,19 +1847,19 @@ export const promptSteeredEventSchema = z.object({
   promptIds: z.array(z.string()),
   content: z.array(messageContentSchema),
   steeredAt: isoDateTimeSchema,
-}) satisfies z.ZodType<PromptSteeredEvent>;
+});
 
 export const toolListUpdatedReasonSchema = z.enum([
   "mcp.connected",
   "mcp.disconnected",
   "mcp.failed",
-]) satisfies z.ZodType<ToolListUpdatedReason>;
+]);
 
 export const toolListUpdatedEventSchema = z.object({
   type: z.literal("tool.list.updated"),
   reason: toolListUpdatedReasonSchema,
   serverName: z.string(),
-}) satisfies z.ZodType<ToolListUpdatedEvent>;
+});
 
 export const mcpServerStatusPayloadSchema = z.object({
   name: z.string(),
@@ -1867,12 +1867,12 @@ export const mcpServerStatusPayloadSchema = z.object({
   status: z.enum(["pending", "connected", "failed", "disabled", "needs-auth"]),
   toolCount: z.number(),
   error: z.string().optional(),
-}) satisfies z.ZodType<McpServerStatusPayload>;
+});
 
 export const mcpServerStatusEventSchema = z.object({
   type: z.literal("mcp.server.status"),
   server: mcpServerStatusPayloadSchema,
-}) satisfies z.ZodType<McpServerStatusEvent>;
+});
 
 export const agentEventSchema = z.discriminatedUnion("type", [
   errorEventSchema,
@@ -1925,14 +1925,14 @@ export const agentEventSchema = z.discriminatedUnion("type", [
   promptCompletedEventSchema,
   promptAbortedEventSchema,
   promptSteeredEventSchema,
-]) satisfies z.ZodType<AgentEvent>;
+]);
 
 export const eventSchema = agentEventSchema.and(
   z.object({
     agentId: z.string(),
     sessionId: z.string(),
   }),
-) satisfies z.ZodType<Event>;
+);
 
 /**
  * Volatile (ephemeral) event types — the IM-style "typing indicator" class.
