@@ -16,8 +16,8 @@
  * `StepRequest`s onto `loop` (the continuation message materializes when the
  * loop pops it), accounts live
  * turn usage through `usage`, observes terminal goal tool results through
- * `toolExecutor`, writes system reminders through `systemReminder`, reports
- * telemetry through `telemetry`, and checks main-agent eligibility through
+ * `toolExecutor`, writes system reminders through `systemReminder`, and checks
+ * main-agent eligibility through
  * `scopeContext`. Measures time and arms hard deadlines through `goal`'s
  * App-scoped deadline scheduler. Two `onBeforeExecuteTool` veto listeners
  * guard the goal lifecycle: stale or budget-exhausted goal tool calls are
@@ -784,16 +784,6 @@ function goalBudgetBlockReason(budget: GoalBudgetReport): string | undefined {
   return reached.length === 0
     ? undefined
     : `${GOAL_BUDGET_BLOCK_PREFIX}: ${reached.join(", ")}`;
-}
-
-function budgetTelemetryProperties(
-  limits: GoalBudgetLimits,
-): GoalBudgetProperties {
-  return {
-    has_token_budget: limits.tokenBudget !== undefined,
-    has_turn_budget: limits.turnBudget !== undefined,
-    has_wall_clock_budget: limits.wallClockBudgetMs !== undefined,
-  };
 }
 
 function normalizeCompletionCriterion(

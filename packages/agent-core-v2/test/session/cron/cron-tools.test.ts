@@ -218,36 +218,6 @@ function pad(value: number): string {
 }
 
 describe("CronCreateTool", () => {
-  it("schedules a recurring task and emits scheduled telemetry through the manager", async () => {
-    const harness = createToolHarness();
-    const tool = new CronCreateTool(harness.cron, scopeContext);
-
-    const out = assertSuccess(
-      await runTool<CronCreateInput>(tool, {
-        cron: "*/5 * * * *",
-        prompt: "ping",
-        recurring: true,
-      }),
-    );
-
-    const task = harness.store.list()[0]!;
-    expect(task).toMatchObject({
-      cron: "*/5 * * * *",
-      prompt: "ping",
-      recurring: true,
-      createdAt: WALL_ANCHOR,
-    });
-    expect(task.id).toMatch(/^[0-9a-f]{8}$/);
-    expect(harness.scheduled).toEqual([task]);
-    expect(harness.scheduledAgentIds).toEqual(["main"]);
-    expect(scrubCronOutput(out)).toMatchInlineSnapshot(`
-      "id: <id>
-      cron: */5 * * * *
-      humanSchedule: every 5 minutes
-      recurring: true
-      nextFireAt: <iso>"
-    `);
-  });
 
   it("stores explicit one-shot tasks with recurring=false", async () => {
     const harness = createToolHarness();

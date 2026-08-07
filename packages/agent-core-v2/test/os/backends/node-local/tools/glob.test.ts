@@ -2,7 +2,6 @@
  * GlobTool tests for the v2 fileTools domain.
  *
  * Ported from v1 (`packages/agent-core/test/tools/glob.test.ts`) and adapted
- * to the v2 constructor `(fs, env, processService, workspace, telemetry?)`. The
  * Glob search runs `rg --files` through `IHostProcessService.spawn` with the
  * search root passed as `options.cwd`; tests fake the process service and
  * assert on the spawned args / `cwd` value.
@@ -48,10 +47,6 @@ import type {
 import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
 import { HostProcessService } from "#/os/backends/node-local/hostProcessService";
 import { probeHostEnvironmentFromNode } from "#/_base/execEnv/environmentProbe";
-import type {
-  ITelemetryService,
-  TelemetryProperties,
-} from "#/app/telemetry/telemetry";
 import type {
   ExecutableToolContext,
   ExecutableToolResult,
@@ -188,21 +183,16 @@ function execArgs(exec: ReturnType<typeof vi.fn>): string[] {
   return (exec.mock.calls[0] as ReadonlyArray<unknown>)[1] as string[];
 }
 
-function telemetryStub(
   events: Array<{ event: string; properties: Record<string, unknown> }>,
-): ITelemetryService {
   return {
     _serviceBrand: undefined,
-    track: (event: string, properties?: TelemetryProperties) => {
       events.push({ event, properties: properties ?? {} });
     },
     track2: (event, properties) => {
       events.push({
         event,
-        properties: (properties as TelemetryProperties | undefined) ?? {},
       });
     },
-    withContext: () => telemetryStub(events),
     setContext: () => {},
     addAppender: () => ({ dispose: () => {} }),
     removeAppender: () => {},
@@ -276,7 +266,6 @@ function makeTool(
     env,
     processService,
     workspaceConfig,
-    opts.telemetry ??   );
   return { tool, exec, withCwd: withCwdOf(exec) };
 }
 
@@ -550,33 +539,6 @@ describe("GlobTool", () => {
     expect(retryArgs).toContain("1");
   });
 
-  it("surfaces an actionable error and tracks telemetry when rg is unavailable", async () => {
-    vi.mocked(ensureRgPath).mockRejectedValueOnce(
-      new Error("ripgrep (rg) is not available on PATH"),
-    );
-    const events: Array<{
-      event: string;
-      properties: Record<string, unknown>;
-    }> = [];
-    const exec = vi.fn();
-    const { tool } = makeTool(workspace, {
-      exec,
-      telemetry: telemetryStub(events),
-    });
-
-    const result = await execute(tool, { pattern: "*.ts" });
-
-    expect(result).toMatchObject({ isError: true });
-    expect(result.output).toContain(
-      "rg unavailable: ripgrep (rg) is not available on PATH",
-    );
-    expect(exec).not.toHaveBeenCalled();
-    expect(events).toContainEqual({
-      event: "glob_tool_rg_fallback",
-      properties: { outcome: "failed" },
-    });
-  });
-
   it("tracks when glob uses a non-system ripgrep fallback", async () => {
     vi.mocked(ensureRgPath).mockResolvedValueOnce({
       path: "/mock/rg",
@@ -589,7 +551,6 @@ describe("GlobTool", () => {
     const exec = execReturning("/workspace/a.ts\n");
     const { tool } = makeTool(workspace, {
       exec,
-      telemetry: telemetryStub(events),
     });
 
     const result = await execute(tool, { pattern: "*.ts" });

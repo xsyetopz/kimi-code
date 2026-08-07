@@ -4,7 +4,7 @@
  * When one agent drives another through `ISessionSubagentService.run`, the
  * *requesting* agent surfaces that run
  * on its own record stream so the UI can nest the child transcript under the
- * launching tool call, external hooks fire, and telemetry is tracked. That
+ * launching tool call and external hooks fire. That
  * requester ↔ target association is business data of this wrapper layer — the
  * lifecycle registry itself stays flat and knows nothing about it.
  *
@@ -14,8 +14,7 @@
  * slot and stop event.
  *
  * Wire shape note: the signals are still named `subagent.spawned / started /
- * completed / failed` and telemetry still tracks `subagent_created` so existing
- * session recordings and dashboards stay valid.
+ * completed / failed` so existing session recordings stay valid.
  */
 
 import type { IAgentScopeHandle } from "#/_base/di/scope";

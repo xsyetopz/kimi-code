@@ -11,18 +11,6 @@ import {
 } from "#/agent/llmRequester/llmRequester";
 import { IAgentProfileService } from "#/agent/profile/profile";
 import type { ILogger as Logger, LogPayload } from "#/_base/log/log";
-import {
-  configServices,
-  createTestAgent,
-  llmGenerateServices,
-  logServices,
-  telemetryServices,
-  type TestAgentContext,
-} from "../../harness";
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
 
 interface CapturedLogEntry {
   readonly level: "error" | "warn" | "info" | "debug";
@@ -419,7 +407,6 @@ describe("LLMRequester service migration coverage", () => {
     });
 
     it("tracks api_error with the v1 wire shape (model id, alias, protocol, status code)", async () => {
-      const records: TelemetryRecord[] = [];
       ctx = createTestAgent(
         llmGenerateServices(async () => {
           throw new APIStatusError(429, "rate limited");
@@ -450,7 +437,6 @@ describe("LLMRequester service migration coverage", () => {
     });
 
     it("tags api_error with turn_id and request_kind from the request source", async () => {
-      const records: TelemetryRecord[] = [];
       ctx = createTestAgent(
         llmGenerateServices(async () => {
           throw new APIConnectionError("terminated");

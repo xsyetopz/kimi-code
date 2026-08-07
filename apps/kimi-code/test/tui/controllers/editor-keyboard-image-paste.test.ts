@@ -325,7 +325,7 @@ describe("clipboard image paste compression", () => {
     expect(att.placeholder).toContain("80×120");
   });
 
-  it("does not emit compression telemetry while recording the paste action", async () => {
+  it("does not emit compression while recording the paste action", async () => {
     const big = await solidPng(3600, 1800);
     readClipboardMedia.mockResolvedValue({
       kind: "image",

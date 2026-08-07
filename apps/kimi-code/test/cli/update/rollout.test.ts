@@ -376,14 +376,14 @@ describe("resolveUpdateDeviceId", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("does not create the telemetry device id file when one is missing", () => {
+  it("does not create the device id file when one is missing", () => {
     const deviceId = resolveUpdateDeviceId();
 
     expect(deviceId).toMatch(/^[0-9a-f-]+$/);
     expect(existsSync(join(dir, "device_id"))).toBe(false);
   });
 
-  it("reuses an existing telemetry device id without rewriting it", () => {
+  it("reuses an existing device id without rewriting it", () => {
     writeFileSync(join(dir, "device_id"), "existing-device-id", "utf-8");
 
     expect(resolveUpdateDeviceId()).toBe("existing-device-id");

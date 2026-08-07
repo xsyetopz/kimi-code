@@ -32,9 +32,6 @@ import { McpConnectionManager } from "#/mcpCore/connection-manager";
 import type { McpServerConfig } from "#/mcpCore/config-schema";
 import { MergedMcpConnectionView } from "#/session/mcp/mergedConnectionView";
 import { IMcpOAuthStore } from "#/app/mcpConfig/oauthStore";
-import {
-  ITelemetryService,
-  } from "#/app/telemetry/telemetry";
 import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 import {
   IWorkspaceMcpConfigService,

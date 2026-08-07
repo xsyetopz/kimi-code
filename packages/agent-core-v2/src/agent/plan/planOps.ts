@@ -21,8 +21,8 @@
  * continues its counter instead of overwriting earlier blobs. Each `apply`
  * returns the same reference on a no-op (re-entering the same plan, or
  * cancelling/exiting while already inactive) so the wire's
- * reference-equality gate stays quiet. The side effects — `telemetryContext`
- * mode, plan-directory/file fs I/O, the blob write, and the
+ * reference-equality gate stays quiet. The side effects — plan-directory/file
+ * fs I/O, the blob write, and the
  * `agent.status.updated` planMode slice — are NOT part of `apply`: they run
  * after `wire.dispatch` on the live path, and `wire.replay` rebuilds the
  * Model silently from the persisted `plan_mode.*` / `plan.revision` records.

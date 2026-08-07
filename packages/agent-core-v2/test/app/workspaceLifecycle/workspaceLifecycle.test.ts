@@ -264,11 +264,9 @@ function sessionStubs(): ReturnType<typeof stubPair>[] {
 
 describe("WorkspaceLifecycleService", () => {
   let host: ScopedTestHost | undefined;
-  let telemetryRecords: TelemetryRecord[];
   let createOrTouchSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    telemetryRecords = [];
     _clearScopedRegistryForTests();
     registerScopedService(
       LifecycleScope.App,
@@ -380,7 +378,6 @@ describe("WorkspaceLifecycleService", () => {
         watch: () => ({ onDidChange: Event.None, dispose: () => {} }),
       } as unknown as IHostFsWatchService),
       stubPair(ILogService, stubLog()),
-      stubPair(ITelemetryService),
       stubPair(ICronTaskPersistence, {
         _serviceBrand: undefined,
         get: () => Promise.resolve(undefined),
@@ -554,7 +551,6 @@ describe("WorkspaceLifecycleService", () => {
       ).rejects.toMatchObject({
         code: ErrorCodes.SESSION_NOT_FOUND,
       });
-      expect(telemetryRecords).toContainEqual({
         event: "session_load_failed",
         properties: { sessionId: "s1", reason: ErrorCodes.SESSION_NOT_FOUND },
       });

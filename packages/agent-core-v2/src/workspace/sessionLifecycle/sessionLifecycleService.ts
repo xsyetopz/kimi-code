@@ -13,10 +13,8 @@
  * (metadata, agent wire records, plans, logs), evicts the index read-model
  * entry, and appends a `deleted` tombstone to the shared
  * `session_index.jsonl`, raising `session.not_found` for ids this handler
- * never persisted. Session start and
- * resume failures are reported through telemetry. Each Session scope
- * receives a telemetry view bound to its session id, while failures before
- * a scope is available use an ephemeral context view. Closing a session
+ * never persisted. Session start and resume failures surface as errors.
+ * Closing a session
  * never touches the handler itself.
  * Every Session scope is also seeded with the handler's shared workspace
  * resources as pure-data read views (the injection contracts) — discovery,

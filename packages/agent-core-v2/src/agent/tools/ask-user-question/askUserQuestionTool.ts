@@ -9,8 +9,7 @@
  * record the owning agent (`IAgentScopeContext.agentId`) on the interaction
  * origin, so question events and transcript frames route to the asking
  * agent's surfaces instead of falling back to 'main' (a subagent's question
- * must not land there). Answers and dismissals are tracked through
- * `ITelemetryService`; `background: true` registers a
+ * must not land there). `background: true` registers a
  * `QuestionBackgroundTask` on
  * `IAgentTaskService` so the call returns immediately with a `task_id`.
  *

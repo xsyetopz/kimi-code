@@ -19,13 +19,12 @@
  *     thought it deleted. Surfacing `isError: true` lets the model
  *     correct itself (typically by calling `CronList` again).
  *
- * Why the service is not consulted for telemetry on the not-found
- * branch:
+ * Why the service is not consulted on the not-found branch:
  *
  *   - `cron_deleted` records an actual state change. Emitting it on a
  *     miss would inflate the metric and break parity with `cron_create`
  *     (which never fires on a rejected schedule). The branch is fully
- *     observable through tool-call telemetry already.
+ *     observable through the tool-call result already.
  *
  * Refresh-cron pattern this tool participates in:
  *
@@ -37,7 +36,7 @@
  *   reach for it without prompting from a system message.
  *
  * Collaborators: `ISessionCronService` for task removal
- * and telemetry emission, and `IAgentScopeContext` for the emitting agent
+ * and `IAgentScopeContext` for the emitting agent
  * id. Bound at Agent scope.
  */
 

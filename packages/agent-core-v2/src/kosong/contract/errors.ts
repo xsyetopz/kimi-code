@@ -3,7 +3,7 @@
  *
  * The single authority on error classification for the LLM wire layer:
  * the `API*Error` class family, the retry verdict (`isRetryableGenerateError`),
- * the telemetry classification (`ApiErrorKind` / `classifyApiError`), and the
+ * the error classification (`ApiErrorKind` / `classifyApiError`), and the
  * status-error normalizer every dialect's error converter funnels through.
  * Alongside the wire-status classes, `VideoUploadUnsupportedError` marks the
  * by-design capability gap (provider has no video upload hook) so callers

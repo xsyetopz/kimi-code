@@ -68,7 +68,7 @@ export type PromptInput = readonly PromptPart[];
 export type EmptyPayload = {};
 export type SessionMetadataPatch = Partial<Omit<SessionMeta, "agents">>;
 
-export interface ClientTelemetryInfo {
+export interface ClientHostInfo {
   readonly id?: string | undefined;
   readonly name?: string | undefined;
   readonly version?: string | undefined;
@@ -83,7 +83,7 @@ export interface CreateSessionPayload {
   readonly permission?: PermissionMode | undefined;
   readonly metadata?: JsonObject | undefined;
   readonly additionalDirs?: readonly string[];
-  readonly client?: ClientTelemetryInfo | undefined;
+  readonly client?: ClientHostInfo | undefined;
 }
 
 export interface CloseSessionPayload {

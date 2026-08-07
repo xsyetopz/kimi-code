@@ -21,9 +21,6 @@ import { ISessionAgentProfileCatalog } from "#/session/sessionAgentProfileCatalo
 import { APIProviderRateLimitError } from "#/kosong/contract/errors";
 import { IModelCatalog, type Model } from "#/kosong/model/catalog";
 import {
-  ITelemetryService,
-  } from "#/app/telemetry/telemetry";
-import {
   IAgentLifecycleService,
   type CreateAgentOptions,
 } from "#/session/agentLifecycle/agentLifecycle";

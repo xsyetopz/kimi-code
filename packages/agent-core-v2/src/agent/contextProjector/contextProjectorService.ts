@@ -10,9 +10,8 @@
  * dropped, wholly-vacuous messages — nothing sendable was recorded, e.g. an
  * assistant step that kept only an empty thinking part — dropped whole) are
  * reported through an optional sink and surfaced once here as a
- * single deduped warning plus a `context_projection_repaired` telemetry event,
- * so a silently-mangled history always leaves a trace. The mutable
- * repair-dedup signature (`lastRepairSignature`) is registered into
+ * single deduped warning, so a silently-mangled history always leaves a trace.
+ * The mutable repair-dedup signature (`lastRepairSignature`) is registered into
  * `agentState` (`IAgentStateService`) and read/written through it.
  *
  * `projectMediaDegraded` / `projectMediaStripped` are the fallback

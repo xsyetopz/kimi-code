@@ -20,14 +20,12 @@
  *      session cap, byte-length cap);
  *   2. add it to the service (which writes through to the store);
  *   3. report back the post-jitter `nextFireAt` and a human-readable
- *      schedule for the model's benefit;
- *   4. emit `cron_scheduled` telemetry through the service (the tool
- *      does **not** reach into `ITelemetryService` directly).
+ *      schedule for the model's benefit.
  *
- * Collaborators: `ISessionCronService` for task storage,
- * scheduling state and telemetry emission, `IAgentScopeContext` for the
- * emitting agent id, and the App-scope cron helpers for
- * expression parsing and timestamp formatting. Bound at Agent scope.
+ * Collaborators: `ISessionCronService` for task storage and scheduling
+ * state, `IAgentScopeContext` for the emitting agent id, and the App-scope
+ * cron helpers for expression parsing and timestamp formatting. Bound at
+ * Agent scope.
  */
 
 import {

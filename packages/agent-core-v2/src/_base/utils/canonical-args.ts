@@ -2,7 +2,7 @@
  * `_base` utility — canonical JSON argument serialization for stable tool-call keys.
  */
 
-export function canonicalTelemetryArgs(args: unknown): string {
+export function canonicalToolArgs(args: unknown): string {
   const json = JSON.stringify(sortJsonValue(args));
   return json ?? String(args);
 }

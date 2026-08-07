@@ -2,8 +2,8 @@
  * `plan` domain — `IAgentPlanService` implementation.
  *
  * Manages plan-mode state through `wire`, injects plan-mode context through
- * `contextInjector`, writes optional plan files through `hostFileSystem`,
- * and tags mode telemetry through `telemetry`. Also snapshots submitted plan
+ * `contextInjector`, writes optional plan files through `hostFileSystem`.
+ * Also snapshots submitted plan
  * revisions: `recordRevision` reads the current plan file, writes it
  * atomically through `IBlobStore` under the agent's own persistence scope
  * (`agentCtx.scope()`, i.e. the homeDir-relative

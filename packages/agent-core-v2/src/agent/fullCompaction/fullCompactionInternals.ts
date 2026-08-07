@@ -65,11 +65,6 @@ export class CompactionTruncatedError extends Error {
   }
 }
 
-type CompactionTelemetryProperties = Pick<
-  CompactionFinishedEvent,
-  "input_tokens" | "output_tokens" | "input_cache_read" | "input_cache_creation"
->;
-
 export function findAPIStatusError(error: unknown): APIStatusError | undefined {
   let current: unknown = error;
   const seen = new Set<unknown>();
@@ -164,18 +159,6 @@ function dropLeadingToolResults<T extends { readonly role: string }>(
     start += 1;
   }
   return messages.slice(start);
-}
-
-export function usageTelemetry(
-  usage: TokenUsage | null,
-): CompactionTelemetryProperties {
-  if (usage === null) return {};
-  return {
-    input_tokens: inputTotal(usage),
-    output_tokens: usage.output,
-    input_cache_read: usage.inputCacheRead,
-    input_cache_creation: usage.inputCacheCreation,
-  };
 }
 
 export function compactionCancelledReason(

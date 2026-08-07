@@ -4,9 +4,7 @@
  *
  * Responsibilities: assert manual and automatic compaction outcomes, overflow
  * recovery, resume compatibility, dynamic tool context handling, and emitted
- * wire/telemetry effects. Wiring: testAgent harness with fake providers,
  * filesystem sandboxes, real compaction services, and stubs at external model /
- * telemetry boundaries. Run:
  * ../../node_modules/.bin/vitest run test/fullCompaction/full.test.ts
  */
 
@@ -43,10 +41,6 @@ import { makeHookRunner } from "../externalHooks/runner-stub";
 import type { IExternalHooksRunnerService } from "#/app/externalHooksRunner/externalHooksRunner";
 import { MASTER_ENV } from "#/app/flag/flagService";
 import { estimateTokensForMessages } from "#/kosong/contract/tokens";
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
 import type {
   TestAgentContext,
   TestAgentOptions,
@@ -270,7 +264,6 @@ describe("FullCompaction", () => {
   });
 
   it("runs manual compaction and applies the compacted context", async () => {
-    const records: TelemetryRecord[] = [];
     const ctx = testAgent({});
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
@@ -701,7 +694,6 @@ describe("FullCompaction", () => {
   });
 
   it("reports compaction retry_count after a retryable generation failure recovers", async () => {
-    const records: TelemetryRecord[] = [];
     let attempts = 0;
     const generate: GenerateFn = async () => {
       attempts += 1;
@@ -996,7 +988,6 @@ describe("FullCompaction", () => {
 
   it("fails after exhausting retries when the model only ever returns thinking content", async () => {
     vi.useFakeTimers();
-    const records: TelemetryRecord[] = [];
     const inputs: string[][] = [];
     const firstResponse = deferred<void>();
     const generate = realKosongGenerate((attempt, history) => {
@@ -1077,7 +1068,6 @@ describe("FullCompaction", () => {
 
   it("cancels retry backoff with the failed compaction request trace", async () => {
     vi.useFakeTimers();
-    const records: TelemetryRecord[] = [];
     const firstAttemptFailed = deferred<void>();
     let attempts = 0;
     const generate: GenerateFn = async () => {
@@ -1132,7 +1122,6 @@ describe("FullCompaction", () => {
   });
 
   it("cancels the compaction lifecycle when manual compaction generation fails", async () => {
-    const records: TelemetryRecord[] = [];
     const generate: GenerateFn = async () => {
       throw new Error("compaction exploded");
     };
@@ -1191,7 +1180,6 @@ describe("FullCompaction", () => {
   });
 
   it("attaches the failed request trace id to compaction_failed", async () => {
-    const records: TelemetryRecord[] = [];
     const generate: GenerateFn = async () => {
       throw new APIStatusError(
         400,
@@ -1225,7 +1213,6 @@ describe("FullCompaction", () => {
   });
 
   it("attributes compaction_failed to the in-flight request trace on a mid-stream failure", async () => {
-    const records: TelemetryRecord[] = [];
     // The stream delivers response headers (trace id) and one part, then fails
     // — the error itself carries no trace, so attribution must come from the
     // trace captured when the headers arrived.
@@ -1249,7 +1236,6 @@ describe("FullCompaction", () => {
     });
     ctx.appendExchange(1, "old user one", "old assistant one", 20);
     ctx.appendExchange(2, "recent user two", "recent assistant two", 80);
-    ctx.get(IAgentTelemetryContextService).set({ trace_id: "trace-turn-1" });
     const failed = ctx.once("error");
 
     await ctx.rpc.beginCompaction({});
@@ -1264,7 +1250,6 @@ describe("FullCompaction", () => {
         trace_id: "trace-mid-stream",
       }),
     });
-    expect(ctx.get(IAgentTelemetryContextService).get().trace_id).toBe(
       "trace-turn-1",
     );
     await ctx.expectResumeMatches();
@@ -1400,7 +1385,6 @@ describe("FullCompaction", () => {
 
   it("reports compaction retry_count when retryable generation failures are exhausted", async () => {
     vi.useFakeTimers();
-    const records: TelemetryRecord[] = [];
     const firstAttemptFailed = deferred<void>();
     let attempts = 0;
     const generate: GenerateFn = async () => {
@@ -1777,7 +1761,6 @@ describe("FullCompaction", () => {
   });
 
   it("blocks the turn until auto compaction finishes", async () => {
-    const records: TelemetryRecord[] = [];
     const ctx = testAgent({});
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
@@ -1874,7 +1857,6 @@ describe("FullCompaction", () => {
   it("attributes background auto compaction to the turn that started it", async () => {
     const compactionRequested = deferred<void>();
     const releaseCompaction = deferred<void>();
-    const records: TelemetryRecord[] = [];
     let ctx!: TestAgentContext;
     let llmCallCount = 0;
     const generate: GenerateFn = async () => {
@@ -2932,7 +2914,6 @@ describe("FullCompaction", () => {
 
   it("preserves thinking effort when compacting after provider context overflow", async () => {
     let callCount = 0;
-    const records: TelemetryRecord[] = [];
     // The per-turn thinking intent captured from each generate call — the
     // replacement for the morph-era provider `thinkingEffort` field.
     const thinkingEfforts: unknown[] = [];
@@ -3882,7 +3863,6 @@ describe("goal reminder re-injection after full compaction", () => {
   });
 
   it("counts the re-injected goal reminder into the post-compaction token floor", async () => {
-    const records: TelemetryRecord[] = [];
     const ctx = testAgent({});
     ctx.configure({
       provider: CATALOGUED_PROVIDER,

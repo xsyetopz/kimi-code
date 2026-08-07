@@ -5,8 +5,7 @@
  * serializing same-id bootstrap and dropping incomplete handles after startup
  * failure. Seeds each agent's identity through `agent` scopeContext, wires
  * per-agent wire records and the wire state machine, the blob store, and MCP,
- * and registers the agent in the session registry. Binds the agent id into the
- * Agent-scoped telemetry view. New logs receive a metadata
+ * and registers the agent in the session registry. New logs receive a metadata
  * envelope while non-empty unversioned logs are rejected. Removal awaits the
  * agent task manager's graceful exit policy before draining turns and full
  * compaction, then disposing the child scope. Fans session-level

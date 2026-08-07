@@ -1002,7 +1002,7 @@ describe("runUpdatePreflight", () => {
     );
   });
 
-  it("tracks update_prompted telemetry", async () => {
+  it("tracks update_prompted ", async () => {
     disableAutoInstall();
     mocks.readUpdateCache.mockResolvedValue(cacheWith("0.5.0"));
     mocks.refreshUpdateCache.mockResolvedValue(cacheWith("0.5.0"));
@@ -1099,7 +1099,7 @@ describe("runUpdatePreflight", () => {
       );
     });
 
-    it("prompts with rollout telemetry when eligible and auto-install is disabled", async () => {
+    it("prompts with rollout when eligible and auto-install is disabled", async () => {
       disableAutoInstall();
       const released = cacheWithManifest(releasedForEveryone("0.5.0"));
       mocks.readUpdateCache.mockResolvedValue(released);
@@ -1127,7 +1127,7 @@ describe("runUpdatePreflight", () => {
       );
     });
 
-    it("uses the refreshed manifest for rollout telemetry when the prompt target changes", async () => {
+    it("uses the refreshed manifest for rollout when the prompt target changes", async () => {
       disableAutoInstall();
       const cached = cacheWithManifest(
         manifestFor("0.6.0", {

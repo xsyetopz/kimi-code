@@ -31,7 +31,7 @@
  * file into an in-memory `claimed` set (parallel calls can never duplicate a
  * reminder and a failed attempt releases the claim), while `agentState`
  * (`agentsMdReminder.known`) is only ever whole-value replaced after the
- * reminder text is attached and the telemetry emitted — never mutated in
+ * reminder text is attached — never mutated in
  * place, and never ahead of the reminder it records. Probing anchors at the
  * nearest existing ancestor (so `Write` into a not-yet-created directory
  * still resolves), walks `findProjectRoot → touched dir`, skips chain
@@ -56,8 +56,7 @@
  * `agentState` as well; restored provenance comes from `wire`/`profile`; fs
  * probes go through the os `IHostFileSystem`, the home directory through
  * `IHostEnvironment`, the brand home through `bootstrap`, syntax
- * trees through `bashParser`, and the shown-event
- * through `telemetry`. Bound at Agent scope.
+ * trees through `bashParser`. Bound at Agent scope.
  */
 
 import { basename, dirname, isAbsolute, join, normalize } from "pathe";

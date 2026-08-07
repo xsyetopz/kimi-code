@@ -15,10 +15,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import type { IHostEnvironment } from "#/os/interface/hostEnvironment";
-import type {
-  ITelemetryService,
-  TelemetryProperties,
-} from "#/app/telemetry/telemetry";
 import {
   ReadMediaFileInputSchema,
   type ReadMediaFileInput,
@@ -105,18 +101,14 @@ function withExifOrientation(jpeg: Uint8Array, orientation: number): Buffer {
   ]);
 }
 
-interface TelemetryRecord {
   readonly event: string;
   readonly properties: Readonly<Record<string, unknown>> | undefined;
 }
 
-function : ITelemetryService {
   const     track(event, properties) {
       records.push({ event, properties });
     },
     track2: (event, properties) =>
-      telemetry.track(event, properties as TelemetryProperties),
-    withContext: () => telemetry,
     setContext: () => {},
     addAppender: () => ({ dispose: () => {} }),
     removeAppender: () => {},
@@ -125,7 +117,6 @@ function : ITelemetryService {
     flush: async () => {},
     shutdown: async () => {},
   };
-  return telemetry;
 }
 
 function capabilities(
@@ -183,7 +174,6 @@ function makeTool(
   files: Record<string, FakeFile>,
   caps: ModelCapability = capabilities(),
   videoUploader?: VideoUploader,
-  telemetry?: ITelemetryService,
   inlineVideoSupported?: boolean,
 ): ReadMediaFileTool {
   return new ReadMediaFileTool(
@@ -192,7 +182,6 @@ function makeTool(
     WORKSPACE,
     caps,
     videoUploader,
-    telemetry,
     inlineVideoSupported,
   );
 }
@@ -727,37 +716,6 @@ describe("ReadMediaFileTool", () => {
     expect(systemText).not.toMatch(/downsampled/i);
   });
 
-  it("emits image_compress and image_crop telemetry tagged read_media", async () => {
-    const records: TelemetryRecord[] = [];
-    const big = Buffer.from(
-      await new Jimp({
-        width: 2200,
-        height: 1100,
-        color: 0x3366ccff,
-      }).getBuffer("image/png"),
-    );
-    const tool = makeTool(
-      { "/workspace/big.png": { data: big } },
-      capabilities(),
-      undefined,
-    );
-
-    await execute(tool, { path: "/workspace/big.png" });
-    expect(records).toHaveLength(1);
-    expect(records[0]!.event).toBe("image_compress");
-    expect(records[0]!.properties?.["source"]).toBe("read_media");
-    expect(records[0]!.properties?.["outcome"]).toBe("compressed");
-
-    await execute(tool, {
-      path: "/workspace/big.png",
-      region: { x: 0, y: 0, width: 100, height: 100 },
-    });
-    expect(records).toHaveLength(2);
-    expect(records[1]!.event).toBe("image_crop");
-    expect(records[1]!.properties?.["source"]).toBe("read_media");
-    expect(records[1]!.properties?.["ok"]).toBe(true);
-  });
-
   it("errors when reading an image without image input capability", async () => {
     const result = await execute(
       makeTool(
@@ -1119,36 +1077,7 @@ describe("createVideoUploader", () => {
     ).toBeUndefined();
   });
 
-  it("binds uploadVideo without telemetry", async () => {
-    const uploadVideo = vi.fn().mockResolvedValue(uploadResult);
-    const uploader = createVideoUploader(modelWith(uploadVideo));
-    await expect(uploader!(input)).resolves.toEqual(uploadResult);
-    expect(uploadVideo).toHaveBeenCalledWith(input, undefined);
-  });
-
-  it("reports video_upload telemetry on success", async () => {
-    const records: TelemetryRecord[] = [];
-    const uploader = createVideoUploader(
-      modelWith(vi.fn().mockResolvedValue(uploadResult)),
-      {
-        client:         props: { model: "example-model", protocol: "kimi" },
-      },
-    );
-    await expect(uploader!(input)).resolves.toEqual(uploadResult);
-    expect(records).toHaveLength(1);
-    expect(records[0]!.event).toBe("video_upload");
-    expect(records[0]!.properties).toMatchObject({
-      outcome: "success",
-      mime_type: "video/mp4",
-      size_bytes: 2048,
-      model: "example-model",
-      protocol: "kimi",
-    });
-    expect(records[0]!.properties?.["duration_ms"]).toEqual(expect.any(Number));
-  });
-
   it("reports an error outcome with the error type and rethrows", async () => {
-    const records: TelemetryRecord[] = [];
     const failure = new TypeError("upload exploded");
     const uploader = createVideoUploader(
       modelWith(vi.fn().mockRejectedValue(failure)),
@@ -1164,21 +1093,6 @@ describe("createVideoUploader", () => {
       mime_type: "video/mp4",
       size_bytes: 2048,
     });
-  });
-
-  it("never lets a throwing telemetry client break the upload", async () => {
-    const throwing = {
-      ...      track2: () => {
-        throw new Error("sink down");
-      },
-    } as ITelemetryService;
-    const uploader = createVideoUploader(
-      modelWith(vi.fn().mockResolvedValue(uploadResult)),
-      {
-        client: throwing,
-      },
-    );
-    await expect(uploader!(input)).resolves.toEqual(uploadResult);
   });
 
   function heicBytes(): Buffer {

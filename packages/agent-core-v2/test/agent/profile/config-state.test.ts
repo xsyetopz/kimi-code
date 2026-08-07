@@ -4,18 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IAgentLLMRequesterService } from "#/agent/llmRequester/llmRequester";
 import { IAgentProfileService } from "#/agent/profile/profile";
 import type { ModelRecord } from "#/kosong/model/model";
-import {
-  configServices,
-  createTestAgent,
-  llmGenerateServices,
-  modelProviderOptionServices,
-  telemetryServices,
-  type TestAgentContext,
-} from "../../harness";
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
 
 type TestKimiConfig = ReturnType<Parameters<typeof configServices>[0]>;
 type TestProtocolModelConfig = NonNullable<TestKimiConfig["models"]>[string] &
@@ -32,7 +20,6 @@ describe("ConfigState model capabilities", () => {
   let requester: IAgentLLMRequesterService;
   let kimiConfig: TestKimiConfig;
   let generate: GenerateFn;
-  let records: TelemetryRecord[];
 
   beforeEach(() => {
     kimiConfig = {

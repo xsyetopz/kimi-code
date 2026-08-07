@@ -7,7 +7,6 @@
  * Responsibilities: assert retry eligibility, projection order and bounds,
  * per-turn recovery stickiness, request recording, and usage accounting.
  * Wiring: real AgentLLMRequesterService with stubbed context memory,
- * projector, context sizing, profile, model, telemetry, and wire/log services. Run:
  * bun test -- test/agent/llmRequester/llmRequesterService.test.ts
  */
 
@@ -57,225 +56,7 @@ import { ILogService } from "#/_base/log/log";
 import { Error2, ErrorCodes } from "#/errors";
 import { IWireService } from "#/wire/wire";
 import type { WireRecord } from "#/wire/record";
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
 
-import { recordingWireLog, registerTestAgentWire } from "../../wire/stubs";
-
-const capabilities: ModelCapability = {
-  image_in: false,
-  video_in: false,
-  audio_in: false,
-  thinking: false,
-  tool_use: false,
-  max_context_tokens: 1000,
-};
-
-const history: Message[] = [
-  { role: "user", content: [{ type: "text", text: "hello" }], toolCalls: [] },
-];
-
-function createRequester(
-  calls: { value: number },
-  firstCallError?: Error | null,
-  subsequentCallErrors: readonly Error[] = [],
-  capturedInputs?: ModelRequestInput[],
-): ModelRequester {
-  const model: Model = {
-    id: "m",
-    name: "wire-model",
-    aliases: [],
-    protocol: "anthropic",
-    baseUrl: "https://example.test",
-    headers: {},
-    capabilities,
-    maxContextSize: 1000,
-    alwaysThinking: false,
-    providerName: "p",
-    authProvider: { getAuth: async () => undefined },
-  };
-  return {
-    model,
-    request: async function* (input) {
-      calls.value += 1;
-      capturedInputs?.push(input);
-      const error =
-        calls.value === 1
-          ? firstCallError === null
-            ? undefined
-            : (firstCallError ??
-              new APIStatusError(
-                400,
-                "messages: `tool_use` ids must be unique",
-              ))
-          : subsequentCallErrors[calls.value - 2];
-      if (error !== undefined) throw error;
-      yield {
-        type: "finish",
-        message: {
-          role: "assistant",
-          content: [{ type: "text", text: "ok" }],
-          toolCalls: [],
-        },
-        providerFinishReason: "completed",
-        rawFinishReason: "stop",
-        id: "resp-1",
-      };
-    },
-  };
-}
-
-let disposables: DisposableStore;
-
-beforeEach(() => {
-  disposables = new DisposableStore();
-});
-
-afterEach(() => disposables.dispose());
-
-function createService(
-  requester: ModelRequester,
-  projector:
-    | (Pick<IAgentContextProjectorService, "project" | "projectStrict"> &
-        Partial<
-          Pick<
-            IAgentContextProjectorService,
-            | "captureMediaStripSnapshot"
-            | "projectMediaDegraded"
-            | "projectMediaStripped"
-          >
-        >)
-    | undefined,
-  options: {
-    readonly thinkingLevel?: ThinkingEffort;
-  } = {},
-) {
-  const ix = disposables.add(new TestInstantiationService());
-  const thinkingLevel = options.thinkingLevel ?? "off";
-  const profile: Partial<IAgentProfileService> = {
-    resolveModelContext: () => ({
-      modelAlias: "m",
-      modelCapabilities: capabilities,
-      maxOutputSize: undefined,
-      alwaysThinking: undefined,
-      thinkingLevel,
-      reservedContextSize: undefined,
-      compactionTriggerRatio: undefined,
-    }),
-    resolveRequestParams: () => ({}),
-    getSystemPrompt: () => "system",
-    data: () => ({
-      cwd: "",
-      modelAlias: "m",
-      modelCapabilities: capabilities,
-      thinkingLevel,
-      systemPrompt: "system",
-    }),
-  };
-  const measuredCalls: {
-    readonly messages: number;
-    readonly usage: TokenUsage;
-  }[] = [];
-  const tokenCounting = {
-    get: () => ({ size: 0, measured: 0, estimated: 0 }),
-    measured: (
-      input: readonly Message[],
-      _output: readonly Message[],
-      usage: TokenUsage,
-    ) => {
-      measuredCalls.push({ messages: input.length, usage });
-    },
-  };
-  const usage = { record: () => undefined, status: () => ({}) };
-  const context = { get: () => history };
-  const tools = { list: () => [] };
-  const config: Partial<IConfigService> = {
-    get: (() => undefined) as IConfigService["get"],
-  };
-  const log = { info: () => undefined, warn: () => undefined };
-  const telemetryRecords: TelemetryRecord[] = [];
-  const telemetry = ;
-  const toolSelect: Partial<IAgentToolSelectService> = {
-    enabled: () => false,
-    shapeTools: (entries) => entries,
-    shapeHistory: (messages) => messages,
-  };
-  const testSnapshot = Object.freeze({}) as MediaStripSnapshot;
-  const events: DomainEvent[] = [];
-  const eventBus: IEventBus = {
-    _serviceBrand: undefined,
-    publish: (event) => events.push(event),
-    subscribe: () => toDisposable(() => {}),
-  };
-
-  ix.stub(IAgentContextMemoryService, context);
-  ix.stub(IAgentToolSelectService, toolSelect);
-  ix.stub(IAgentVideoResolverService, {
-    resolve: async (messages) => messages,
-  });
-  if (projector === undefined) {
-    ix.set(
-      IAgentContextProjectorService,
-      new SyncDescriptor(AgentContextProjectorService),
-    );
-  } else {
-    ix.stub(IAgentContextProjectorService, {
-      captureMediaStripSnapshot: () => testSnapshot,
-      projectMediaDegraded: projector.project,
-      projectMediaStripped: projector.project,
-      ...projector,
-    });
-  }
-  ix.stub(IAgentTokenCountingService, tokenCounting);
-  ix.stub(IAgentToolRegistryService, tools);
-  ix.stub(IAgentProfileService, profile);
-  ix.stub(IAgentUsageService, usage);
-  ix.stub(IConfigService, config);
-  ix.stub(ILogService, log);  ix.stub(IModelCatalog, {
-    _serviceBrand: undefined,
-    get: () => requester.model,
-    getRequester: () => requester,
-    findByName: () => [],
-  });
-  ix.stub(IModelService, {
-    get: () => undefined,
-  });
-  const records: WireRecord[] = [];
-  registerTestAgentWire(ix, "wire/llm-requester", {
-    log: recordingWireLog(records),
-    eventBus,
-  });
-  ix.set(IAgentStateService, new AgentStateService());
-  ix.set(
-    IAgentLLMRequesterService,
-    new SyncDescriptor(AgentLLMRequesterService),
-  );
-
-  return {
-    service: ix.get(IAgentLLMRequesterService),
-    wire: ix.get(IWireService),
-    records,
-    events,
-    telemetryRecords,
-    measuredCalls,
-  };
-}
-
-describe("AgentLLMRequesterService measured anchors", () => {
-  it("skips the measured anchor when the stream reports no usage", async () => {
-    const { service, measuredCalls } = createService(
-      createRequester({ value: 0 }),
-      undefined,
-    );
-
-    await service.request();
-
-    expect(measuredCalls).toHaveLength(0);
-  });
-
-  it("writes the measured anchor from the reported usage", async () => {
     const requester = createRequester({ value: 0 });
     const base = requester.request.bind(requester);
     requester.request = async function* (input, signal, options) {
@@ -807,7 +588,6 @@ describe("AgentLLMRequesterService trace id", () => {
         throw new APIStatusError(500, "boom", "req-1", null, "trace-fail-1");
       },
     });
-    const { service, telemetryRecords } = createService(
       requester,
       passthroughProjector,
     );
@@ -816,7 +596,6 @@ describe("AgentLLMRequesterService trace id", () => {
     });
     await expect(request.result).rejects.toMatchObject({ statusCode: 500 });
 
-    expect(telemetryRecords).toContainEqual({
       event: "api_error",
       properties: expect.objectContaining({
         error_type: "5xx_server",
@@ -844,7 +623,6 @@ describe("AgentLLMRequesterService trace id", () => {
         throw new APIEmptyResponseError("no content, no tool calls");
       },
     });
-    const { service, telemetryRecords } = createService(
       requester,
       passthroughProjector,
     );
@@ -853,7 +631,6 @@ describe("AgentLLMRequesterService trace id", () => {
     });
     await expect(request.result).rejects.toThrow();
 
-    const apiError = telemetryRecords.find(
       (record) => record.event === "api_error",
     );
     expect(apiError?.properties?.["trace_id"]).toBe("trace-mid-stream");
@@ -878,7 +655,6 @@ describe("AgentLLMRequesterService trace id", () => {
         throw new APIConnectionError("socket hang up");
       },
     });
-    const { service, telemetryRecords } = createService(
       requester,
       passthroughProjector,
     );
@@ -888,7 +664,6 @@ describe("AgentLLMRequesterService trace id", () => {
     expect(attempts).toBe(2);
     expect(request.trace.traceId).toBeUndefined();
     expect(
-      telemetryRecords.find((record) => record.event === "api_error")
         ?.properties?.["trace_id"],
     ).toBeUndefined();
   });

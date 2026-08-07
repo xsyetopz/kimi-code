@@ -1,20 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ErrorCodes } from "#/errors";
-
-import {
-  createTestAgent,
-  telemetryServices,
-  type TestAgentContext,
-} from "../../harness";
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
-
 describe("undoHistory RPC", () => {
   let ctx: TestAgentContext;
-  let records: TelemetryRecord[];
 
   afterEach(async () => {
     try {

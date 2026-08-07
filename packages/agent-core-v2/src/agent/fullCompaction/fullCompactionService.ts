@@ -93,7 +93,6 @@ import {
   OVERFLOW_CONTEXT_SAFETY_RATIO,
   OVERFLOW_STATUS_RECOVERY_RATIO,
   shrinkCompactionHistoryAfterOverflow,
-  usageTelemetry,
   type ActiveCompaction,
   type CompactionAttemptResult,
 } from "./fullCompactionInternals";

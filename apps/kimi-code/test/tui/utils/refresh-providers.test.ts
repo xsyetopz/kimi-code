@@ -93,7 +93,6 @@ describe("refreshAllProviderModels", () => {
         },
       },
       defaultModel: "kimi-code/kimi-for-coding",
-      telemetry: true,
     };
     vi.stubEnv("KIMI_CODE_BASE_URL", envBaseUrl);
     vi.stubEnv("KIMI_CODE_OAUTH_HOST", envOauthHost);
@@ -179,7 +178,6 @@ describe("refreshAllProviderModels", () => {
         },
       },
       defaultModel: "kimi-code/kimi-for-coding",
-      telemetry: true,
     };
     const host = makeRefreshHost(config);
     const resolveOAuthToken = vi.fn(async () => "oauth-access-token");
@@ -287,7 +285,6 @@ describe("refreshAllProviderModels", () => {
         [userAlias]: userAliasModel,
       },
       defaultModel: modelAlias,
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input, init) => {
@@ -404,7 +401,6 @@ describe("refreshAllProviderModels", () => {
           displayName: "m1",
         },
       },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input, init) => {
@@ -517,7 +513,6 @@ describe("refreshAllProviderModels", () => {
       },
       defaultModel: "my-b",
       thinking: { enabled: true },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input, init) => {
@@ -611,7 +606,6 @@ describe("refreshAllProviderModels", () => {
           displayName: "m1",
         },
       },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input, init) => {
@@ -719,7 +713,6 @@ describe("refreshAllProviderModels", () => {
       },
       defaultModel: userAlias,
       thinking: { enabled: false },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input, init) => {
@@ -787,7 +780,6 @@ describe("refreshAllProviderModels", () => {
       },
       defaultModel: "kimi-code/kimi-deep-coder",
       thinking: { enabled: false },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(
@@ -858,7 +850,6 @@ describe("refreshAllProviderModels", () => {
         "my-fav": userAliasModel,
       },
       defaultModel: "my-kimi/kimi-for-coding",
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input, init) => {
@@ -934,7 +925,6 @@ describe("refreshAllProviderModels", () => {
           capabilities: ["thinking", "tool_use"],
         },
       },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input, init) => {
@@ -983,7 +973,6 @@ describe("refreshAllProviderModels", () => {
         },
       },
       models: {},
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input) => {
@@ -1032,7 +1021,6 @@ describe("refreshAllProviderModels", () => {
         },
       },
       models: {},
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>();
@@ -1070,7 +1058,6 @@ describe("refreshAllProviderModels", () => {
         },
       },
       defaultModel: "kimi-code/kimi-for-coding",
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const resolveOAuthToken = vi.fn(async () => "oauth-access-token");
@@ -1145,7 +1132,6 @@ describe("refreshAllProviderModels", () => {
           capabilities: ["tool_use"],
         },
       },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(
@@ -1191,7 +1177,6 @@ describe("refreshAllProviderModels", () => {
           capabilities: ["tool_use"],
         },
       },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(
@@ -1236,7 +1221,6 @@ describe("refreshAllProviderModels", () => {
         },
       },
       defaultProvider: "my-kimi",
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(
@@ -1301,7 +1285,6 @@ describe("refreshAllProviderModels", () => {
           displayName: "m1",
         },
       },
-      telemetry: true,
     } as unknown as KimiConfig);
 
     const fetchMock = vi.fn<FetchMock>(async (input) => {

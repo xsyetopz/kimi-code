@@ -23,10 +23,8 @@
  * policy are persisted independently. The `agent.status.updated`
  * / `warning` events ride `IEventBus`. `emitStatusUpdated` runs live-only
  * after the dispatch, so
- * `wire.replay` rebuilds the Models silently; the same live-only path mirrors
- * the resolved
- * model protocol into the ambient telemetry context (`provider_type` /
- * `protocol`) whenever the model alias changes.
+ * `wire.replay` rebuilds the Models silently; the same live-only path records
+ * the resolved model alias whenever it changes.
  * `bind()` is first-bind only — a profile is the session's identity: the
  * guard runs before name resolution so `already bound` fails fast, and again
  * in the synchronous segment before the first dispatch, so concurrent binds

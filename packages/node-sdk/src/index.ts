@@ -84,8 +84,7 @@ export type {
 } from "#/compat";
 
 // Host-side config helpers — safe config reader + config path resolution, used
-// by hosts (e.g. the CLI's server telemetry bootstrap) that need to inspect
-// config without spinning up a full KimiCore.
+// by hosts that need to inspect config without spinning up a full KimiCore.
 export {
   effectiveModelAlias,
   loadRuntimeConfigSafe,

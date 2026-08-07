@@ -79,8 +79,6 @@ function blobStore(): IBlobStore {
   };
 }
 
-const telemetry = { track2: () => {} } as unknown as ITelemetryService;
-
 function requester(opts: {
   videoIn?: boolean;
   protocol?: Protocol;
@@ -148,7 +146,6 @@ describe("AgentVideoResolverService", () => {
         new Map([[FILE_ID, { name: "clip.mp4", bytes: VIDEO_BYTES }]]),
       ),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     );
     const req = requester({ uploadVideo: upload });
@@ -173,7 +170,6 @@ describe("AgentVideoResolverService", () => {
     await new AgentVideoResolverService(
       fileService(files),
       blobs,
-      telemetry,
       new AgentStateService(),
     ).resolve([message], requester({ uploadVideo: upload1 }));
 
@@ -181,7 +177,6 @@ describe("AgentVideoResolverService", () => {
     const out = await new AgentVideoResolverService(
       fileService(files),
       blobs,
-      telemetry,
       new AgentStateService(),
     ).resolve([message], requester({ uploadVideo: upload2 }));
 
@@ -197,7 +192,6 @@ describe("AgentVideoResolverService", () => {
         new Map([[FILE_ID, { name: "clip.mp4", bytes: VIDEO_BYTES }]]),
       ),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     ).resolve(
       [videoMessage(buildKimiFileUrl(FILE_ID, FALLBACK_PATH))],
@@ -217,7 +211,6 @@ describe("AgentVideoResolverService", () => {
         new Map([[FILE_ID, { name: "clip.mp4", bytes: VIDEO_BYTES }]]),
       ),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     ).resolve(
       [videoMessage(buildKimiFileUrl(FILE_ID, FALLBACK_PATH))],
@@ -238,7 +231,6 @@ describe("AgentVideoResolverService", () => {
         new Map([[FILE_ID, { name: "clip.mp4", bytes: VIDEO_BYTES }]]),
       ),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     ).resolve(
       [videoMessage(buildKimiFileUrl(FILE_ID, FALLBACK_PATH))],
@@ -260,7 +252,6 @@ describe("AgentVideoResolverService", () => {
         new Map([[FILE_ID, { name: "clip.mp4", bytes: VIDEO_BYTES }]]),
       ),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     );
 
@@ -285,7 +276,6 @@ describe("AgentVideoResolverService", () => {
         new Map([[FILE_ID, { name: "clip.mp4", bytes: VIDEO_BYTES }]]),
       ),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     );
     const message = videoMessage(buildKimiFileUrl(FILE_ID, FALLBACK_PATH));
@@ -319,7 +309,6 @@ describe("AgentVideoResolverService", () => {
         new Map([[FILE_ID, { name: "clip.mp4", bytes: VIDEO_BYTES }]]),
       ),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     );
     const message = videoMessage(buildKimiFileUrl(FILE_ID, FALLBACK_PATH));
@@ -344,7 +333,6 @@ describe("AgentVideoResolverService", () => {
     const out = await new AgentVideoResolverService(
       fileService(new Map([[FILE_ID, { name: "clip.mp4", bytes: PNG_BYTES }]])),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     ).resolve(
       [videoMessage(buildKimiFileUrl(FILE_ID, FALLBACK_PATH))],
@@ -362,7 +350,6 @@ describe("AgentVideoResolverService", () => {
     const out = await new AgentVideoResolverService(
       fileService(new Map()),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     ).resolve(
       [videoMessage(buildKimiFileUrl("missing", FALLBACK_PATH))],
@@ -379,7 +366,6 @@ describe("AgentVideoResolverService", () => {
     const out = await new AgentVideoResolverService(
       fileService(new Map()),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     ).resolve(
       [videoMessage(buildKimiFileUrl("missing"))],
@@ -398,7 +384,6 @@ describe("AgentVideoResolverService", () => {
         new Map([[FILE_ID, { name: "clip.mp4", bytes: VIDEO_BYTES }]]),
       ),
       blobStore(),
-      telemetry,
       new AgentStateService(),
     );
     const messages = [videoMessage("ms://already-uploaded")];

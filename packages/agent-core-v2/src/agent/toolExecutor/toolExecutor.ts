@@ -3,7 +3,7 @@
  *
  * Defines the public execution surface for provider tool calls, the
  * before/will execution-interception events, the did execution hook,
- * tool-call result settlement, duplicate-call tagging for telemetry, and
+ * tool-call result settlement, duplicate-call tagging, and
  * preflight description extension points. Bound at Agent scope.
  */
 

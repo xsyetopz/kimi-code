@@ -193,10 +193,6 @@ export async function mcpResultToExecutableOutput(
 
   const budgeted = applyTextBudget(wrapped);
   const compressed = await compressImageContentParts(budgeted.parts, {
-    telemetry:
-      options.telemetry === undefined
-        ? undefined
-        : { client: options.telemetry, source: "mcp_tool_result" },
     annotate: {
       persistOriginal: (bytes, mimeType) =>
         persistOriginalImage(

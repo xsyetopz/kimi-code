@@ -16,8 +16,8 @@
  * `StepRequest`s onto `loop` (the continuation message materializes when the
  * loop pops it), accounts live
  * turn usage through `usage`, observes terminal goal tool results through
- * `toolExecutor`, writes system reminders through `systemReminder`, reports
- * telemetry through `telemetry`, and checks main-agent eligibility through
+ * `toolExecutor`, writes system reminders through `systemReminder`, and checks
+ * main-agent eligibility through
  * `scopeContext`. Measures time and arms hard deadlines through `goal`'s
  * App-scoped deadline scheduler. Two `onBeforeExecuteTool` veto listeners
  * guard the goal lifecycle: stale or budget-exhausted goal tool calls are
@@ -120,6 +120,7 @@ import type {
   GoalStatus,
   GoalToolResult,
 } from "./types";
+import { normalizeCompletionCriterion } from "./goalService.support";
 
 const MAX_GOAL_OBJECTIVE_LENGTH = 4000;
 

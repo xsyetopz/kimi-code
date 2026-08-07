@@ -28,21 +28,9 @@ import { ErrorCodes } from "#/errors";
 import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 import { TodoModel, todoSet } from "#/session/todo/todoOps";
 import { defineModel } from "#/wire/model";
-import { IWireService } from "#/wire/wire";
-
-import {
-  createTestAgent,
-  telemetryServices,
-  type TestAgentContext,
-} from "../../harness";
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
 
 describe("AgentConversationUndoService", () => {
   let ctx: TestAgentContext;
-  let records: TelemetryRecord[];
 
   afterEach(async () => {
     try {
@@ -304,31 +292,6 @@ describe("AgentConversationUndoService", () => {
     expect(wire.getModel(TodoModel).current).toEqual([
       { title: "kept", status: "pending" },
     ]);
-  });
-
-  it("restores plan mode and its telemetry mirror to their pre-turn value", async () => {
-    setup();
-    const undo = ctx.get(IAgentConversationUndoService);
-    const wire = ctx.get(IWireService);
-    ctx.appendTurnExchange("u1", "a1");
-    ctx.appendTurnExchange("u2", "a2");
-    await ctx.get(IAgentPlanService).enter("plan-x", false);
-    const restoredModes: boolean[] = [];
-    const subscription = ctx
-      .get(IEventBus)
-      .subscribe("agent.status.updated", (event) => {
-        if (event.planMode !== undefined) restoredModes.push(event.planMode);
-      });
-
-    try {
-      await undo.undo(1);
-
-      expect(wire.getModel(PlanModel).current.active).toBe(false);
-      expect(ctx.get(IAgentTelemetryContextService).get().mode).toBe("agent");
-      expect(restoredModes).toEqual([false]);
-    } finally {
-      subscription.dispose();
-    }
   });
 
   it("does not roll back world-time turn bookkeeping", async () => {

@@ -6,8 +6,7 @@
  * initial connect from the config domain's snapshot, applies its reconciled
  * change events incrementally (serialized on a mutation tail, always after
  * the initial connect settles), feeds the manager's global timeout defaults
- * from the config domain's tunables at each (re)connect, and reports
- * connection telemetry for the initial load. It also builds per-session
+ * from the config domain's tunables at each (re)connect. It also builds per-session
  * overlays (`sessionOverlay`): a session-owned manager for a session's
  * ephemeral (caller-injected, never persisted) servers, presented through a
  * `MergedMcpConnectionView` over the shared manager and shut down by the

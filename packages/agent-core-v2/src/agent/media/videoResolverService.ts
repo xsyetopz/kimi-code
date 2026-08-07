@@ -4,8 +4,8 @@
  * Resolves each `kimi-file://` video reference in the projected wire messages
  * to a provider-acceptable part right before the request leaves for the wire.
  * Reads the uploaded bytes through the `file` domain (`IFileService`), uploads
- * them through the bound model's `ModelRequester.uploadVideo` (wrapped for
- * `video_upload` telemetry through `createVideoUploader`), and persists the
+ * them through the bound model's `ModelRequester.uploadVideo` (wrapped by
+ * `createVideoUploader`), and persists the
  * `(file, provider) → llmFileId` mapping through the `blobStore`
  * access-pattern store so the upload happens once across a turn's steps,
  * retries, and media-recovery reprojections. Falls back to an inline base64

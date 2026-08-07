@@ -1,7 +1,7 @@
 /**
  * `toolExecutor` domain — tool execution helpers.
  *
- * Preflight, result normalization, telemetry classification, and abort-race
+ * Preflight, result normalization, and abort-race
  * utilities used by `AgentToolExecutorService`. Bound at Agent scope via
  * the service.
  */
@@ -296,25 +296,6 @@ export function normalizeToolResult(result: ExecutableToolResult): ToolResult {
     };
   }
   return base;
-}
-
-export function toolTelemetryOutcome(
-  result: ToolResult,
-): "success" | "error" | "cancelled" {
-  if (result.isError !== true) return "success";
-  const text = toolOutputText(result.output).toLowerCase();
-  return text.includes("aborted") ||
-    text.includes("cancelled") ||
-    text.includes("manually interrupted")
-    ? "cancelled"
-    : "error";
-}
-
-export function toolTelemetryErrorType(
-  outcome: "success" | "error" | "cancelled",
-): "cancelled" | "error" {
-  if (outcome === "cancelled") return "cancelled";
-  return "error";
 }
 
 function toolOutputText(output: ToolResult["output"]): string {

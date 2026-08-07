@@ -3,7 +3,6 @@
  *
  * Responsibilities: validates tool-exchange repair, strict projection, and
  * degraded/full-strip media projections through the public projector contract.
- * Wiring: real AgentContextProjectorService with captured log and telemetry
  * boundaries. Run: bun test -- test/agent/contextProjector/projector-tool-exchanges.test.ts
  */
 
@@ -27,10 +26,6 @@ import {
   DEEPSEEK_PROTOCOL_PROFILE,
   KIMI_K2_PROTOCOL_PROFILE,
 } from "#/kosong/protocol/presets";
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
 
 const REPAIR_WARNING = "repaired the request to keep it wire-valid";
 
@@ -134,15 +129,12 @@ describe("projector tool-exchange normalization", () => {
   let disposables: DisposableStore;
   let projector: IAgentContextProjectorService;
   let warnings: WarningCall[];
-  let telemetryRecords: TelemetryRecord[];
 
   beforeEach(() => {
     disposables = new DisposableStore();
     warnings = [];
-    telemetryRecords = [];
     const ix = disposables.add(new TestInstantiationService());
     ix.set(ILogService, createCapturingLog(warnings));
-    ix.set(ITelemetryService);
     ix.set(IAgentStateService, new AgentStateService());
     ix.set(
       IAgentScopeContext,
@@ -680,31 +672,6 @@ describe("projector tool-exchange normalization", () => {
       );
     });
 
-    it("emits context_projection_repaired telemetry with the v1 wire keys when a repair occurs", () => {
-      project([
-        assistant("", ["c1", "c2"]),
-        reminder("host note"),
-        toolResult("c1", "one"),
-        toolResult("c2", "two"),
-      ]);
-      expect(telemetryRecords).toEqual([
-        {
-          event: "context_projection_repaired",
-          properties: {
-            reordered: 2,
-            synthesized: 0,
-            dropped_orphan: 0,
-            duplicate_calls_dropped: 0,
-            duplicate_results_dropped: 0,
-            leading_dropped: 0,
-            assistants_merged: 0,
-            whitespace_dropped: 0,
-            vacuous_dropped: 0,
-          },
-        },
-      ]);
-    });
-
     it("does not emit context_projection_repaired on a clean projection or a trailing in-flight close", () => {
       project([
         user("go"),
@@ -713,7 +680,6 @@ describe("projector tool-exchange normalization", () => {
         user("next"),
       ]);
       project([user("go"), assistant("", ["c1"])]);
-      expect(telemetryRecords).toEqual([]);
     });
   });
 
@@ -734,7 +700,6 @@ describe("projector tool-exchange normalization", () => {
       expect(repairPayloads(warnings)).toEqual([
         expect.objectContaining({ vacuousDropped: 1 }),
       ]);
-      expect(telemetryRecords).toEqual([
         {
           event: "context_projection_repaired",
           properties: expect.objectContaining({ vacuous_dropped: 1 }),

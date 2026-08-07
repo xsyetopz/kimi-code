@@ -63,9 +63,6 @@ import {
   normalizeAgentProfile,
   type AgentProfile,
 } from "#/app/agentProfileCatalog/agentProfileCatalog";
-import {
-  ITelemetryService,
-  } from "#/app/telemetry/telemetry";
 import { ISessionCronService } from "#/session/cron/sessionCronService";
 import {
   ISessionMetadata,
@@ -1320,7 +1317,6 @@ describe("Agent tool execution contract", () => {
         ],
       ]),
     );
-    const telemetryRecords: Array<{ event: string; properties: unknown }> = [];
     const requester = {
       id: "main",
       kind: LifecycleScope.Agent,
@@ -1329,7 +1325,6 @@ describe("Agent tool execution contract", () => {
           if (serviceId === IEventBus) return eventBus;
           if (serviceId === IAgentLifecycleService) return lifecycle;            return {
               ...              track2: (event: string, properties: unknown) => {
-                telemetryRecords.push({ event, properties });
               },
             };
           }
@@ -1364,7 +1359,6 @@ describe("Agent tool execution contract", () => {
       parentAgentId: "main",
       callerAgentId: "main",
     });
-    expect(telemetryRecords).toContainEqual({
       event: "subagent_created",
       properties: {
         subagent_name: "explore",

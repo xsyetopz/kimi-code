@@ -14,15 +14,15 @@
  * `<video path>` tag) so the internal reference never reaches the wire. When a
  * model is configured, `prepareTurnConfig` snapshots the
  * model, effective thinking effort, and system prompt at the turn boundary
- * so loop telemetry and every request in that turn share one configuration.
+ * so every request in that turn share one configuration.
  * Forwards streamed `part` events to the caller's `onPart`
  * handler, records `usage` through `IAgentUsageService`, resolves to an
  * `AgentLLMRequestFinish` on the `finish` event, logs the request lifecycle
  * (config deduplicated by content, request/response/failure lines, plus
  * per-request fields) through `log`, publishes advisory model-capability
  * warnings through `eventBus`, records durable request-trace Ops
- * through `wire`, reports each request's `x-trace-id` to its caller, and
- * reports provider failures through `telemetry`. The mutable request state
+ * through `wire`, and reports each request's `x-trace-id` to its caller.
+ * The mutable request state
  * (`lastConfigLogSignature`, `turnConfigs`, `mediaDegradedTurns`,
  * `mediaStrippedTurns`, `emittedThinkingEffortWarnings`) is registered into
  * `agentState` (`IAgentStateService`) and read/written through it. Bound at
@@ -113,7 +113,6 @@ import {
   projectionField,
   providerVisibleTools,
   requestKindForRecord,
-  requestKindForTelemetry,
   stringField,
   toolSignature,
 } from "./llmRequesterHelpers";

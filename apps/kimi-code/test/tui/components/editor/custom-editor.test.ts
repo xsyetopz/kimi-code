@@ -644,7 +644,7 @@ describe("CustomEditor paste marker expansion", () => {
   });
 });
 
-describe("CustomEditor shortcut telemetry hooks", () => {
+describe("CustomEditor shortcut  hooks", () => {
   it("reports undo shortcuts before delegating to the base editor", () => {
     const editor = makeEditor();
     const onUndo = vi.fn();

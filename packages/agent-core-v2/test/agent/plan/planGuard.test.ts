@@ -4,7 +4,6 @@
  * TaskStop/Cron vetoes, abstention on unrelated tools, and every ExitPlanMode
  * review branch (approve with/without option, Reject and Exit, Revise,
  * dismiss, auto / no-plan / empty-plan / non-plan_review skips) with
- * telemetry.
  * Wiring: real wire and plan services against a fireable executor event
  * stub; a stand-in listener registered after the plan listener proves
  * whether the guard ended adjudication (veto/allow) or abstained;
@@ -49,10 +48,6 @@ import { ISessionContext } from "#/session/sessionContext/sessionContext";
 import { ToolAccesses } from "#/tool/toolContract";
 import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
 
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
 import { createFakeHostFs } from "../../tools/fixtures/fake-exec";
 import { registerTestAgentWireServices } from "../../wire/stubs";
 import { stubPermissionModeService } from "../permissionMode/stubs";
@@ -149,7 +144,6 @@ describe("AgentPlanService plan-guard listener", () => {
   let executorEvents: ToolExecutorEventStubs;
   let permissionRan: boolean;
   let permissionStandInRegistered: boolean;
-  let records: TelemetryRecord[];
   let requests: ApprovalRequestRecord[];
   let approvalResponse: ApprovalResponse;
   let formatDenyMessage: Mock<(message: string) => string>;
@@ -205,7 +199,6 @@ describe("AgentPlanService plan-guard listener", () => {
         reg.definePartialInstance(IAgentContextInjectorService, {
           register: () => ({ dispose: () => {} }),
         });
-        reg.definePartialInstance(IAgentTelemetryContextService, {
           set: () => {},
         });
         reg.defineInstance(IAgentToolExecutorService, executorEvents.executor);
@@ -214,7 +207,6 @@ describe("AgentPlanService plan-guard listener", () => {
           IAgentPermissionModeService,
           stubPermissionModeService(() => mode),
         );
-        reg.defineInstance(ITelemetryService);
         reg.defineInstance(IAgentStateService, new AgentStateService());
         reg.define(IAgentPlanService, AgentPlanService);
       },

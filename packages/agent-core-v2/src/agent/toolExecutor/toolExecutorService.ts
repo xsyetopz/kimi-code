@@ -5,7 +5,7 @@
  * through the `onBeforeExecuteTool` veto event, awaits readiness work
  * through the `onWillExecuteTool` participation event, finalizes results
  * through the ordered `onDidExecuteTool` hook, publishes tool lifecycle
- * events through `event`, records telemetry through `telemetry`, truncates
+ * events through `event`, truncates
  * oversized outputs through `toolResultTruncation`, and logs parse
  * diagnostics through `log`. The mutable dup-type tracking state
  * (`toolCallDupTypes`, `dupTypeTurnId`) is registered into `agentState`
@@ -57,8 +57,6 @@ import {
   preflightToolCall,
   raceWithAbortGrace,
   toolCallDisplayFieldsFromExecution,
-  toolTelemetryErrorType,
-  toolTelemetryOutcome,
   type PreflightedToolCall,
   type RunnableToolCall,
   type ToolCallDisplayFields,

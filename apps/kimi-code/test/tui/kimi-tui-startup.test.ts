@@ -296,7 +296,6 @@ describe("KimiTUI startup", () => {
     });
     expect(session.setApprovalHandler).toHaveBeenCalledOnce();
     expect(session.setQuestionHandler).toHaveBeenCalledOnce();
-    expect(harness.setTelemetryContext).not.toHaveBeenCalled();
     expect(driver.state.startupState).toBe("ready");
     expect(driver.state.appState).toMatchObject({
       sessionId: "ses-1",

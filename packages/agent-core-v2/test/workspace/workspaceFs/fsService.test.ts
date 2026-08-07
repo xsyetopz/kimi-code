@@ -22,10 +22,6 @@ import {
   ISessionProcessRunner,
   type IProcess,
 } from "#/session/process/processRunner";
-import {
-  ITelemetryService,
-  type TelemetryProperties,
-} from "#/app/telemetry/telemetry";
 import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 import { IWorkspaceDirs } from "#/workspace/workspaceDirs/workspaceDirs";
 import { IWorkspaceGitService } from "#/workspace/workspaceGit/workspaceGit";
@@ -344,21 +340,16 @@ function makeStreamingProcess(lines: readonly string[]): {
   return { proc, wasKilled: () => killed, yieldedLines: () => yielded };
 }
 
-function telemetryStub(
   events: Array<{ event: string; properties: Record<string, unknown> }>,
-): ITelemetryService {
   return {
     _serviceBrand: undefined,
-    track: (event: string, properties?: TelemetryProperties) => {
       events.push({ event, properties: properties ?? {} });
     },
     track2: (event, properties) => {
       events.push({
         event,
-        properties: (properties as TelemetryProperties | undefined) ?? {},
       });
     },
-    withContext: () => telemetryStub(events),
     setContext: () => {},
     addAppender: () => ({ dispose: () => {} }),
     removeAppender: () => {},
@@ -419,7 +410,6 @@ function makeSession(
     stubPair(IWorkspaceDirs, stubWorkspaceDirs()),
     stubPair(IHostFileSystem, fakeFs(files, symlinks, symlinkTargets)),
     stubPair(ISessionProcessRunner, runner ?? fakeRunner(handler)),
-    stubPair(ITelemetryService, telemetryStub(events)),
     stubPair(IWorkspaceGitService, workspaceGitStub(git)),
   ]);
   return workspace.accessor.get(IWorkspaceFsService);

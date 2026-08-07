@@ -2306,7 +2306,7 @@ command = "vim"
     });
   });
 
-  it("routes /yolo through session permission state without app-layer telemetry duplication", async () => {
+  it("routes /yolo through session permission state without app-layer duplication", async () => {
     const { driver, session, harness } = await makeDriver();
     harness.track.mockClear();
 

@@ -1,20 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { IAgentPermissionModeService } from "#/agent/permissionMode/permissionMode";
-
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
-import {
-  createTestAgent,
-  telemetryServices,
-  type TestAgentContext,
-} from "../../harness";
-
 describe("setPermission RPC", () => {
   let ctx: TestAgentContext;
-  let records: TelemetryRecord[];
 
   afterEach(async () => {
     try {

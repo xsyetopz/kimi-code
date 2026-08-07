@@ -3,13 +3,13 @@
  */
 
 import { defineState } from "#/_base/state/stateRegistry";
-import { defineModel } from "#/wire/wire";
+import { defineModel } from "#/wire/model";
 import {
   ErrorCodes,
-  isPlainRecord,
   toKimiErrorPayload,
   type KimiErrorPayload,
 } from "#/errors";
+import { isPlainRecord } from "#/_base/utils/canonical-args";
 import { LoopErrors } from "#/agent/loop/errors";
 import type { EnqueueReceipt } from "#/agent/loop/loop";
 import type { ContextMessage, PromptOrigin } from "#/agent/contextMemory/types";
@@ -282,7 +282,7 @@ function goalBudgetBlockReason(budget: GoalBudgetReport): string | undefined {
     : `${GOAL_BUDGET_BLOCK_PREFIX}: ${reached.join(", ")}`;
 }
 
-function normalizeCompletionCriterion(
+export function normalizeCompletionCriterion(
   value: string | undefined,
 ): string | undefined {
   const trimmed = value?.trim();

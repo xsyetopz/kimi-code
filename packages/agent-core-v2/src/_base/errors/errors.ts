@@ -10,23 +10,6 @@ export class ExpectedError extends Error {
   readonly isExpected = true;
 }
 
-export class ErrorNoTelemetry extends Error {
-  constructor(message?: string) {
-    super(message);
-    this.name = "CodeExpectedError";
-  }
-
-  static fromError(error: Error): ErrorNoTelemetry {
-    const wrapped = new ErrorNoTelemetry(error.message);
-    wrapped.stack = error.stack;
-    return wrapped;
-  }
-
-  static isErrorNoTelemetry(error: unknown): error is ErrorNoTelemetry {
-    return error instanceof Error && error.name === "CodeExpectedError";
-  }
-}
-
 export class BugIndicatingError extends Error {
   constructor(message?: string) {
     super(message ?? "An unexpected bug occurred.");

@@ -25,20 +25,6 @@ import { IAgentLoopService } from "#/agent/loop/loop";
 import { MessageStepRequest } from "#/agent/loop/stepRequest";
 import { IAgentConversationUndoService } from "#/agent/undo/undo";
 import { ErrorCodes } from "#/errors";
-import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
-import {
-  configServices,
-  createTestAgent,
-  externalHookServices,
-  homeDirServices,
-  telemetryServices,
-  type TestAgentContext,
-  type TestAgentServiceOverride,
-} from "../../harness";
-import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
 import {
   executeTool,
   type TestExecutableToolContext,
@@ -161,7 +147,6 @@ interface TaskServiceFixture {
   ctx: TestAgentContext;
   agent: FakeTaskAgent;
   manager: TaskServiceTestManager;
-  records: TelemetryRecord[];
   persistence?: ReturnType<typeof createAgentTaskPersistence>;
 }
 
@@ -182,8 +167,6 @@ function createAgentTaskService(
     hooks?: FakeTaskAgent["hooks"];
   } = {},
 ): TaskServiceFixture {
-  const records: TelemetryRecord[] = [];
-  const telemetry = ;
   const hookEngine:
     | Pick<
         IExternalHooksRunnerService,
@@ -372,37 +355,6 @@ describe("AgentTaskService — event emission", () => {
     expect(records).toContainEqual({
       event: "background_task_created",
       properties: { agent_id: "main", task_id: taskId, kind: "agent" },
-    });
-  });
-
-  it("emits task.terminated and telemetry on natural exit", async () => {
-    const { agent, manager, records } = createAgentTaskService();
-    const taskId = registerProcess(
-      manager,
-      immediateProcess(0),
-      "echo",
-      "done",
-    );
-    records.length = 0;
-
-    await manager.wait(taskId);
-
-    expect(agent.emittedEvents).toContainEqual({
-      type: "task.terminated",
-      info: expect.objectContaining({
-        taskId,
-        status: "completed",
-      }),
-    });
-    expect(records).toContainEqual({
-      event: "background_task_completed",
-      properties: expect.objectContaining({
-        agent_id: "main",
-        task_id: taskId,
-        kind: "process",
-        duration_ms: expect.any(Number),
-        status: "completed",
-      }),
     });
   });
 

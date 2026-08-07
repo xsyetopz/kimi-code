@@ -10,8 +10,7 @@
  * `execute` runs only when no interactive review ask intercepted the call. In
  * auto permission mode (`permissionMode`) the auto-mode-approve policy lets
  * every call through before any ask can fire, so the result is worded as
- * auto-approved (not user-reviewed), matching the `auto_approved` telemetry
- * outcome (`telemetry`). In manual / yolo modes the review-ask policy owns
+ * auto-approved (not user-reviewed). In manual / yolo modes the review-ask policy owns
  * the user-facing result; the only way `execute` still runs there is a
  * configured or session allow/ask rule — an explicit user decision that keeps
  * the user-approved output and the `approved` outcome. Bound at Agent scope.

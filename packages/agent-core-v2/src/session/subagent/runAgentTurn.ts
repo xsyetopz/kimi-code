@@ -5,7 +5,8 @@
  * Not a Service: `runAgentTurn` is a pure function that borrows
  * `IAgentPromptService`, `IAgentContextMemoryService`, `IAgentUsageService`,
  * and `IEventBus` from the target agent's scope. It has no notion of a caller:
- * it emits no record signals, runs no hooks, and tracks no telemetry.
+ * it emits no record signals, runs no hooks, and performs no side effects beyond
+ * the turn itself.
  *
  * The lifecycle is imperative — the caller awaits the returned `completion`
  * promise. Turn hooks are not used because there is exactly one observer (the

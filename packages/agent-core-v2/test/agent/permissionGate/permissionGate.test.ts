@@ -28,10 +28,6 @@ import { stubPermissionModeService } from "../permissionMode/stubs";
 import { stubPermissionPolicyService } from "../permissionPolicy/stubs";
 import { stubPermissionRulesService } from "../permissionRules/stubs";
 import {
-  recordingTelemetry,
-  type TelemetryRecord,
-} from "../../app/telemetry/stubs";
-import {
   stubToolExecutorEvents,
   type ToolExecutorEventStubs,
 } from "../toolExecutor/stubs";
@@ -66,7 +62,6 @@ describe("AgentPermissionGate", () => {
   let mode: PermissionMode;
   let rules: readonly PermissionRule[];
   let policyResult: PermissionPolicyEvaluation | undefined;
-  let records: TelemetryRecord[];
   let executorEvents: ToolExecutorEventStubs;
   let resolvePermissionResolution: ReturnType<
     typeof vi.fn<IAgentToolApprovalService["resolvePermissionResolution"]>
@@ -106,7 +101,6 @@ describe("AgentPermissionGate", () => {
           stubPermissionPolicyService(() => policyResult),
         );
         reg.defineInstance(IAgentToolApprovalService, toolApproval);
-        reg.defineInstance(ITelemetryService);
         reg.defineInstance(IAgentToolExecutorService, executorEvents.executor);
         reg.define(IAgentPermissionGate, AgentPermissionGate);
       },

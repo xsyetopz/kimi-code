@@ -655,7 +655,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * A v1 patch is one deep-merge over the whole document; v2 deep-merges
    * per domain with the same plain-object-recursive / array-replace
    * semantics, so the patch fans out one `config.set` per top-level field.
-   * Unknown-to-v2 fields (`yolo`, `planMode`, `telemetry`, ...) persist as
+   * Unknown-to-v2 fields (`yolo`, `planMode`, ...) persist as
    * unregistered pass-through domains, like v1's schema keeping them.
    */
   override async setConfig(patch: KimiConfigPatch): Promise<KimiConfig> {

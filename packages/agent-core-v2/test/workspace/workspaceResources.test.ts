@@ -47,9 +47,6 @@ import { IEventService } from "#/app/event/event";
 import { IPluginService } from "#/app/plugin/plugin";
 import { IProjectLocalConfigService } from "#/app/projectLocalConfig/projectLocalConfig";
 import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
-import {
-  ITelemetryService,
-  } from "#/app/telemetry/telemetry";
 import { FileSkillDiscovery } from "#/app/skillCatalog/fileSkillDiscovery";
 import { InMemorySkillDiscovery } from "#/app/skillCatalog/inMemorySkillDiscovery";
 import { ISkillDiscovery } from "#/app/skillCatalog/skillDiscovery";

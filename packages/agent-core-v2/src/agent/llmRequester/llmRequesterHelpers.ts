@@ -47,14 +47,6 @@ export function logFieldsForSource(
   }
 }
 
-export function requestKindForTelemetry(
-  source: AgentLLMRequestSource | undefined,
-): string | undefined {
-  if (source?.type === "turn") return "turn";
-  if (source?.type === "operation") return source.requestKind ?? "operation";
-  return undefined;
-}
-
 export function providerVisibleTools(tools: readonly Tool[]): readonly Tool[] {
   if (!tools.some((tool) => tool.deferred === true)) return tools;
   return tools.filter((tool) => tool.deferred !== true);

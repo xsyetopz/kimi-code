@@ -352,7 +352,6 @@ export class AgentMcpService extends Disposable implements IAgentMcpService {
             originalsDir: sessionMediaOriginalsDir(
               this.sessionContext.sessionDir,
             ),
-            telemetry: this.telemetry,
             reconnect: (signal) =>
               this.reconnectForToolCall(serverName, client, signal),
           }),

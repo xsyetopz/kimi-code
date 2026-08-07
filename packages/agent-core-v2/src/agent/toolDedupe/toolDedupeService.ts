@@ -4,8 +4,8 @@
  * Self-wiring plugin: its constructor registers `loop` onWillBeginStep/onDidFinishStep
  * hooks, an `onBeforeExecuteTool` veto listener (same-step duplicates are
  * vetoed with a placeholder synthetic result), and an `onDidExecuteTool`
- * hook to drive same-step suppression and cross-step repeat reminders, and
- * reports repeat telemetry through `telemetry`. The mutable dedupe state
+ * hook to drive same-step suppression and cross-step repeat reminders. The
+ * mutable dedupe state
  * (`stepCalls`, `originalCallIndex`, `syntheticCallIds`, `callKeyByCallId`,
  * `consecutiveKey`, `consecutiveCount`, `activeTurnId`, `activeStep`) is
  * registered into `agentState` (`IAgentStateService`) and read/written
@@ -24,7 +24,7 @@ import {
   registerScopedService,
 } from "#/_base/di/scope";
 import { defineState } from "#/_base/state/stateRegistry";
-import { canonicalTelemetryArgs } from "#/_base/utils/canonical-args";
+import { canonicalToolArgs } from "#/_base/utils/canonical-args";
 import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
 import { parseToolCallArguments } from "#/tool/tool-args-parse";
 import { IAgentLoopService } from "#/agent/loop/loop";
@@ -81,12 +81,12 @@ function makeDeferred<T>(): Deferred<T> {
 }
 
 function makeKey(toolName: string, args: unknown): string {
-  return `${toolName} ${canonicalTelemetryArgs(args)}`;
+  return `${toolName} ${canonicalToolArgs(args)}`;
 }
 
 function argsHash(args: unknown): string {
   return createHash("sha256")
-    .update(canonicalTelemetryArgs(args))
+    .update(canonicalToolArgs(args))
     .digest("hex")
     .slice(0, 8);
 }

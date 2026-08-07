@@ -34,18 +34,6 @@ Impl (`src/session/sessionMetadata/sessionMetadataService.ts`):
  */
 ```
 
-## Telemetry
-
-Business events go through `ITelemetryService.track2` — never the low-level `track`, which exists only for appender plumbing and tests. Every event must be registered in `src/app/telemetry/events.ts` (`telemetryEventDefinitions`) before it is emitted: define a properties interface and document every property, then register it one of two ways — the compiler rejects unregistered event names and any property mismatch at the call site.
-
-- Events whose every emission path goes through an Agent-scoped `ITelemetryService` view use `defineAgentTelemetryEvent<P>({ owner, comment, properties })`. `agent_id` is ambient Agent identity — declared once as `AgentTelemetryEventContext`, composed into the wire schema, and bound at runtime by the Agent-scoped `ITelemetryService` view that `agentLifecycle` seeds. Keep it out of the payload interface and out of call sites.
-- All other events use `defineTelemetryEvent<P>({ owner, comment, properties })`. This includes Session/App-level events and events with any non-Agent emission path (e.g. `image_compress`, which prompt routes may emit through a session-scoped view). Per-event agent identity outside the Agent scope (e.g. `subagent_created`, `cron_scheduled`) stays as explicit `agent_id` business properties.
-
-- **Naming**: event names and property keys are snake_case (`tool_call`, `duration_ms`). Durations, counts, and sizes carry a unit suffix (`_ms` / `_count` / `_bytes`). Use specific names (`error_type`, not `error`).
-- **Privacy**: never register user content, prompts, or file paths as properties. `CloudAppender` redacts URLs, emails, tokens, and absolute paths from string values before events leave the process, but that is a safety net, not a license.
-- **Stability**: registered event names and property keys are wire data consumed by dashboards — treat renames as breaking changes.
-- The registry is the single source of truth; `test/app/telemetry/events.test.ts` enforces the naming conventions.
-
 ## Persistence
 
 Business domains **do not implement persistence themselves** — they depend on a Service that owns the access pattern. Business code expresses *what* to store or fetch, never *how*.

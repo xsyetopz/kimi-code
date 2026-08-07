@@ -4,7 +4,7 @@
  * Owns idle conversation undo coordination and restored observable state.
  * Coordinates `contextMemory`, undo participants, `fullCompaction`,
  * `loop`, `prompt`, Agent and Session identity, `sessionMetadata`, `event`,
- * `eventBus`, `telemetry`, and `wire`. Bound at Agent scope.
+ * `eventBus`, and `wire`. Bound at Agent scope.
  */
 
 import { Disposable, type IDisposable } from "#/_base/di/lifecycle";

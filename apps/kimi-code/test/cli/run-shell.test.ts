@@ -34,7 +34,6 @@ const mocks = vi.hoisted(() => {
     harnessGetConfig: vi.fn(async () => ({
       providers: {},
       defaultModel: "k2",
-      telemetry: true,
     })),
     harnessGetConfigDiagnostics: vi.fn(async () => ({
       warnings: [] as readonly string[],
@@ -111,7 +110,6 @@ describe("runShell", () => {
     mocks.harnessGetConfig.mockResolvedValue({
       providers: {},
       defaultModel: "k2",
-      telemetry: true,
     });
     mocks.tuiGetCurrentSessionId.mockReturnValue("");
     mocks.tuiHasSessionContent.mockReturnValue(false);

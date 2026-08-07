@@ -10,7 +10,7 @@
  *
  * The Model is intentionally phase-only — `{ phase }` (initial `idle`). The
  * richer per-compaction data is NOT resume state: `instruction` is only needed
- * by the live worker (which does not survive a restart) and by telemetry, so it
+ * by the live worker (which does not survive a restart), so it
  * rides the `begin` payload (and is persisted on the record for audit) but is
  * not stored in the Model; result numbers are consumed live by the
  * `compaction.completed` signal and their durable effect (the summary message

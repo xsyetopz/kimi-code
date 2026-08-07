@@ -15,7 +15,6 @@
  *   - `processService` — `IHostProcessService`, spawns the rg subprocess
  *   - `workspaceCtx`   — `ISessionWorkspaceContext`, workspace roots for path
  *                        safety and display
- *   - `telemetry`      — `ITelemetryService`, rg fallback outcome tracking
  *   - `skillCatalog`   — `ISessionSkillCatalog` (optional), extends the
  *                        workspace with skill roots
  *

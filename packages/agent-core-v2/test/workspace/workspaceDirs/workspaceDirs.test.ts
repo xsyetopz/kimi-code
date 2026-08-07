@@ -44,9 +44,6 @@ import { ICronTaskPersistence } from "#/app/cron/cronTaskPersistence";
 import { IEventService } from "#/app/event/event";
 import { IProjectLocalConfigService } from "#/app/projectLocalConfig/projectLocalConfig";
 import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
-import {
-  ITelemetryService,
-  } from "#/app/telemetry/telemetry";
 import { IWorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycle";
 import { WorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycleService";
 import { IWorkspaceService, type Workspace } from "#/app/workspace/workspace";

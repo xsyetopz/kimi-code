@@ -84,7 +84,6 @@ export function createMcpTool(
         return normalizeMcpToolResult(
           await mcpResultToExecutableOutput(result, qualifiedName, {
             originalsDir: options.originalsDir,
-            telemetry: options.telemetry,
           }),
         );
       },

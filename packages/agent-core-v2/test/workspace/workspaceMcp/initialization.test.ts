@@ -27,9 +27,6 @@ import { IBootstrapService } from "#/app/bootstrap/bootstrap";
 import { IConfigService } from "#/app/config/config";
 import { IPluginService } from "#/app/plugin/plugin";
 import type { ReloadSummary } from "#/app/plugin/types";
-import {
-  ITelemetryService,
-  } from "#/app/telemetry/telemetry";
 import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
 import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import {
