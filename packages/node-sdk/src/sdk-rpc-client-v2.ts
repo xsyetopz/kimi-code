@@ -179,6 +179,7 @@ import {
   IBootstrapService,
   IConfigService,
   IEventService,
+  IHarnessInterceptorRegistry,
   IHostEnvironment,
   IHostFileSystem,
   IModelCatalog,
@@ -547,6 +548,15 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   get engineAccessor(): ServicesAccessor {
     return this.app.accessor;
+  }
+
+  /**
+   * In-process harness interceptor registry. Hook-style interception is not
+   * wire-exposable (see klient AGENTS.md), so hosts register interceptors here
+   * before materializing agents. Remote transports have no equivalent.
+   */
+  get harnessInterceptors(): IHarnessInterceptorRegistry {
+    return this.engineAccessor.get(IHarnessInterceptorRegistry);
   }
 
   protected getRpc(): Promise<never> {

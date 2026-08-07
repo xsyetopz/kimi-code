@@ -222,6 +222,13 @@ export type BeginGlobalMcpServerAuthResult =
     }
   | { readonly status: "already-authorized" };
 
+// ── Harness interceptors (in-process only) ──
+export { IHarnessInterceptorRegistry } from "@moonshot-ai/agent-core-v2/app/harnessInterceptor/harnessInterceptorRegistry";
+export type {
+  HarnessInterceptorDefinition,
+  HarnessInterceptorHooks,
+} from "@moonshot-ai/agent-core-v2/app/harnessInterceptor/types";
+
 // ── Config helpers ──
 export {
   resolveConfigPath,
