@@ -23,68 +23,68 @@ export interface KimiTUIDialogDelegates {
   openUndoSelector(): void;
 }
 
-export function installKimiTUIDialogDelegates(
-  ctor: { prototype: KimiTUIDialogDelegates },
-): void {
+export function installKimiTUIDialogDelegates(ctor: {
+  prototype: KimiTUIDialogDelegates;
+}): void {
   ctor.prototype.mountEditorReplacement = function (
-  this: KimiTUI,
-  panel: Component & Focusable,
-): void {
-  this.startupPanelsController.mountEditorReplacement(panel);
-};
+    this: KimiTUI,
+    panel: Component & Focusable,
+  ): void {
+    this.startupPanelsController.mountEditorReplacement(panel);
+  };
 
-ctor.prototype.restoreEditor = function (this: KimiTUI): void {
-  this.startupPanelsController.restoreEditor();
-};
+  ctor.prototype.restoreEditor = function (this: KimiTUI): void {
+    this.startupPanelsController.restoreEditor();
+  };
 
-ctor.prototype.restoreInputText = function (
-  this: KimiTUI,
-  text: string,
-): void {
-  this.startupPanelsController.restoreInputText(text);
-};
+  ctor.prototype.restoreInputText = function (
+    this: KimiTUI,
+    text: string,
+  ): void {
+    this.startupPanelsController.restoreInputText(text);
+  };
 
-ctor.prototype.showHelpPanel = function (this: KimiTUI): void {
-  this.startupPanelsController.showHelpPanel();
-};
+  ctor.prototype.showHelpPanel = function (this: KimiTUI): void {
+    this.startupPanelsController.showHelpPanel();
+  };
 
-ctor.prototype.hideHelpPanel = function (this: KimiTUI): void {
-  this.startupPanelsController.hideHelpPanel();
-};
+  ctor.prototype.hideHelpPanel = function (this: KimiTUI): void {
+    this.startupPanelsController.hideHelpPanel();
+  };
 
-ctor.prototype.showApprovalPanel = function (
-  this: KimiTUI,
-  payload: Parameters<StartupPanelsController["showApprovalPanel"]>[0],
-): void {
-  this.startupPanelsController.showApprovalPanel(payload);
-};
+  ctor.prototype.showApprovalPanel = function (
+    this: KimiTUI,
+    payload: Parameters<StartupPanelsController["showApprovalPanel"]>[0],
+  ): void {
+    this.startupPanelsController.showApprovalPanel(payload);
+  };
 
-ctor.prototype.hideApprovalPanel = function (this: KimiTUI): void {
-  this.startupPanelsController.hideApprovalPanel();
-};
+  ctor.prototype.hideApprovalPanel = function (this: KimiTUI): void {
+    this.startupPanelsController.hideApprovalPanel();
+  };
 
-ctor.prototype.showQuestionDialog = function (
-  this: KimiTUI,
-  payload: Parameters<StartupPanelsController["showQuestionDialog"]>[0],
-): void {
-  this.startupPanelsController.showQuestionDialog(payload);
-};
+  ctor.prototype.showQuestionDialog = function (
+    this: KimiTUI,
+    payload: Parameters<StartupPanelsController["showQuestionDialog"]>[0],
+  ): void {
+    this.startupPanelsController.showQuestionDialog(payload);
+  };
 
-ctor.prototype.hideQuestionDialog = function (this: KimiTUI): void {
-  this.startupPanelsController.hideQuestionDialog();
-};
+  ctor.prototype.hideQuestionDialog = function (this: KimiTUI): void {
+    this.startupPanelsController.hideQuestionDialog();
+  };
 
-ctor.prototype.showSessionPicker = function (this: KimiTUI): Promise<void> {
-  return this.startupPanelsController.showSessionPicker();
-};
+  ctor.prototype.showSessionPicker = function (this: KimiTUI): Promise<void> {
+    return this.startupPanelsController.showSessionPicker();
+  };
 
-ctor.prototype.hideSessionPicker = function (this: KimiTUI): void {
-  this.startupPanelsController.hideSessionPicker();
-};
+  ctor.prototype.hideSessionPicker = function (this: KimiTUI): void {
+    this.startupPanelsController.hideSessionPicker();
+  };
 
-ctor.prototype.openUndoSelector = function (this: KimiTUI): void {
-  void slashCommands.handleUndoCommand(this, "");
-};
+  ctor.prototype.openUndoSelector = function (this: KimiTUI): void {
+    void slashCommands.handleUndoCommand(this, "");
+  };
 }
 
 declare module "./kimi-tui" {

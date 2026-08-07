@@ -106,7 +106,8 @@ function outputLimitReason(): string {
 export const SIGTERM_GRACE_MS = 5_000;
 export const SESSION_CLOSED_REASON = "Session closed";
 export const NOTIFICATION_FALLBACK_PREVIEW_BYTES = 3_000;
-export const ACTIVE_BACKGROUND_TASK_INJECTION_VARIANT = "background_task_status";
+export const ACTIVE_BACKGROUND_TASK_INJECTION_VARIANT =
+  "background_task_status";
 export const ACTIVE_BACKGROUND_TASK_GUIDANCE = [
   "The conversation was compacted, so the earlier messages that started these background tasks are gone — but the tasks are still running from before.",
   "Do not start duplicates. Use TaskList to list them, TaskOutput for a non-blocking status/output snapshot, and TaskStop to cancel one — completion arrives via automatic notification.",
@@ -211,7 +212,10 @@ function renderOutputPreviewBlock(output: AgentTaskOutputSnapshot): string {
   ].join("\n");
 }
 
-export function shouldListTask(info: AgentTaskInfo, activeOnly: boolean): boolean {
+export function shouldListTask(
+  info: AgentTaskInfo,
+  activeOnly: boolean,
+): boolean {
   if (!TERMINAL_STATUSES.has(info.status)) return true;
   if (activeOnly) return false;
   return info.detached !== false;
@@ -252,7 +256,9 @@ type TaskNotificationOrigin = Pick<
   "taskId" | "status" | "notificationId"
 >;
 
-export function isTaskOrigin(origin: unknown): origin is TaskNotificationOrigin {
+export function isTaskOrigin(
+  origin: unknown,
+): origin is TaskNotificationOrigin {
   if (typeof origin !== "object" || origin === null) return false;
   const value = origin as Record<string, unknown>;
   return (
@@ -311,7 +317,9 @@ export function generateTaskId(kind: string): string {
   return `${kind}-${suffix}`;
 }
 
-export function normalizeReason(reason: string | undefined): string | undefined {
+export function normalizeReason(
+  reason: string | undefined,
+): string | undefined {
   const trimmed = reason?.trim();
   return trimmed === undefined || trimmed.length === 0 ? undefined : trimmed;
 }
