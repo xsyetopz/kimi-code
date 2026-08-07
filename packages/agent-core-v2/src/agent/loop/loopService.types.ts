@@ -13,7 +13,7 @@ import type { StepRequest, TurnSeed } from './stepRequest';
 import type { StepRequestQueue, StepRequestBatch } from './stepRequestQueue';
 import type { TurnInterruptReason } from './turnEvents';
 
-function normalizeFinishReason(reason: FinishReason): string {
+export function normalizeFinishReason(reason: FinishReason): string {
   if (reason === 'tool_calls') return 'tool_use';
   if (reason === 'completed') return 'end_turn';
   if (reason === 'truncated') return 'max_tokens';
@@ -72,11 +72,11 @@ interface StreamPartCollector {
   drainInterruptedContent(): ContentPart[];
 }
 
-function cancelReasonFor(cancellation: unknown): 'user_cancelled' | 'aborted' {
+export function cancelReasonFor(cancellation: unknown): 'user_cancelled' | 'aborted' {
   return isUserCancellation(cancellation) ? 'user_cancelled' : 'aborted';
 }
 
-function interruptReasonFor(
+export function interruptReasonFor(
   result: Extract<TurnResult, { readonly type: 'cancelled' | 'failed' }>,
 ): TurnInterruptReason {
   if (result.type === 'cancelled') {
