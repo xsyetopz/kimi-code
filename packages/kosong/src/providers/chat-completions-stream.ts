@@ -30,11 +30,19 @@ export function convertChatCompletionStreamToolCall(
   toolCall: ChatCompletionStreamToolCallDelta,
   bufferedByIndex: Map<number | string, BufferedChatCompletionToolCall>,
 ): StreamedMessagePart[] {
+  const streamIndex = toolCall.index;
+
   if (toolCall.function === undefined || toolCall.function === null) {
+    if (streamIndex !== undefined && toolCall.id !== undefined) {
+      const buffered = bufferedByIndex.get(streamIndex) ?? {
+        arguments: "",
+        emitted: false,
+      };
+      buffered.id = toolCall.id;
+      bufferedByIndex.set(streamIndex, buffered);
+    }
     return [];
   }
-
-  const streamIndex = toolCall.index;
   const functionName = toolCall.function.name;
   const functionArguments = toolCall.function.arguments;
   const hasConcreteName =

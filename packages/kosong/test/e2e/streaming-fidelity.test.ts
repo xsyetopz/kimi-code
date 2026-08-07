@@ -7,6 +7,7 @@ import type {
   ToolCall,
 } from "#/message";
 import { extractText } from "#/message";
+import { convertChatCompletionStreamToolCall } from "#/providers/chat-completions-stream";
 import { MockChatProvider } from "../fixtures/mock-provider";
 import { SimpleToolset, toolOk } from "../fixtures/simple-toolset";
 import type { ToolReturnValue } from "../fixtures/simple-toolset";
@@ -230,6 +231,40 @@ describe("e2e: streaming fidelity", () => {
 
       expect(result.message.toolCalls).toHaveLength(1);
       expect(result.message.toolCalls[0]!.arguments).toBe('{"key":"val"}');
+    });
+  });
+
+  describe("Chat Completions stream tool-call adapter", () => {
+    it("buffers indexed tool call id until the function header arrives", () => {
+      const buffered = new Map<
+        number | string,
+        { id?: string; arguments: string; emitted: boolean }
+      >();
+
+      expect(
+        convertChatCompletionStreamToolCall(
+          { index: 0, id: "call_buffered" },
+          buffered,
+        ),
+      ).toEqual([]);
+
+      expect(
+        convertChatCompletionStreamToolCall(
+          {
+            index: 0,
+            function: { name: "search", arguments: '{"q":"x"}' },
+          },
+          buffered,
+        ),
+      ).toEqual([
+        {
+          type: "function",
+          id: "call_buffered",
+          name: "search",
+          arguments: '{"q":"x"}',
+          _streamIndex: 0,
+        },
+      ]);
     });
   });
 

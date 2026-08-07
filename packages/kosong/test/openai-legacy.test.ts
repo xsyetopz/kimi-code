@@ -2575,6 +2575,67 @@ describe("OpenAILegacyChatProvider — non-indexed streaming tool_calls", () => 
     ]);
   });
 
+  it("buffers indexed tool call id until the function header arrives", async () => {
+    const provider = new OpenAILegacyChatProvider({
+      model: "gpt-4.1",
+      apiKey: "test-key",
+      stream: true,
+    });
+
+    const chunks = [
+      {
+        id: "chatcmpl-idbuf",
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [{ index: 0, id: "call_buffered" }],
+            },
+          },
+        ],
+      },
+      {
+        id: "chatcmpl-idbuf",
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  function: { name: "Bash", arguments: '{"x":1}' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ];
+
+    (
+      provider as unknown as {
+        _client: { chat: { completions: { create: unknown } } };
+      }
+    )._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(mockStream(chunks));
+
+    const stream = await provider.generate("", [], []);
+    const parts: Array<Record<string, unknown>> = [];
+    for await (const p of stream)
+      parts.push(p as unknown as Record<string, unknown>);
+
+    expect(parts).toEqual([
+      {
+        type: "function",
+        id: "call_buffered",
+        name: "Bash",
+        arguments: '{"x":1}',
+        _streamIndex: 0,
+      },
+    ]);
+  });
+
   it("handles tool_call delta with no function field (early return)", async () => {
     const provider = new OpenAILegacyChatProvider({
       model: "gpt-4.1",
@@ -2648,5 +2709,66 @@ describe("OpenAILegacyChatProvider — non-indexed streaming tool_calls", () => 
       parts.push(p as unknown as Record<string, unknown>);
 
     expect(parts).toEqual([]);
+  });
+
+  it("buffers indexed tool call id when function field is null", async () => {
+    const provider = new OpenAILegacyChatProvider({
+      model: "gpt-4.1",
+      apiKey: "test-key",
+      stream: true,
+    });
+
+    const chunks = [
+      {
+        id: "chatcmpl-nullid",
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [{ index: 0, id: "call_nullfn", function: null }],
+            },
+          },
+        ],
+      },
+      {
+        id: "chatcmpl-nullid",
+        choices: [
+          {
+            index: 0,
+            delta: {
+              tool_calls: [
+                {
+                  index: 0,
+                  function: { name: "Bash", arguments: '{"y":2}' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ];
+
+    (
+      provider as unknown as {
+        _client: { chat: { completions: { create: unknown } } };
+      }
+    )._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(mockStream(chunks));
+
+    const stream = await provider.generate("", [], []);
+    const parts: Array<Record<string, unknown>> = [];
+    for await (const p of stream)
+      parts.push(p as unknown as Record<string, unknown>);
+
+    expect(parts).toEqual([
+      {
+        type: "function",
+        id: "call_nullfn",
+        name: "Bash",
+        arguments: '{"y":2}',
+        _streamIndex: 0,
+      },
+    ]);
   });
 });

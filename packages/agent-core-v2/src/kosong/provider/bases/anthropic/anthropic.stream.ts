@@ -2,30 +2,22 @@
  * `kosong/provider` domain — Anthropic streaming message adapter.
  */
 
-
-import Anthropic, {
-} from "@anthropic-ai/sdk";
 import type {
+  MessageStreamEvent,
+  RawContentBlockDeltaEvent,
+  RawContentBlockStartEvent,
+  RawMessageStartEvent,
 } from "@anthropic-ai/sdk/resources/messages/messages.js";
 
-import {
-} from "#/kosong/contract/errors";
-import type {
-} from "#/kosong/contract/message";
-import { isToolDeclarationOnlyMessage } from "#/kosong/contract/message";
-import type {
-} from "#/kosong/contract/provider";
-import type { Tool } from "#/kosong/contract/tool";
+import type { ChatProviderError } from "#/kosong/contract/errors";
+import type { StreamedMessagePart, ToolCall } from "#/kosong/contract/message";
+import type { FinishReason, StreamedMessage } from "#/kosong/contract/provider";
 import type { TokenUsage } from "#/kosong/contract/usage";
 
 import {
-} from "./anthropic-profile";
-import { mergeConsecutiveUserMessages } from "../merge-user-messages";
-import { mergeRequestHeaders, resolveAuthBackedClient } from "../request-auth";
-import {
-} from "../tool-call-id";
-
-import { convertAnthropicError } from './anthropic.convert';
+  convertAnthropicError,
+  normalizeAnthropicStopReason,
+} from "./anthropic.convert";
 
 export class AnthropicStreamedMessage implements StreamedMessage {
   private _id: string | null = null;

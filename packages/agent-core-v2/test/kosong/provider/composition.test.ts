@@ -1630,4 +1630,66 @@ describe("OpenAI reasoning_effort path (issue #1616)", () => {
     });
     expect(explicit["reasoning_effort"]).toBe("low");
   });
+
+  it("reattaches tool-result images when convertMessage hook is set (trait mode)", async () => {
+    const provider = new OpenAILegacyChatProvider({
+      model: "gpt-4.1",
+      apiKey: "sk-probe",
+      stream: false,
+      hooks: {
+        convertMessage: (_message, converted) => converted,
+      },
+    });
+
+    const history: Message[] = [
+      {
+        role: "user",
+        content: [{ type: "text", text: "Add 2 and 3" }],
+        toolCalls: [],
+      },
+      {
+        role: "assistant",
+        content: [{ type: "text", text: "ok" }],
+        toolCalls: [
+          {
+            type: "function",
+            id: "call_abc123",
+            name: "add",
+            arguments: '{"a":2,"b":3}',
+          },
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          { type: "text", text: "5" },
+          {
+            type: "image_url",
+            imageUrl: { url: "https://example.com/image.png" },
+          },
+        ],
+        toolCallId: "call_abc123",
+        toolCalls: [],
+      },
+    ];
+
+    const body = await captureOpenAIBody(provider, undefined, history);
+    const messages = body["messages"] as Array<Record<string, unknown>>;
+
+    expect(messages[2]).toMatchObject({
+      role: "tool",
+      tool_call_id: "call_abc123",
+      content: "5",
+    });
+    expect(messages[3]).toEqual({
+      role: "user",
+      content: [
+        { type: "text", text: "Attached media from tool result:" },
+        {
+          type: "image_url",
+          image_url: { url: "https://example.com/image.png" },
+        },
+      ],
+    });
+  });
 });

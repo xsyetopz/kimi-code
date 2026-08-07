@@ -2,9 +2,14 @@
  * `kosong/provider` domain — OpenAI Chat Completions streamed response adapter.
  */
 
-import type { StreamedMessagePart } from "#/kosong/contract/message";
+import OpenAI from "openai";
+
+import type { ChatProviderError } from "#/kosong/contract/errors";
+import type { StreamedMessagePart, ToolCall } from "#/kosong/contract/message";
 import type { FinishReason, StreamedMessage } from "#/kosong/contract/provider";
 import type { TokenUsage } from "#/kosong/contract/usage";
+
+import { ReasoningKeyDialect } from "./reasoning-key";
 
 import {
   convertChatCompletionStreamToolCall,

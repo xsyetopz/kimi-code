@@ -26,7 +26,10 @@
 
 import OpenAI from "openai";
 
+import { parseTraceId } from "#/kosong/contract/errors";
+
 import type { Message } from "#/kosong/contract/message";
+import { isToolDeclarationOnlyMessage } from "#/kosong/contract/message";
 import type {
   ChatProvider,
   GenerateOptions,
@@ -45,6 +48,9 @@ import {
   OPENAI_TEXT_TOOL_CAPABILITY,
   OPENAI_VISION_TOOL_CAPABILITY,
   OPENAI_VISION_TOOL_PREFIXES,
+  toolToOpenAI,
+  type OpenAIContentPart,
+  type ToolMessageConversion,
 } from "./openai-common";
 import { ReasoningKeyDialect } from "./reasoning-key";
 import {
@@ -57,10 +63,13 @@ import {
 } from "../tool-call-id";
 
 import {
+  appendToolResultMediaMessage,
   completionTokenKwargs,
   convertHistoryMessages,
+  convertMessage,
   normalizeGenerationKwargs,
   responseFormatToOpenAI,
+  toolResultImageParts,
   usesMaxCompletionTokens,
   type OpenAIChatCompletionsHooks,
   type OpenAILegacyGenerationKwargs,
@@ -178,19 +187,28 @@ export class OpenAILegacyChatProvider implements ChatProvider {
 
     const convertMessageHook = this._hooks?.convertMessage;
     if (convertMessageHook !== undefined) {
+      const pendingToolResultMedia: OpenAIContentPart[] = [];
       for (const msg of normalizedHistory) {
+        if (isToolDeclarationOnlyMessage(msg)) continue;
+        if (msg.role !== "tool") {
+          appendToolResultMediaMessage(messages, pendingToolResultMedia);
+        }
         const converted = convertMessage(
           msg,
           reasoningKey,
-          null,
+          this._toolMessageConversion,
           preserveThinking,
-          false,
+          true,
         );
         const shaped = convertMessageHook(msg, converted);
         if (shaped !== null) {
           messages.push(shaped);
         }
+        if (msg.role === "tool") {
+          pendingToolResultMedia.push(...toolResultImageParts(msg));
+        }
       }
+      appendToolResultMediaMessage(messages, pendingToolResultMedia);
     } else {
       messages.push(
         ...convertHistoryMessages(

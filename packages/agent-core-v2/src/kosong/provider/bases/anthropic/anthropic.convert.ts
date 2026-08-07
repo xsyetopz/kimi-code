@@ -2,27 +2,51 @@
  * `kosong/provider` domain — Anthropic message conversion and error mapping.
  */
 
-
+import {
+  APIConnectionError,
+  APITimeoutError,
+  ChatProviderError,
+  classifyBaseApiError,
+  normalizeAPIStatusError,
+  parseRetryAfterMs,
+  throwIfAbortError,
+} from "#/kosong/contract/errors";
+import type { ContentPart, Message } from "#/kosong/contract/message";
+import type {
+  FinishReason,
+  ProviderRequestAuth,
+  ResponseFormat,
+  ThinkingEffort,
+  ToolCallIdPolicy,
+} from "#/kosong/contract/provider";
+import type { Tool } from "#/kosong/contract/tool";
 import Anthropic, {
+  APIError as AnthropicAPIError,
+  APIConnectionError as AnthropicConnectionError,
+  AnthropicError,
+  APIConnectionTimeoutError as AnthropicTimeoutError,
 } from "@anthropic-ai/sdk";
 import type {
+  Tool as AnthropicTool,
+  ContentBlockParam,
+  MessageCreateParams,
+  MessageParam,
+  TextBlockParam,
+  ThinkingBlockParam,
+  ToolResultBlockParam,
+  ToolUseBlockParam,
 } from "@anthropic-ai/sdk/resources/messages/messages.js";
 
 import {
-} from "#/kosong/contract/errors";
-import type {
-} from "#/kosong/contract/message";
-import { isToolDeclarationOnlyMessage } from "#/kosong/contract/message";
-import type {
-} from "#/kosong/contract/provider";
-import type { Tool } from "#/kosong/contract/tool";
-import type { TokenUsage } from "#/kosong/contract/usage";
-
-import {
+  BUDGET_THINKING_EFFORTS,
+  inferAnthropicModelProfile,
+  matchKnownAnthropicModelProfile,
+  parseAnthropicModelVersion,
+  type AnthropicModelProfile,
+  type AnthropicModelVersion,
 } from "./anthropic-profile";
-import { mergeConsecutiveUserMessages } from "../merge-user-messages";
-import { mergeRequestHeaders, resolveAuthBackedClient } from "../request-auth";
 import {
+  sanitizeToolCallId,
 } from "../tool-call-id";
 
 export function normalizeAnthropicStopReason(raw: string | null | undefined): {
