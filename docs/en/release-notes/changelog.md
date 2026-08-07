@@ -675,7 +675,6 @@ This page documents the changes in each Kimi Code CLI release.
 
 - Route Kimi Code models on the Anthropic-compatible protocol through the beta Messages API.
 - Upgrade web markdown renderer dependencies (katex, markstream-vue, shiki) for bug fixes and performance improvements.
-- Add provider type and protocol attributes to turn and API error telemetry.
 
 ## 0.20.1 (2026-06-26)
 

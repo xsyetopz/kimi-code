@@ -22,11 +22,10 @@ This is a TypeScript monorepo built for agent-assisted development. Keep the roo
 - `packages/kosong`: the LLM / provider abstraction layer.
 - `packages/kaos`: the execution environment and file/process abstractions.
 - `packages/oauth`: Kimi OAuth and managed auth utilities.
-- Telemetry: removed from the harness product line.
 - `packages/transcript`: the isomorphic transcript rendering data layer — agent-granular L1 store, idempotent L2 operations, `off/turn/block/delta` L3 subscription granularity, framework-free L4 view registry, and turn-cursor pagination. Pure TypeScript (no engine imports) and the sole owner of transcript contract types (`src/contract/`). Consumed by the TUI projection path and engine-side fold/rebuild helpers.
 - `packages/tree-sitter-bash`: a pure-TypeScript bash parser (no runtime deps, no wasm) that produces a syntax tree with tree-sitter-bash 0.25.0 named-node type names and UTF-16 code-unit offsets. `parse(source, { timeoutMs, maxNodes })` runs under a deterministic budget (default 50 ms / 50k nodes, plus per-chain recursion depth caps) and returns a discriminated `ParseResult` (`{ ok, rootNode, hasError }` or `{ ok: false, reason: 'aborted' }`) — callers must treat aborted/hasError trees as "cannot analyze" and degrade. Parser only, no safety judgments; consumers (e.g. Bash tool permission matching) live elsewhere. Known deviations from the reference are tracked in the package README's "Known differences" section, pinned by differential fixtures tested against the real `tree-sitter-bash` wasm (dev-only).
 
-**Out of the harness product line** (migration targets for deletion or quarantine, not default-path dependencies): `apps/kimi-web`, `apps/vis`, `apps/kimi-inspect`. **Deleted from the tree:** `packages/kap-server`, `packages/minidb`, `packages/server-e2e` (legacy HTTP server stack; klient hosts the retired wire e2e suites). See [ARCHITECTURE.md](ARCHITECTURE.md) for the north star.
+**Out of the harness product line** (migration targets for deletion or quarantine, not default-path dependencies): `apps/kimi-web`, `apps/vis`, `apps/kimi-inspect`. **Deleted from the tree:** `packages/kap-server`, `packages/minidb`, `packages/server-e2e`, `packages/telemetry` (legacy HTTP server stack; klient hosts the retired wire e2e suites). See [ARCHITECTURE.md](ARCHITECTURE.md) for the north star.
 
 ## Environment Requirements
 

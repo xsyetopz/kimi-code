@@ -675,7 +675,6 @@ outline: 2
 
 - 将 Anthropic 兼容协议上的 Kimi Code 模型改走 beta Messages API。
 - 升级 web Markdown 渲染器依赖（katex、markstream-vue、shiki），以修复问题并改进性能。
-- 在轮次和 API 错误遥测中新增供应商类型与协议属性。
 
 ## 0.20.1（2026-06-26）
 
