@@ -127,19 +127,6 @@ interface AgentTaskNotificationBuildContext {
   readonly notification: AgentTaskNotification;
 }
 
-const TaskNotificationDeliveryModel = defineCheckpointedModel(
-  "task.notificationDelivery",
-  (): readonly string[] => [],
-  {
-    onAppendMessage: (current, message) => {
-      const origin = taskOriginFromMessage(message);
-      if (origin === undefined) return current;
-      const key = notificationKey(origin);
-      return current.includes(key) ? current : [...current, key];
-    },
-  },
-);
-
 interface ManagedTask {
   readonly taskId: string;
   readonly task: AgentTask | undefined;

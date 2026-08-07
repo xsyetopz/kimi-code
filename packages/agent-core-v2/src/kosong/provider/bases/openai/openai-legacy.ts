@@ -62,6 +62,7 @@ import { normalizeToolCallIdsForProvider } from "../tool-call-id";
 
 import {
   appendToolResultMediaMessage,
+  CHAT_COMPLETIONS_MAX_OUTPUT_TOKENS_CEILING,
   completionTokenKwargs,
   convertHistoryMessages,
   convertMessage,

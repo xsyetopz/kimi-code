@@ -42,7 +42,7 @@ interface AgentTaskNotificationBuildContext {
   readonly notification: AgentTaskNotification;
 }
 
-const TaskNotificationDeliveryModel = defineCheckpointedModel(
+export const TaskNotificationDeliveryModel = defineCheckpointedModel(
   "task.notificationDelivery",
   (): readonly string[] => [],
   {
@@ -103,15 +103,16 @@ function outputLimitReason(): string {
   );
 }
 
-const SIGTERM_GRACE_MS = 5_000;
-const TASK_ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
-const SESSION_CLOSED_REASON = "Session closed";
-const NOTIFICATION_FALLBACK_PREVIEW_BYTES = 3_000;
-const ACTIVE_BACKGROUND_TASK_INJECTION_VARIANT = "background_task_status";
-const ACTIVE_BACKGROUND_TASK_GUIDANCE = [
+export const SIGTERM_GRACE_MS = 5_000;
+export const SESSION_CLOSED_REASON = "Session closed";
+export const NOTIFICATION_FALLBACK_PREVIEW_BYTES = 3_000;
+export const ACTIVE_BACKGROUND_TASK_INJECTION_VARIANT = "background_task_status";
+export const ACTIVE_BACKGROUND_TASK_GUIDANCE = [
   "The conversation was compacted, so the earlier messages that started these background tasks are gone — but the tasks are still running from before.",
   "Do not start duplicates. Use TaskList to list them, TaskOutput for a non-blocking status/output snapshot, and TaskStop to cancel one — completion arrives via automatic notification.",
 ].join(" ");
+
+const TASK_ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 export function isAgentTaskTerminal(status: AgentTaskStatus): boolean {
   return TERMINAL_STATUSES.has(status);
@@ -168,7 +169,7 @@ export const taskActiveTaskReminderPendingKey = defineState<boolean>(
   () => false,
 );
 
-function emptyOutputSnapshot(): AgentTaskOutputSnapshot {
+export function emptyOutputSnapshot(): AgentTaskOutputSnapshot {
   return {
     outputSizeBytes: 0,
     previewBytes: 0,
@@ -178,7 +179,7 @@ function emptyOutputSnapshot(): AgentTaskOutputSnapshot {
   };
 }
 
-function agentTaskNotificationChildren(
+export function agentTaskNotificationChildren(
   output: AgentTaskOutputSnapshot,
 ): readonly string[] | undefined {
   if (output.fullOutputAvailable && output.outputPath !== undefined) {
@@ -210,13 +211,13 @@ function renderOutputPreviewBlock(output: AgentTaskOutputSnapshot): string {
   ].join("\n");
 }
 
-function shouldListTask(info: AgentTaskInfo, activeOnly: boolean): boolean {
+export function shouldListTask(info: AgentTaskInfo, activeOnly: boolean): boolean {
   if (!TERMINAL_STATUSES.has(info.status)) return true;
   if (activeOnly) return false;
   return info.detached !== false;
 }
 
-function isCompactionSplice(splice: {
+export function isCompactionSplice(splice: {
   readonly deleteCount: number;
   readonly messages: readonly {
     readonly origin?: { readonly kind: string } | undefined;
@@ -230,7 +231,7 @@ function isCompactionSplice(splice: {
   );
 }
 
-function newerRestoredTask(
+export function newerRestoredTask(
   existing: AgentTaskInfo,
   loaded: AgentTaskInfo,
 ): AgentTaskInfo {
@@ -251,7 +252,7 @@ type TaskNotificationOrigin = Pick<
   "taskId" | "status" | "notificationId"
 >;
 
-function isTaskOrigin(origin: unknown): origin is TaskNotificationOrigin {
+export function isTaskOrigin(origin: unknown): origin is TaskNotificationOrigin {
   if (typeof origin !== "object" || origin === null) return false;
   const value = origin as Record<string, unknown>;
   return (
@@ -262,11 +263,11 @@ function isTaskOrigin(origin: unknown): origin is TaskNotificationOrigin {
   );
 }
 
-function notificationKey(origin: TaskNotificationOrigin): string {
+export function notificationKey(origin: TaskNotificationOrigin): string {
   return `${origin.taskId}\0${origin.status}\0${origin.notificationId}`;
 }
 
-function taskOriginFromMessage(
+export function taskOriginFromMessage(
   message: unknown,
 ): TaskNotificationOrigin | undefined {
   if (typeof message !== "object" || message === null) return undefined;
@@ -274,7 +275,7 @@ function taskOriginFromMessage(
   return isTaskOrigin(origin) ? origin : undefined;
 }
 
-function buildAgentTaskNotificationBody(info: AgentTaskInfo): string {
+export function buildAgentTaskNotificationBody(info: AgentTaskInfo): string {
   const baseLine =
     info.status === "timed_out"
       ? `${info.description} timed out.`
@@ -301,7 +302,7 @@ function buildAgentTaskNotificationBody(info: AgentTaskInfo): string {
   return `${baseLine}${recovery}`;
 }
 
-function generateTaskId(kind: string): string {
+export function generateTaskId(kind: string): string {
   const bytes = randomBytes(8);
   let suffix = "";
   for (let index = 0; index < 8; index++) {
@@ -310,7 +311,7 @@ function generateTaskId(kind: string): string {
   return `${kind}-${suffix}`;
 }
 
-function normalizeReason(reason: string | undefined): string | undefined {
+export function normalizeReason(reason: string | undefined): string | undefined {
   const trimmed = reason?.trim();
   return trimmed === undefined || trimmed.length === 0 ? undefined : trimmed;
 }
@@ -319,7 +320,7 @@ function isSerializedUserCancellation(reason: string | undefined): boolean {
   return reason === userCancellationReason().message;
 }
 
-function createForegroundRelease(): ForegroundRelease {
+export function createForegroundRelease(): ForegroundRelease {
   let resolve!: (reason: ForegroundTaskReleaseReason) => void;
   const promise = new Promise<ForegroundTaskReleaseReason>((done) => {
     resolve = done;
@@ -327,7 +328,7 @@ function createForegroundRelease(): ForegroundRelease {
   return { promise, resolve };
 }
 
-function errorMessage(error: unknown): string {
+export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
 }

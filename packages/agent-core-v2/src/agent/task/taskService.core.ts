@@ -102,6 +102,20 @@ import { TaskModel, taskStarted, taskTerminated } from "./taskOps";
 import { formatTaskList } from "#/agent/tools/task/task-list/taskListTool";
 import "#/agent/tools/task/task-output/taskOutputTool";
 import "#/agent/tools/task/task-stop/taskStopTool";
+import {
+  createForegroundRelease,
+  emptyOutputSnapshot,
+  errorMessage,
+  generateTaskId,
+  isCompactionSplice,
+  isTaskOrigin,
+  newerRestoredTask,
+  normalizeReason,
+  notificationKey,
+  shouldListTask,
+  taskOriginFromMessage,
+  TaskNotificationDeliveryModel,
+} from "./taskService.support";
 
 interface ForegroundRelease {
   readonly promise: Promise<ForegroundTaskReleaseReason>;
@@ -126,19 +140,6 @@ interface AgentTaskNotificationBuildContext {
   readonly origin: TaskOrigin;
   readonly notification: AgentTaskNotification;
 }
-
-const TaskNotificationDeliveryModel = defineCheckpointedModel(
-  "task.notificationDelivery",
-  (): readonly string[] => [],
-  {
-    onAppendMessage: (current, message) => {
-      const origin = taskOriginFromMessage(message);
-      if (origin === undefined) return current;
-      const key = notificationKey(origin);
-      return current.includes(key) ? current : [...current, key];
-    },
-  },
-);
 
 interface ManagedTask {
   readonly taskId: string;
