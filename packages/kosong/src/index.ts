@@ -47,6 +47,7 @@ export type { ModelCapability } from "./capability";
 export {
   capabilityToProtocolCapability,
   parseModelProtocolProfile,
+  parseOpaqueProviderState,
   parseProviderTransportProfile,
   parseServingProfile,
 } from "./protocol";
@@ -58,12 +59,24 @@ export type {
   ModelProtocolReasoningProfile,
   ModelProtocolRequestConstraints,
   ModelProtocolToolsProfile,
+  OpaqueProviderState,
   ProtocolTransportFamily,
   ProviderTransportProfile,
   ReasoningMode,
   ServingEngine,
   ServingProfile,
   ToolProtocolKind,
+} from "./protocol";
+export {
+  ANTHROPIC_PROTOCOL_PROFILE,
+  DEEPSEEK_PROTOCOL_PROFILE,
+  GEMINI_PROTOCOL_PROFILE,
+  KIMI_K2_PROTOCOL_PROFILE,
+  KIMI_K3_PROTOCOL_PROFILE,
+  MINIMAX_PROTOCOL_PROFILE,
+  OPENAI_CHAT_PROTOCOL_PROFILE,
+  OPENAI_RESPONSES_PROTOCOL_PROFILE,
+  TRANSPORT_PROFILE_BY_WIRE,
 } from "./protocol";
 
 // Model catalog (models.dev-style) metadata
@@ -74,6 +87,10 @@ export {
   inferWireType,
   resolveCatalogImport,
 } from "./catalog";
+export {
+  resolveModelProtocolProfile,
+  resolveProviderTransportProfile,
+} from "./catalog-profiles";
 export type {
   Catalog,
   CatalogModel,

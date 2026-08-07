@@ -172,6 +172,20 @@ export function parseServingProfile(value: unknown): ServingProfile {
   return ServingProfileSchema.parse(value);
 }
 
+/**
+ * Provider-specific replay state that does not belong in {@link ContentPart}
+ * or {@link ToolCall} IR fields (e.g. Responses API item ids, Anthropic
+ * message ids). Carried as an optional sidecar on {@link Message} and
+ * {@link ToolCall} until adapters consume it.
+ */
+export const OpaqueProviderStateSchema = z.record(z.string(), z.unknown());
+
+export type OpaqueProviderState = z.infer<typeof OpaqueProviderStateSchema>;
+
+export function parseOpaqueProviderState(value: unknown): OpaqueProviderState {
+  return OpaqueProviderStateSchema.parse(value);
+}
+
 /** Narrow a full {@link ModelCapability} to the protocol-profile capability shape. */
 export function capabilityToProtocolCapability(
   capability: ModelCapability,

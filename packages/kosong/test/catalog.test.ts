@@ -1091,4 +1091,217 @@ describe("protocol profile metadata", () => {
       reasoningParser: "deepseek_r1",
     });
   });
+
+  it("parseOpaqueProviderState accepts string-keyed replay blobs", async () => {
+    const { parseOpaqueProviderState } = await import("../src/protocol");
+    expect(
+      parseOpaqueProviderState({
+        responses_item_id: "item_abc",
+        call_id: "call_xyz",
+      }),
+    ).toEqual({
+      responses_item_id: "item_abc",
+      call_id: "call_xyz",
+    });
+  });
+});
+
+describe("catalog protocol profile resolution", () => {
+  const baseModel = (id: string): CatalogModelEntry => ({
+    id,
+    limit: { context: 128_000 },
+    tool_call: true,
+    reasoning: true,
+  });
+
+  it("resolves OpenAI Responses GPT with hidden reasoning replay", () => {
+    const [model] = catalogProviderModels({
+      id: "openai",
+      type: "openai_responses",
+      models: { "gpt-4.1": baseModel("gpt-4.1") },
+    });
+    expect(model?.protocolProfile).toMatchObject({
+      transport: "openai_responses",
+      tools: { protocol: "openai_responses", requiresAssistantReplay: false },
+      reasoning: { mode: "hidden", replayWithToolCalls: true },
+    });
+  });
+
+  it("resolves OpenAI Chat Completions GPT without reasoning replay", () => {
+    const [model] = catalogProviderModels({
+      id: "openai",
+      type: "openai",
+      models: { "gpt-4.1": baseModel("gpt-4.1") },
+    });
+    expect(model?.protocolProfile).toMatchObject({
+      transport: "openai",
+      tools: { protocol: "openai_chat", requiresAssistantReplay: false },
+      reasoning: {
+        mode: "separate_field",
+        field: "reasoning_content",
+        replayWithToolCalls: false,
+      },
+    });
+  });
+
+  it("resolves Anthropic Claude with interleaved reasoning replay", () => {
+    const [model] = catalogProviderModels({
+      id: "anthropic",
+      npm: "@ai-sdk/anthropic",
+      models: { "claude-opus-4-6": baseModel("claude-opus-4-6") },
+    });
+    expect(model?.protocolProfile).toMatchObject({
+      transport: "anthropic",
+      tools: { protocol: "anthropic", requiresAssistantReplay: false },
+      reasoning: { mode: "interleaved", replayWithToolCalls: true },
+    });
+  });
+
+  it("resolves Google Gemini with strict role alternation", () => {
+    const [model] = catalogProviderModels({
+      id: "google",
+      npm: "@ai-sdk/google",
+      models: { "gemini-2.5-flash": baseModel("gemini-2.5-flash") },
+    });
+    expect(model?.protocolProfile).toMatchObject({
+      transport: "google-genai",
+      tools: { protocol: "google_genai" },
+      request: { strictRoleAlternation: true },
+    });
+  });
+
+  it("resolves Kimi K2 with assistant replay", () => {
+    const [model] = catalogProviderModels({
+      id: "moonshot",
+      type: "kimi",
+      models: { "kimi-k2.5": baseModel("kimi-k2.5") },
+    });
+    expect(model?.protocolProfile).toMatchObject({
+      transport: "kimi",
+      tools: { requiresAssistantReplay: true },
+      reasoning: {
+        field: "reasoning_content",
+        replayWithToolCalls: true,
+      },
+    });
+  });
+
+  it("resolves Kimi K3 with requiresAssistantReplay", () => {
+    const [model] = catalogProviderModels({
+      id: "moonshot",
+      type: "kimi",
+      models: { "kimi-k3": baseModel("kimi-k3") },
+    });
+    expect(model?.protocolProfile).toMatchObject({
+      transport: "kimi",
+      tools: { requiresAssistantReplay: true },
+      reasoning: { field: "reasoning_effort", replayWithToolCalls: true },
+    });
+  });
+
+  it("resolves DeepSeek with reasoning_content replay alongside tools", () => {
+    const [model] = catalogProviderModels({
+      id: "deepseek",
+      type: "openai",
+      models: { "deepseek-reasoner": baseModel("deepseek-reasoner") },
+    });
+    expect(model?.protocolProfile).toMatchObject({
+      reasoning: {
+        mode: "separate_field",
+        field: "reasoning_content",
+        replayWithToolCalls: true,
+      },
+    });
+  });
+
+  it("resolves MiniMax with reasoning_details replay", () => {
+    const [model] = catalogProviderModels({
+      id: "minimax",
+      type: "openai",
+      models: { "abab7-chat": baseModel("abab7-chat") },
+    });
+    expect(model?.protocolProfile).toMatchObject({
+      reasoning: {
+        mode: "separate_field",
+        field: "reasoning_details",
+        replayWithToolCalls: true,
+      },
+    });
+  });
+
+  it("keeps an explicit protocolProfile override on the catalog entry", () => {
+    const customProfile = {
+      transport: "custom",
+      tools: {
+        protocol: "none",
+        parallel: false,
+        streaming: false,
+        requiresCallId: false,
+        requiresAssistantReplay: false,
+      },
+      reasoning: {
+        mode: "none",
+        replayWithToolCalls: false,
+      },
+    } as const;
+    const [model] = catalogProviderModels({
+      id: "custom-gw",
+      type: "openai",
+      models: {
+        "gpt-4.1": {
+          ...baseModel("gpt-4.1"),
+          protocolProfile: customProfile,
+        },
+      },
+    });
+    expect(model?.protocolProfile).toEqual(customProfile);
+  });
+});
+
+describe("catalog transport profile resolution", () => {
+  it("resolves transport profiles for known provider wires", async () => {
+    const { resolveProviderTransportProfile } = await import(
+      "../src/catalog-profiles"
+    );
+    expect(
+      resolveProviderTransportProfile(
+        { id: "anthropic", npm: "@ai-sdk/anthropic" },
+        "anthropic",
+      ),
+    ).toEqual({
+      family: "anthropic",
+      endpoint: "messages",
+      auth: "bearer",
+    });
+    expect(
+      resolveProviderTransportProfile({ id: "openai" }, "openai_responses"),
+    ).toEqual({
+      family: "openai_responses",
+      endpoint: "responses",
+      auth: "bearer",
+    });
+    expect(
+      resolveProviderTransportProfile({ id: "google" }, "google-genai"),
+    ).toMatchObject({
+      family: "google-genai",
+      endpoint: "generate_content",
+    });
+  });
+
+  it("prefers an explicit transportProfile on the provider entry", async () => {
+    const { resolveProviderTransportProfile } = await import(
+      "../src/catalog-profiles"
+    );
+    const explicit = {
+      family: "custom",
+      endpoint: "custom",
+      auth: "bearer",
+    } as const;
+    expect(
+      resolveProviderTransportProfile(
+        { id: "gw", transportProfile: explicit },
+        "openai",
+      ),
+    ).toEqual(explicit);
+  });
 });

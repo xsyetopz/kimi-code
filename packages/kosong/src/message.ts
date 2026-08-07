@@ -1,4 +1,5 @@
 import type { Tool } from "./tool";
+import type { OpaqueProviderState } from "./protocol/profile";
 
 export type Role = "system" | "user" | "assistant" | "tool";
 
@@ -48,6 +49,12 @@ export interface ToolCall {
   name: string;
   arguments: string | null;
   extras?: Record<string, unknown>;
+  /**
+   * Provider-specific replay state for this tool call (e.g. Responses API
+   * `item_id`). Distinct from {@link extras}, which holds ad-hoc wire fields;
+   * this sidecar is validated by {@link OpaqueProviderStateSchema}.
+   */
+  opaqueProviderState?: OpaqueProviderState;
   /**
    * Provider-specific streaming index used to route argument deltas to the
    * correct parallel tool call. Set by streaming providers (OpenAI Chat
@@ -117,6 +124,12 @@ export interface Message {
    * a provider without that capability.
    */
   readonly tools?: readonly Tool[] | undefined;
+  /**
+   * Provider-specific replay state that does not map onto content or tool-call
+   * IR fields (e.g. Responses conversation item ids). Round-tripped by wire
+   * adapters when replaying history.
+   */
+  readonly opaqueProviderState?: OpaqueProviderState;
 }
 
 /** Check if a streamed part is a ContentPart (text, think, image_url, audio_url, video_url). */

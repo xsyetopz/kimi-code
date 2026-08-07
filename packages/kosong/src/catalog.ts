@@ -1,4 +1,5 @@
 import type { ModelCapability } from "./capability";
+import { resolveModelProtocolProfile } from "./catalog-profiles";
 import type { ProviderType } from "./providers";
 import type {
   ModelProtocolProfile,
@@ -395,6 +396,8 @@ function catalogEndpointRequired(
 /** Normalizes one catalog model entry into a {@link CatalogModel}; skips invalid entries. */
 export function catalogModelToCapability(
   model: CatalogModelEntry,
+  provider?: CatalogProviderEntry,
+  providerWire?: ProviderType,
 ): CatalogModel | undefined {
   if (typeof model.id !== "string" || model.id.length === 0) return undefined;
   const context = model.limit?.context;
@@ -413,6 +416,12 @@ export function catalogModelToCapability(
     typeof input === "number" && Number.isInteger(input) && input > 0
       ? Math.min(input, context)
       : undefined;
+  const protocolProfile = resolveModelProtocolProfile(
+    model.id,
+    providerWire,
+    model.protocolProfile,
+    provider?.id,
+  );
   return {
     id: model.id,
     name:
@@ -425,7 +434,7 @@ export function catalogModelToCapability(
     supportEfforts: thinking.efforts,
     offEffort: thinking.offEffort,
     alwaysThinking: thinking.alwaysThinking,
-    protocolProfile: model.protocolProfile,
+    protocolProfile,
     capability: {
       image_in: inputs.includes("image"),
       video_in: inputs.includes("video"),
@@ -523,7 +532,7 @@ export function catalogProviderModels(
   return Object.values(entry.models ?? {})
     .map((raw) =>
       applyModelProviderOverride(
-        catalogModelToCapability(raw),
+        catalogModelToCapability(raw, entry, providerWire),
         raw,
         entry,
         providerWire,
