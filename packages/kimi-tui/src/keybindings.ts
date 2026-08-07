@@ -168,9 +168,9 @@ function normalizeKeys(keys: KeyId | KeyId[] | undefined): KeyId[] {
 }
 
 export class KeybindingsManager {
-  private definitions: KeybindingDefinitions;
+  private readonly definitions: KeybindingDefinitions;
   private userBindings: KeybindingsConfig;
-  private keysById = new Map<Keybinding, KeyId[]>();
+  private readonly keysById = new Map<Keybinding, KeyId[]>();
   private conflicts: KeybindingConflict[] = [];
 
   constructor(

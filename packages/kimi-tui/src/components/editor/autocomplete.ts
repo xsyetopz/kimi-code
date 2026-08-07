@@ -1,6 +1,7 @@
-import { isWhitespaceChar } from "../../utils.ts";
 import type { AutocompleteSuggestions } from "../../autocomplete.ts";
+import { isWhitespaceChar } from "../../utils.ts";
 import { SelectList } from "../select-list.ts";
+import type { Editor } from "./component.ts";
 import {
   ATTACHMENT_AUTOCOMPLETE_DEBOUNCE_MS,
   buildDebouncePattern,
@@ -8,26 +9,29 @@ import {
   DEFAULT_AUTOCOMPLETE_TRIGGER_CHARACTERS,
   SLASH_COMMAND_SELECT_LIST_LAYOUT,
 } from "./types.ts";
-import type { Editor } from "./component.ts";
 
-export function isSlashMenuAllowed(this: Editor, ): boolean {
+export function isSlashMenuAllowed(this: Editor): boolean {
   return this.state.cursorLine === 0;
 }
 
-export function isAtStartOfMessage(this: Editor, ): boolean {
+export function isAtStartOfMessage(this: Editor): boolean {
   if (!this.isSlashMenuAllowed()) return false;
   const currentLine = this.state.lines[this.state.cursorLine] || "";
   const beforeCursor = currentLine.slice(0, this.state.cursorCol);
   return beforeCursor.trim() === "" || beforeCursor.trim() === "/";
 }
 
-export function isInSlashCommandContext(this: Editor, textBeforeCursor: string): boolean {
+export function isInSlashCommandContext(
+  this: Editor,
+  textBeforeCursor: string,
+): boolean {
   return (
     this.isSlashMenuAllowed() && textBeforeCursor.trimStart().startsWith("/")
   );
 }
 
-export function getBestAutocompleteMatchIndex(this: Editor, 
+export function getBestAutocompleteMatchIndex(
+  this: Editor,
   items: Array<{ value: string; label: string }>,
   prefix: string,
 ): number {
@@ -36,7 +40,7 @@ export function getBestAutocompleteMatchIndex(this: Editor,
   let firstPrefixIndex = -1;
 
   for (let i = 0; i < items.length; i++) {
-    const value = items[i]!.value;
+    const value = items[i]?.value;
     if (value === prefix) {
       return i; // Exact match always wins
     }
@@ -48,7 +52,8 @@ export function getBestAutocompleteMatchIndex(this: Editor,
   return firstPrefixIndex;
 }
 
-export function createAutocompleteList(this: Editor, 
+export function createAutocompleteList(
+  this: Editor,
   prefix: string,
   items: Array<{ value: string; label: string; description?: string }>,
 ): SelectList {
@@ -63,11 +68,14 @@ export function createAutocompleteList(this: Editor,
   );
 }
 
-export function tryTriggerAutocomplete(this: Editor, explicitTab: boolean = false): void {
+export function tryTriggerAutocomplete(
+  this: Editor,
+  explicitTab: boolean = false,
+): void {
   this.requestAutocomplete({ force: false, explicitTab });
 }
 
-export function handleTabCompletion(this: Editor, ): void {
+export function handleTabCompletion(this: Editor): void {
   if (!this.autocompleteProvider) return;
 
   const currentLine = this.state.lines[this.state.cursorLine] || "";
@@ -83,18 +91,24 @@ export function handleTabCompletion(this: Editor, ): void {
   }
 }
 
-export function handleSlashCommandCompletion(this: Editor, ): void {
+export function handleSlashCommandCompletion(this: Editor): void {
   this.requestAutocomplete({ force: false, explicitTab: true });
 }
 
-export function forceFileAutocomplete(this: Editor, explicitTab: boolean = false): void {
+export function forceFileAutocomplete(
+  this: Editor,
+  explicitTab: boolean = false,
+): void {
   this.requestAutocomplete({ force: true, explicitTab });
 }
 
-export function requestAutocomplete(this: Editor, options: {
-  force: boolean;
-  explicitTab: boolean;
-}): void {
+export function requestAutocomplete(
+  this: Editor,
+  options: {
+    force: boolean;
+    explicitTab: boolean;
+  },
+): void {
   if (!this.autocompleteProvider) return;
 
   if (options.force) {
@@ -159,7 +173,10 @@ export async function startAutocompleteRequest(
   await this.autocompleteRequestTask;
 }
 
-export function setAutocompleteTriggerCharacters(this: Editor, triggerCharacters: string[]): void {
+export function setAutocompleteTriggerCharacters(
+  this: Editor,
+  triggerCharacters: string[],
+): void {
   const next = [...DEFAULT_AUTOCOMPLETE_TRIGGER_CHARACTERS];
   for (const character of triggerCharacters) {
     if (
@@ -177,10 +194,13 @@ export function setAutocompleteTriggerCharacters(this: Editor, triggerCharacters
   this.autocompleteDebouncePattern = buildDebouncePattern(next);
 }
 
-export function getAutocompleteDebounceMs(this: Editor, options: {
-  force: boolean;
-  explicitTab: boolean;
-}): number {
+export function getAutocompleteDebounceMs(
+  this: Editor,
+  options: {
+    force: boolean;
+    explicitTab: boolean;
+  },
+): number {
   if (options.explicitTab || options.force) {
     return 0;
   }
@@ -225,8 +245,7 @@ export async function runAutocompleteRequest(
   this.autocompleteAbort = undefined;
 
   if (
-    !suggestions ||
-    !Array.isArray(suggestions.items) ||
+    !(suggestions && Array.isArray(suggestions.items)) ||
     suggestions.items.length === 0
   ) {
     this.cancelAutocomplete();
@@ -234,11 +253,7 @@ export async function runAutocompleteRequest(
     return;
   }
 
-  if (
-    options.force &&
-    options.explicitTab &&
-    suggestions.items.length === 1
-  ) {
+  if (options.force && options.explicitTab && suggestions.items.length === 1) {
     const item = suggestions.items[0]!;
     this.pushUndoSnapshot();
     this.lastAction = null;
@@ -264,7 +279,8 @@ export async function runAutocompleteRequest(
   this.tui.requestRender();
 }
 
-export function isAutocompleteRequestCurrent(this: Editor, 
+export function isAutocompleteRequestCurrent(
+  this: Editor,
   requestId: number,
   controller: AbortController,
   snapshotText: string,
@@ -280,7 +296,8 @@ export function isAutocompleteRequestCurrent(this: Editor,
   );
 }
 
-export function applyAutocompleteSuggestions(this: Editor, 
+export function applyAutocompleteSuggestions(
+  this: Editor,
   suggestions: AutocompleteSuggestions,
   state: "regular" | "force",
 ): void {
@@ -301,7 +318,7 @@ export function applyAutocompleteSuggestions(this: Editor,
   this.autocompleteState = state;
 }
 
-export function cancelAutocompleteRequest(this: Editor, ): void {
+export function cancelAutocompleteRequest(this: Editor): void {
   this.autocompleteStartToken += 1;
   if (this.autocompleteDebounceTimer) {
     clearTimeout(this.autocompleteDebounceTimer);
@@ -311,22 +328,21 @@ export function cancelAutocompleteRequest(this: Editor, ): void {
   this.autocompleteAbort = undefined;
 }
 
-export function clearAutocompleteUi(this: Editor, ): void {
+export function clearAutocompleteUi(this: Editor): void {
   this.autocompleteState = null;
   this.autocompleteList = undefined;
   this.autocompletePrefix = "";
 }
 
-export function cancelAutocomplete(this: Editor, ): void {
+export function cancelAutocomplete(this: Editor): void {
   this.cancelAutocompleteRequest();
   this.clearAutocompleteUi();
 }
 
-export function updateAutocomplete(this: Editor, ): void {
-  if (!this.autocompleteState || !this.autocompleteProvider) return;
+export function updateAutocomplete(this: Editor): void {
+  if (!(this.autocompleteState && this.autocompleteProvider)) return;
   this.requestAutocomplete({
     force: this.autocompleteState === "force",
     explicitTab: false,
   });
 }
-

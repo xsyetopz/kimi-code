@@ -12,7 +12,7 @@
  * 2. That the fix works correctly
  */
 
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 describe("Bug regression: isImageLine() crash with image escape sequences", () => {

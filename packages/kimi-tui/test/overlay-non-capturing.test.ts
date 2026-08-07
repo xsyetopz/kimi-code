@@ -1,11 +1,12 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
+import process from "node:process";
 import { describe, it } from "node:test";
 import type { Component, Focusable } from "../src/tui.ts";
 import { Container, TUI } from "../src/tui.ts";
 import { VirtualTerminal } from "./virtual-terminal.ts";
 
 class StaticOverlay implements Component {
-  private lines: string[];
+  private readonly lines: string[];
 
   constructor(lines: string[]) {
     this.lines = lines;
@@ -28,7 +29,7 @@ class EmptyContent implements Component {
 class FocusableOverlay implements Component, Focusable {
   focused = false;
   inputs: string[] = [];
-  private lines: string[];
+  private readonly lines: string[];
 
   constructor(lines: string[]) {
     this.lines = lines;

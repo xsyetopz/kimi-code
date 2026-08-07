@@ -1,13 +1,13 @@
 import { Marked, type Token, Tokenizer, type Tokens } from "marked";
 
 const STRICT_STRIKETHROUGH_REGEX =
-  /^(~~)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/;
+  /^(~~)(?=[^\s~])((?:\\.|[^\\])*?(?:\\.|[^\s~\\]))\1(?=[^~]|$)/u;
 
 class StrictStrikethroughTokenizer extends Tokenizer {
   override del(src: string): Tokens.Del | undefined {
     const match = STRICT_STRIKETHROUGH_REGEX.exec(src);
     if (!match) {
-      return undefined;
+      return;
     }
 
     const text = match[2]!;
@@ -21,9 +21,9 @@ class StrictStrikethroughTokenizer extends Tokenizer {
 }
 
 export function trimPartialClosingFences(tokens: readonly Token[]): void {
-  const token = tokens[tokens.length - 1];
+  const token = tokens.at(-1);
   if (token?.type === "list") {
-    trimPartialClosingFences(token.items[token.items.length - 1]?.tokens ?? []);
+    trimPartialClosingFences(token.items.at(-1)?.tokens ?? []);
     return;
   }
   if (token?.type === "blockquote") {
@@ -34,18 +34,17 @@ export function trimPartialClosingFences(tokens: readonly Token[]): void {
     return;
   }
 
-  const marker = /^(`{3,}|~{3,})/.exec(token.raw)?.[1];
+  const marker = /^(`{3,}|~{3,})/u.exec(token.raw)?.[1];
   const lastLine = token.raw.split("\n").pop();
   if (
-    !marker ||
-    !lastLine ||
+    !(marker && lastLine) ||
     lastLine.length >= marker.length ||
     lastLine !== marker[0]?.repeat(lastLine.length)
   ) {
     return;
   }
 
-  token.text = token.text.slice(0, -lastLine.length).replace(/\n$/, "");
+  token.text = token.text.slice(0, -lastLine.length).replace(/\n$/u, "");
 }
 
 const markdownParser = new Marked();

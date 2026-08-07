@@ -1,12 +1,14 @@
 import { performance } from "node:perf_hooks";
-import { getCapabilities } from "../terminal-image.ts";
-import type { TerminalColorScheme } from "../terminal-colors.ts";
-import type { RgbColor } from "../terminal-colors.ts";
+import process from "node:process";
+import type { RgbColor, TerminalColorScheme } from "../terminal-colors.ts";
 import { MIN_RENDER_INTERVAL_MS } from "./constants.ts";
-import type { InputListener, PendingOsc11BackgroundQuery } from "./overlay-shared.ts";
+import type {
+  InputListener,
+  PendingOsc11BackgroundQuery,
+} from "./overlay-shared.ts";
 import type { TUI } from "./tui-class.ts";
 
-export function start(this: TUI, ): void {
+export function start(this: TUI): void {
   this.stopped = false;
   this.terminal.start(
     (data) => this.handleInput(data),
@@ -20,7 +22,10 @@ export function start(this: TUI, ): void {
   this.requestRender();
 }
 
-export function addInputListener(this: TUI, listener: InputListener): () => void {
+export function addInputListener(
+  this: TUI,
+  listener: InputListener,
+): () => void {
   this.inputListeners.add(listener);
   return () => {
     this.inputListeners.delete(listener);
@@ -31,7 +36,8 @@ export function removeInputListener(this: TUI, listener: InputListener): void {
   this.inputListeners.delete(listener);
 }
 
-export function onTerminalColorSchemeChange(this: TUI, 
+export function onTerminalColorSchemeChange(
+  this: TUI,
   listener: (scheme: TerminalColorScheme) => void,
 ): () => void {
   this.terminalColorSchemeListeners.add(listener);
@@ -40,7 +46,10 @@ export function onTerminalColorSchemeChange(this: TUI,
   };
 }
 
-export function setTerminalColorSchemeNotifications(this: TUI, enabled: boolean): void {
+export function setTerminalColorSchemeNotifications(
+  this: TUI,
+  enabled: boolean,
+): void {
   if (this.terminalColorSchemeNotificationsEnabled === enabled) {
     return;
   }
@@ -50,7 +59,7 @@ export function setTerminalColorSchemeNotifications(this: TUI, enabled: boolean)
   }
 }
 
-export function stop(this: TUI, ): void {
+export function stop(this: TUI): void {
   this.stopped = true;
   if (this.renderTimer) {
     clearTimeout(this.renderTimer);
@@ -104,7 +113,7 @@ export function requestRender(this: TUI, force = false): void {
   process.nextTick(() => this.scheduleRender());
 }
 
-export function scheduleRender(this: TUI, ): void {
+export function scheduleRender(this: TUI): void {
   if (this.stopped || this.renderTimer || !this.renderRequested) {
     return;
   }
@@ -128,11 +137,14 @@ export function dispatchInput(this: TUI, data: string): void {
   this.handleInput(data);
 }
 
-export function queryTerminalBackgroundColor(this: TUI, {
-  timeoutMs,
-}: {
-  timeoutMs: number;
-}): Promise<RgbColor | undefined> {
+export function queryTerminalBackgroundColor(
+  this: TUI,
+  {
+    timeoutMs,
+  }: {
+    timeoutMs: number;
+  },
+): Promise<RgbColor | undefined> {
   return new Promise((resolve) => {
     const query: PendingOsc11BackgroundQuery = {
       settled: false,
@@ -155,11 +167,14 @@ export function queryTerminalBackgroundColor(this: TUI, {
   });
 }
 
-export function queryTerminalColorScheme(this: TUI, {
-  timeoutMs,
-}: {
-  timeoutMs: number;
-}): Promise<TerminalColorScheme | undefined> {
+export function queryTerminalColorScheme(
+  this: TUI,
+  {
+    timeoutMs,
+  }: {
+    timeoutMs: number;
+  },
+): Promise<TerminalColorScheme | undefined> {
   return new Promise((resolve) => {
     let settled = false;
     let timer: NodeJS.Timeout | undefined;
@@ -180,4 +195,3 @@ export function queryTerminalColorScheme(this: TUI, {
     this.terminal.write("\x1b[?996n");
   });
 }
-

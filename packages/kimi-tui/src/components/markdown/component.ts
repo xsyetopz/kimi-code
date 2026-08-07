@@ -7,18 +7,26 @@ import {
 } from "../../utils.ts";
 import { markdownParser, trimPartialClosingFences } from "./parser.ts";
 import { MarkdownRenderer } from "./renderer.ts";
-import type { DefaultTextStyle, MarkdownOptions, MarkdownTheme } from "./types.ts";
+import type {
+  DefaultTextStyle,
+  MarkdownOptions,
+  MarkdownTheme,
+} from "./types.ts";
 
-export type { DefaultTextStyle, MarkdownOptions, MarkdownTheme } from "./types.ts";
+export type {
+  DefaultTextStyle,
+  MarkdownOptions,
+  MarkdownTheme,
+} from "./types.ts";
 
 export class Markdown implements Component {
   private text: string;
-  private paddingX: number;
-  private paddingY: number;
-  private defaultTextStyle?: DefaultTextStyle;
-  private theme: MarkdownTheme;
-  private options: MarkdownOptions;
-  private renderer: MarkdownRenderer;
+  private readonly paddingX: number;
+  private readonly paddingY: number;
+  private readonly defaultTextStyle?: DefaultTextStyle;
+  private readonly theme: MarkdownTheme;
+  private readonly options: MarkdownOptions;
+  private readonly renderer: MarkdownRenderer;
 
   private cachedText?: string;
   private cachedWidth?: number;
@@ -75,7 +83,7 @@ export class Markdown implements Component {
       return result;
     }
 
-    const normalizedText = this.text.replace(/\t/g, "   ");
+    const normalizedText = this.text.replace(/\t/gu, "   ");
     const tokens = markdownParser.lexer(normalizedText);
     trimPartialClosingFences(tokens);
 

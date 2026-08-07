@@ -1,10 +1,10 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { type Component, TUI } from "../src/tui.ts";
 import { VirtualTerminal } from "./virtual-terminal.ts";
 
 class SimpleContent implements Component {
-  private lines: string[];
+  private readonly lines: string[];
 
   constructor(lines: string[]) {
     this.lines = lines;

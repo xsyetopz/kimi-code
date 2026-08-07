@@ -1,4 +1,7 @@
-import type { SelectListLayoutOptions, SelectListTheme } from "../select-list.ts";
+import type {
+  SelectListLayoutOptions,
+  SelectListTheme,
+} from "../select-list.ts";
 
 export interface EditorState {
   lines: string[];
@@ -32,7 +35,7 @@ export const ATTACHMENT_AUTOCOMPLETE_DEBOUNCE_MS = 20;
 export const DEFAULT_AUTOCOMPLETE_TRIGGER_CHARACTERS = ["@", "#"];
 
 function escapeCharacterClass(value: string): string {
-  return value.replace(/[\\^$.*+?()[\]{}|-]/g, "\\$&");
+  return value.replace(/[\\^$.*+?()[\]{}|-]/gu, "\\$&");
 }
 
 export function buildTriggerPattern(triggerCharacters: string[]): RegExp {

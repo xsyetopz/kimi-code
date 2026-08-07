@@ -35,11 +35,11 @@ export class Input implements Component, Focusable {
   private isInPaste: boolean = false;
 
   // Kill ring for Emacs-style kill/yank operations
-  private killRing = new KillRing();
+  private readonly killRing = new KillRing();
   private lastAction: "kill" | "yank" | "type-word" | null = null;
 
   // Undo support
-  private undoStack = new UndoStack<InputState>();
+  private readonly undoStack = new UndoStack<InputState>();
 
   getValue(): string {
     return this.value;
@@ -155,7 +155,7 @@ export class Input implements Component, Focusable {
       if (this.cursor > 0) {
         const beforeCursor = this.value.slice(0, this.cursor);
         const graphemes = [...segmenter.segment(beforeCursor)];
-        const lastGrapheme = graphemes[graphemes.length - 1];
+        const lastGrapheme = graphemes.at(-1);
         this.cursor -= lastGrapheme ? lastGrapheme.segment.length : 1;
       }
       return;
@@ -233,7 +233,7 @@ export class Input implements Component, Focusable {
       this.pushUndo();
       const beforeCursor = this.value.slice(0, this.cursor);
       const graphemes = [...segmenter.segment(beforeCursor)];
-      const lastGrapheme = graphemes[graphemes.length - 1];
+      const lastGrapheme = graphemes.at(-1);
       const graphemeLength = lastGrapheme ? lastGrapheme.segment.length : 1;
       this.value =
         this.value.slice(0, this.cursor - graphemeLength) +
@@ -386,10 +386,10 @@ export class Input implements Component, Focusable {
 
     // Clean the pasted text - remove newlines and carriage returns
     const cleanText = pastedText
-      .replace(/\r\n/g, "")
-      .replace(/\r/g, "")
-      .replace(/\n/g, "")
-      .replace(/\t/g, "    ");
+      .replace(/\r\n/gu, "")
+      .replace(/\r/gu, "")
+      .replace(/\n/gu, "")
+      .replace(/\t/gu, "    ");
 
     // Insert at cursor position
     this.value =

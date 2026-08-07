@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   type Component,
@@ -117,7 +117,7 @@ describe("parseOsc11BackgroundColor", () => {
 
   it("rejects non-strict OSC 11 responses", () => {
     assert.strictEqual(
-      parseOsc11BackgroundColor(`x\x1b]11;#ffffff\x07`),
+      parseOsc11BackgroundColor("x\x1b]11;#ffffff\x07"),
       undefined,
     );
     assert.strictEqual(
@@ -173,7 +173,6 @@ describe("TUI.queryTerminalBackgroundColor", () => {
     tui.setFocus(component);
     tui.addInputListener((data) => {
       listenerInputs.push(data);
-      return undefined;
     });
     tui.start();
     try {
@@ -198,7 +197,6 @@ describe("TUI.queryTerminalBackgroundColor", () => {
     tui.setFocus(component);
     tui.addInputListener((data) => {
       listenerInputs.push(data);
-      return undefined;
     });
     tui.start();
     try {
@@ -223,7 +221,6 @@ describe("TUI.queryTerminalBackgroundColor", () => {
     tui.setFocus(component);
     tui.addInputListener((data) => {
       listenerInputs.push(data);
-      return undefined;
     });
     tui.start();
     try {
@@ -258,7 +255,6 @@ describe("TUI.queryTerminalBackgroundColor", () => {
     tui.setFocus(component);
     tui.addInputListener((data) => {
       listenerInputs.push(data);
-      return undefined;
     });
     tui.start();
     try {

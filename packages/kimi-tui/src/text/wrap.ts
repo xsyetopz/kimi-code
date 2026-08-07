@@ -1,5 +1,9 @@
+import {
+  AnsiCodeTracker,
+  extractAnsiCode,
+  updateTrackerFromText,
+} from "./ansi.ts";
 import { cjkBreakRegex } from "./chars.ts";
-import { AnsiCodeTracker, extractAnsiCode, updateTrackerFromText } from "./ansi.ts";
 import { graphemeSegmenter } from "./segmenters.ts";
 import { visibleWidth } from "./width.ts";
 
@@ -154,7 +158,7 @@ function wrapSingleLine(line: string, width: number): string[] {
       for (let i = 0; i < broken.length - 1; i++) {
         wrapped.push(broken[i]!);
       }
-      currentLine = broken[broken.length - 1]!;
+      currentLine = broken.at(-1)!;
       currentVisibleLength = visibleWidth(currentLine);
       continue;
     }

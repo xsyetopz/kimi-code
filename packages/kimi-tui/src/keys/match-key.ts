@@ -2,12 +2,12 @@ import {
   ARROW_CODEPOINTS,
   CODEPOINTS,
   FUNCTIONAL_CODEPOINTS,
+  type KeyId,
   LEGACY_KEY_SEQUENCES,
   MODIFIERS,
-  SYMBOL_KEYS,
   matchesLegacyModifierSequence,
   matchesLegacySequence,
-  type KeyId,
+  SYMBOL_KEYS,
 } from "./key-id.ts";
 import {
   isDigitKey,

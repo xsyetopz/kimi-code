@@ -1,19 +1,19 @@
-import { getKeybindings } from "../../keybindings.ts";
+import type { getKeybindings } from "../../keybindings.ts";
 import { matchesKey } from "../../keys.ts";
 import { isWhitespaceChar } from "../../utils.ts";
 import type { Editor } from "./component.ts";
 
-export function isEditorEmpty(this: Editor, ): boolean {
+export function isEditorEmpty(this: Editor): boolean {
   return this.state.lines.length === 1 && this.state.lines[0] === "";
 }
 
-export function isOnFirstVisualLine(this: Editor, ): boolean {
+export function isOnFirstVisualLine(this: Editor): boolean {
   const visualLines = this.buildVisualLineMap(this.lastWidth);
   const currentVisualLine = this.findCurrentVisualLine(visualLines);
   return currentVisualLine === 0;
 }
 
-export function isOnLastVisualLine(this: Editor, ): boolean {
+export function isOnLastVisualLine(this: Editor): boolean {
   const visualLines = this.buildVisualLineMap(this.lastWidth);
   const currentVisualLine = this.findCurrentVisualLine(visualLines);
   return currentVisualLine === visualLines.length - 1;
@@ -21,9 +21,9 @@ export function isOnLastVisualLine(this: Editor, ): boolean {
 
 export function normalizeText(this: Editor, text: string): string {
   return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .replace(/\t/g, "    ");
+    .replace(/\r\n/gu, "\n")
+    .replace(/\r/gu, "\n")
+    .replace(/\t/gu, "    ");
 }
 
 export function insertTextAtCursorInternal(this: Editor, text: string): void {
@@ -55,14 +55,14 @@ export function insertTextAtCursorInternal(this: Editor, text: string): void {
       ...insertedLines.slice(1, -1),
 
       // The last inserted line with text after cursor
-      insertedLines[insertedLines.length - 1] + afterCursor,
+      insertedLines.at(-1) + afterCursor,
 
       // All lines after current line
       ...this.state.lines.slice(this.state.cursorLine + 1),
     ];
 
     this.state.cursorLine += insertedLines.length - 1;
-    this.setCursorCol((insertedLines[insertedLines.length - 1] || "").length);
+    this.setCursorCol((insertedLines.at(-1) || "").length);
   }
 
   if (this.onChange) {
@@ -70,7 +70,11 @@ export function insertTextAtCursorInternal(this: Editor, text: string): void {
   }
 }
 
-export function insertCharacter(this: Editor, char: string, skipUndoCoalescing?: boolean): void {
+export function insertCharacter(
+  this: Editor,
+  char: string,
+  skipUndoCoalescing?: boolean,
+): void {
   this.exitHistoryBrowsing();
 
   // Undo coalescing (fish-style):
@@ -107,7 +111,7 @@ export function insertCharacter(this: Editor, char: string, skipUndoCoalescing?:
     else if (this.autocompleteTriggerCharacters.includes(char)) {
       const currentLine = this.state.lines[this.state.cursorLine] || "";
       const textBeforeCursor = currentLine.slice(0, this.state.cursorCol);
-      const charBeforeSymbol = textBeforeCursor[textBeforeCursor.length - 2];
+      const charBeforeSymbol = textBeforeCursor.at(-2);
       if (
         textBeforeCursor.length === 1 ||
         charBeforeSymbol === " " ||
@@ -117,7 +121,7 @@ export function insertCharacter(this: Editor, char: string, skipUndoCoalescing?:
       }
     }
     // Also auto-trigger when typing letters in a slash command or symbol completion context
-    else if (/[a-zA-Z0-9.\-_]/.test(char)) {
+    else if (/[a-zA-Z0-9.\-_]/u.test(char)) {
       const currentLine = this.state.lines[this.state.cursorLine] || "";
       const textBeforeCursor = currentLine.slice(0, this.state.cursorCol);
       // Check if we're in a slash command (with or without space for arguments)
@@ -146,7 +150,7 @@ export function handlePaste(this: Editor, pastedText: string): void {
   // (ESC [ <codepoint> ; 5 u). Decode those back to their literal byte so the
   // per-char filter below preserves newlines instead of stripping ESC and
   // leaking the printable tail (e.g. "[106;5u") into the editor.
-  const decodedText = pastedText.replace(/\x1b\[(\d+);5u/g, (match, code) => {
+  const decodedText = pastedText.replace(/\x1b\[(\d+);5u/gu, (match, code) => {
     const cp = Number(code);
     if (cp >= 97 && cp <= 122) return String.fromCharCode(cp - 96);
     if (cp >= 65 && cp <= 90) return String.fromCharCode(cp - 64);
@@ -164,11 +168,11 @@ export function handlePaste(this: Editor, pastedText: string): void {
 
   // If pasting a file path (starts with /, ~, or .) and the character before
   // the cursor is a word character, prepend a space for better readability
-  if (/^[/~.]/.test(filteredText)) {
+  if (/^[/~.]/u.test(filteredText)) {
     const currentLine = this.state.lines[this.state.cursorLine] || "";
     const charBeforeCursor =
       this.state.cursorCol > 0 ? currentLine[this.state.cursorCol - 1] : "";
-    if (charBeforeCursor && /\w/.test(charBeforeCursor)) {
+    if (charBeforeCursor && /\w/u.test(charBeforeCursor)) {
       filteredText = ` ${filteredText}`;
     }
   }
@@ -203,7 +207,7 @@ export function handlePaste(this: Editor, pastedText: string): void {
   this.insertTextAtCursorInternal(filteredText);
 }
 
-export function addNewLine(this: Editor, ): void {
+export function addNewLine(this: Editor): void {
   this.cancelAutocomplete();
   this.exitHistoryBrowsing();
   this.lastAction = null;
@@ -228,7 +232,8 @@ export function addNewLine(this: Editor, ): void {
   }
 }
 
-export function shouldSubmitOnBackslashEnter(this: Editor, 
+export function shouldSubmitOnBackslashEnter(
+  this: Editor,
   data: string,
   kb: ReturnType<typeof getKeybindings>,
 ): boolean {
@@ -245,7 +250,7 @@ export function shouldSubmitOnBackslashEnter(this: Editor,
   );
 }
 
-export function submitValue(this: Editor, ): void {
+export function submitValue(this: Editor): void {
   this.cancelAutocomplete();
   const result = this.expandPasteMarkers(this.state.lines.join("\n")).trim();
 
@@ -261,11 +266,11 @@ export function submitValue(this: Editor, ): void {
   if (this.onSubmit) this.onSubmit(result);
 }
 
-export function pushUndoSnapshot(this: Editor, ): void {
+export function pushUndoSnapshot(this: Editor): void {
   this.undoStack.push(this.state);
 }
 
-export function undo(this: Editor, ): void {
+export function undo(this: Editor): void {
   this.exitHistoryBrowsing();
   const snapshot = this.undoStack.pop();
   if (!snapshot) return;
@@ -276,4 +281,3 @@ export function undo(this: Editor, ): void {
     this.onChange(this.getText());
   }
 }
-

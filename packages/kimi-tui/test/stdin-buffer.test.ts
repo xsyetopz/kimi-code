@@ -5,7 +5,7 @@
  * MIT License - Copyright (c) 2025 opentui
  */
 
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 import { StdinBuffer } from "../src/stdin-buffer.ts";
 

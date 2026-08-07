@@ -1,10 +1,11 @@
 import type { Token, Tokens } from "marked";
 import { getCapabilities, hyperlink } from "../../terminal-image.ts";
-import {
-  visibleWidth,
-  wrapTextWithAnsi,
-} from "../../utils.ts";
-import type { DefaultTextStyle, MarkdownOptions, MarkdownTheme } from "./types.ts";
+import { visibleWidth, wrapTextWithAnsi } from "../../utils.ts";
+import type {
+  DefaultTextStyle,
+  MarkdownOptions,
+  MarkdownTheme,
+} from "./types.ts";
 
 interface InlineStyleContext {
   applyText: (text: string) => string;
@@ -27,7 +28,7 @@ export class MarkdownRenderer {
     this.defaultTextStyle = defaultTextStyle;
   }
 
-applyDefaultStyle(text: string): string {
+  applyDefaultStyle(text: string): string {
     if (!this.defaultTextStyle) {
       return text;
     }
@@ -56,7 +57,7 @@ applyDefaultStyle(text: string): string {
     return styled;
   }
 
-getDefaultStylePrefix(): string {
+  getDefaultStylePrefix(): string {
     if (!this.defaultTextStyle) {
       return "";
     }
@@ -91,21 +92,21 @@ getDefaultStylePrefix(): string {
     return this.defaultStylePrefix;
   }
 
-getStylePrefix(styleFn: (text: string) => string): string {
+  getStylePrefix(styleFn: (text: string) => string): string {
     const sentinel = "\u0000";
     const styled = styleFn(sentinel);
     const sentinelIndex = styled.indexOf(sentinel);
     return sentinelIndex >= 0 ? styled.slice(0, sentinelIndex) : "";
   }
 
-getDefaultInlineStyleContext(): InlineStyleContext {
+  getDefaultInlineStyleContext(): InlineStyleContext {
     return {
       applyText: (text: string) => this.applyDefaultStyle(text),
       stylePrefix: this.getDefaultStylePrefix(),
     };
   }
 
-renderToken(
+  renderToken(
     token: Token,
     width: number,
     nextTokenType?: string,
@@ -229,7 +230,7 @@ renderToken(
             return quoteStyle(line);
           }
           const lineWithReappliedStyle = line.replace(
-            /\x1b\[0m/g,
+            /\x1b\[0m/gu,
             `\x1b[0m${quoteStylePrefix}`,
           );
           return quoteStyle(lineWithReappliedStyle);
@@ -263,7 +264,7 @@ renderToken(
         // Avoid rendering an extra empty quote line before the outer blockquote spacing.
         while (
           renderedQuoteLines.length > 0 &&
-          renderedQuoteLines[renderedQuoteLines.length - 1] === ""
+          renderedQuoteLines.at(-1) === ""
         ) {
           renderedQuoteLines.pop();
         }
@@ -310,7 +311,7 @@ renderToken(
     return lines;
   }
 
-renderInlineTokens(
+  renderInlineTokens(
     tokens: Token[],
     styleContext?: InlineStyleContext,
   ): string {
@@ -438,20 +439,20 @@ renderInlineTokens(
     return result;
   }
 
-getOrderedListMarker(item: Tokens.ListItem): string | undefined {
-    const match = /^(?: {0,3})(\d{1,9}[.)])[ \t]+/.exec(item.raw);
+  getOrderedListMarker(item: Tokens.ListItem): string | undefined {
+    const match = /^(?: {0,3})(\d{1,9}[.)])[ \t]+/u.exec(item.raw);
     return match ? `${match[1]} ` : undefined;
   }
 
-getUnorderedListMarker(item: Tokens.ListItem): string | undefined {
-    const match = /^(?: {0,3})([-+*])(?:[ \t]+|(?=\r?\n|$))/.exec(item.raw);
+  getUnorderedListMarker(item: Tokens.ListItem): string | undefined {
+    const match = /^(?: {0,3})([-+*])(?:[ \t]+|(?=\r?\n|$))/u.exec(item.raw);
     return match ? `${match[1]} ` : undefined;
   }
 
   /**
    * Render a list with proper nesting support
    */
-renderList(
+  renderList(
     token: Tokens.List,
     depth: number,
     width: number,
@@ -525,8 +526,8 @@ renderList(
   /**
    * Get the visible width of the longest word in a string.
    */
-getLongestWordWidth(text: string, maxWidth?: number): number {
-    const words = text.split(/\s+/).filter((word) => word.length > 0);
+  getLongestWordWidth(text: string, maxWidth?: number): number {
+    const words = text.split(/\s+/u).filter((word) => word.length > 0);
     let longest = 0;
     for (const word of words) {
       longest = Math.max(longest, visibleWidth(word));
@@ -543,7 +544,7 @@ getLongestWordWidth(text: string, maxWidth?: number): number {
    * Delegates to wrapTextWithAnsi() so ANSI codes + long tokens are handled
    * consistently with the rest of the renderer.
    */
-wrapCellText(text: string, maxWidth: number): string[] {
+  wrapCellText(text: string, maxWidth: number): string[] {
     return wrapTextWithAnsi(text, Math.max(1, maxWidth));
   }
 
@@ -551,7 +552,7 @@ wrapCellText(text: string, maxWidth: number): string[] {
    * Render a table with width-aware cell wrapping.
    * Cells that don't fit are wrapped to multiple lines.
    */
-renderTable(
+  renderTable(
     token: Tokens.Table,
     availableWidth: number,
     nextTokenType?: string,
@@ -586,7 +587,7 @@ renderTable(
     const minWordWidths: number[] = [];
     for (let i = 0; i < numCols; i++) {
       const headerText = this.renderInlineTokens(
-        token.header[i]!.tokens || [],
+        token.header[i]?.tokens || [],
         styleContext,
       );
       naturalWidths[i] = visibleWidth(headerText);
@@ -598,7 +599,7 @@ renderTable(
     for (const row of token.rows) {
       for (let i = 0; i < row.length; i++) {
         const cellText = this.renderInlineTokens(
-          row[i]!.tokens || [],
+          row[i]?.tokens || [],
           styleContext,
         );
         naturalWidths[i] = Math.max(

@@ -33,7 +33,7 @@ export function fuzzyMatch(query: string, text: string): FuzzyMatch {
       i++
     ) {
       if (textLower[i] === normalizedQuery[queryIndex]) {
-        const isWordBoundary = i === 0 || /[\s\-_./:]/.test(textLower[i - 1]!);
+        const isWordBoundary = i === 0 || /[\s\-_./:]/u.test(textLower[i - 1]!);
 
         // Reward consecutive matches
         if (lastMatchIndex === i - 1) {
@@ -77,15 +77,15 @@ export function fuzzyMatch(query: string, text: string): FuzzyMatch {
   }
 
   const alphaNumericMatch = queryLower.match(
-    /^(?<letters>[a-z]+)(?<digits>[0-9]+)$/,
+    /^(?<letters>[a-z]+)(?<digits>[0-9]+)$/u,
   );
   const numericAlphaMatch = queryLower.match(
-    /^(?<digits>[0-9]+)(?<letters>[a-z]+)$/,
+    /^(?<digits>[0-9]+)(?<letters>[a-z]+)$/u,
   );
   const swappedQuery = alphaNumericMatch
-    ? `${alphaNumericMatch.groups?.["digits"] ?? ""}${alphaNumericMatch.groups?.["letters"] ?? ""}`
+    ? `${alphaNumericMatch.groups?.digits ?? ""}${alphaNumericMatch.groups?.letters ?? ""}`
     : numericAlphaMatch
-      ? `${numericAlphaMatch.groups?.["letters"] ?? ""}${numericAlphaMatch.groups?.["digits"] ?? ""}`
+      ? `${numericAlphaMatch.groups?.letters ?? ""}${numericAlphaMatch.groups?.digits ?? ""}`
       : "";
 
   if (!swappedQuery) {
@@ -115,7 +115,7 @@ export function fuzzyFilter<T>(
 
   const tokens = query
     .trim()
-    .split(/[\s/]+/)
+    .split(/[\s/]+/u)
     .filter((t) => t.length > 0);
 
   if (tokens.length === 0) {

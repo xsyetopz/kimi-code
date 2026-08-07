@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
   mkdirSync,
@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import process from "node:process";
 import { afterEach, beforeEach, describe, it, test } from "node:test";
 import { CombinedAutocompleteProvider } from "../src/autocomplete.ts";
 
@@ -19,7 +20,7 @@ const resolveFdPath = (): string | null => {
     return null;
   }
 
-  const firstLine = result.stdout.split(/\r?\n/).find(Boolean);
+  const firstLine = result.stdout.split(/\r?\n/u).find(Boolean);
   return firstLine ? firstLine.trim() : null;
 };
 
@@ -319,7 +320,7 @@ describe("CombinedAutocompleteProvider", () => {
       assert.ok(values.includes("@shared-cwd.ts"));
       assert.ok(
         values.includes(
-          `@${join(outsideDir, "shared-extra.ts").replace(/\\/g, "/")}`,
+          `@${join(outsideDir, "shared-extra.ts").replace(/\\/gu, "/")}`,
         ),
       );
     });
@@ -344,7 +345,7 @@ describe("CombinedAutocompleteProvider", () => {
       assert.ok(values.includes("@sub/cwd-file.ts"));
       assert.ok(
         values.includes(
-          `@${join(outsideDir, "sub", "extra-file.ts").replace(/\\/g, "/")}`,
+          `@${join(outsideDir, "sub", "extra-file.ts").replace(/\\/gu, "/")}`,
         ),
       );
     });
@@ -364,7 +365,7 @@ describe("CombinedAutocompleteProvider", () => {
       const result = await getSuggestions(provider, ["@overlap"], 0, 8);
 
       const values = result?.items.map((item) => item.value) ?? [];
-      const absValue = `@${join(nestedDir, "Overlap.ts").replace(/\\/g, "/")}`;
+      const absValue = `@${join(nestedDir, "Overlap.ts").replace(/\\/gu, "/")}`;
       const relValue = "@extra/Overlap.ts";
       const overlapCount = values.filter(
         (v) => v === absValue || v === relValue,
@@ -694,7 +695,7 @@ describe("CombinedAutocompleteProvider", () => {
         0,
         cursorCol,
         item!,
-        result!.prefix,
+        result?.prefix,
       );
       assert.strictEqual(applied.lines[0], '@"my folder/test.txt" ');
     });
@@ -861,7 +862,7 @@ describe("CombinedAutocompleteProvider", () => {
         0,
         cursorCol,
         item!,
-        result!.prefix,
+        result?.prefix,
       );
       assert.strictEqual(applied.lines[0], '"my folder/test.txt"');
     });

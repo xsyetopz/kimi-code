@@ -22,11 +22,11 @@ export interface ImageOptions {
 }
 
 export class Image implements Component {
-  private base64Data: string;
-  private mimeType: string;
-  private dimensions: ImageDimensions;
-  private theme: ImageTheme;
-  private options: ImageOptions;
+  private readonly base64Data: string;
+  private readonly mimeType: string;
+  private readonly dimensions: ImageDimensions;
+  private readonly theme: ImageTheme;
+  private readonly options: ImageOptions;
   private imageId?: number;
 
   private cachedLines?: string[];

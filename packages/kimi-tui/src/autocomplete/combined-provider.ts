@@ -1,6 +1,6 @@
-import { readdirSync, statSync } from "fs";
-import { homedir } from "os";
-import { basename, dirname, join } from "path";
+import { readdirSync, statSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, dirname, join } from "node:path";
 import { fuzzyFilter } from "../fuzzy.ts";
 import type { AutocompleteItem, AutocompleteProvider } from "./contracts.ts";
 import { walkDirectoryWithFd } from "./fd-walk.ts";
@@ -14,13 +14,13 @@ import {
 
 // Combined provider that handles both slash commands and file paths
 export class CombinedAutocompleteProvider implements AutocompleteProvider {
-  private commands: (SlashCommand | AutocompleteItem)[];
-  private basePath: string;
-  private additionalBasePaths: string[];
-  private fdPath: string | null;
+  private readonly commands: (SlashCommand | AutocompleteItem)[];
+  private readonly basePath: string;
+  private readonly additionalBasePaths: string[];
+  private readonly fdPath: string | null;
 
   constructor(
-    commands: (SlashCommand | AutocompleteItem)[] = [],
+    commands: (SlashCommand | AutocompleteItem)[],
     basePath: string,
     fdPath: string | null = null,
     additionalBasePaths: readonly string[] = [],
@@ -101,9 +101,11 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
         return name === commandName;
       });
       if (
-        !command ||
-        !("getArgumentCompletions" in command) ||
-        !command.getArgumentCompletions
+        !(
+          command &&
+          "getArgumentCompletions" in command &&
+          command.getArgumentCompletions
+        )
       ) {
         return null;
       }
@@ -304,7 +306,8 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
       return path.endsWith("/") && !expandedPath.endsWith("/")
         ? `${expandedPath}/`
         : expandedPath;
-    } else if (path === "~") {
+    }
+    if (path === "~") {
       return homedir();
     }
     return path;
@@ -504,7 +507,7 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
       });
 
       return suggestions;
-    } catch (_e) {
+    } catch {
       // Directory doesn't exist or not accessible
       return [];
     }

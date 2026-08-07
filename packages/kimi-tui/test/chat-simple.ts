@@ -2,6 +2,7 @@
  * Simple chat interface demo using tui.ts
  */
 
+import process from "node:process";
 import chalk from "chalk";
 import { CombinedAutocompleteProvider } from "../src/autocomplete.ts";
 import { Editor } from "../src/components/editor.ts";

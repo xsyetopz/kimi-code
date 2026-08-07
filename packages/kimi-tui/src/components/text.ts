@@ -10,8 +10,8 @@ import {
  */
 export class Text implements Component {
   private text: string;
-  private paddingX: number; // Left/right padding
-  private paddingY: number; // Top/bottom padding
+  private readonly paddingX: number; // Left/right padding
+  private readonly paddingY: number; // Top/bottom padding
   private customBgFn?: (text: string) => string;
 
   // Cache for rendered output
@@ -71,7 +71,7 @@ export class Text implements Component {
     }
 
     // Replace tabs with 3 spaces
-    const normalizedText = this.text.replace(/\t/g, "   ");
+    const normalizedText = this.text.replace(/\t/gu, "   ");
 
     // Calculate content width (subtract left/right margins)
     const contentWidth = Math.max(1, width - this.paddingX * 2);

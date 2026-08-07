@@ -1,9 +1,10 @@
-import { findWordForward, findWordBackward } from "../../word-navigation.ts";
-import { isPasteMarker, wordWrapLine } from "./word-wrap.ts";
 import { visibleWidth } from "../../utils.ts";
+import { findWordBackward, findWordForward } from "../../word-navigation.ts";
 import type { Editor } from "./component.ts";
+import { isPasteMarker, wordWrapLine } from "./word-wrap.ts";
 
-export function buildVisualLineMap(this: Editor, 
+export function buildVisualLineMap(
+  this: Editor,
   width: number,
 ): Array<{ logicalLine: number; startCol: number; length: number }> {
   const visualLines: Array<{
@@ -38,7 +39,8 @@ export function buildVisualLineMap(this: Editor,
   return visualLines;
 }
 
-export function findVisualLineAt(this: Editor, 
+export function findVisualLineAt(
+  this: Editor,
   visualLines: Array<{
     logicalLine: number;
     startCol: number;
@@ -66,7 +68,8 @@ export function findVisualLineAt(this: Editor,
   return visualLines.length - 1;
 }
 
-export function findCurrentVisualLine(this: Editor, 
+export function findCurrentVisualLine(
+  this: Editor,
   visualLines: Array<{
     logicalLine: number;
     startCol: number;
@@ -80,7 +83,11 @@ export function findCurrentVisualLine(this: Editor,
   );
 }
 
-export function moveCursor(this: Editor, deltaLine: number, deltaCol: number): void {
+export function moveCursor(
+  this: Editor,
+  deltaLine: number,
+  deltaCol: number,
+): void {
   this.lastAction = null;
   const visualLines = this.buildVisualLineMap(this.lastWidth);
   const currentVisualLine = this.findCurrentVisualLine(visualLines);
@@ -122,7 +129,7 @@ export function moveCursor(this: Editor, deltaLine: number, deltaCol: number): v
       if (this.state.cursorCol > 0) {
         const beforeCursor = currentLine.slice(0, this.state.cursorCol);
         const graphemes = [...this.segment(beforeCursor, "grapheme")];
-        const lastGrapheme = graphemes[graphemes.length - 1];
+        const lastGrapheme = graphemes.at(-1);
         this.setCursorCol(
           this.state.cursorCol -
             (lastGrapheme ? lastGrapheme.segment.length : 1),
@@ -158,16 +165,13 @@ export function pageScroll(this: Editor, direction: -1 | 1): void {
   const currentVisualLine = this.findCurrentVisualLine(visualLines);
   const targetVisualLine = Math.max(
     0,
-    Math.min(
-      visualLines.length - 1,
-      currentVisualLine + direction * pageSize,
-    ),
+    Math.min(visualLines.length - 1, currentVisualLine + direction * pageSize),
   );
 
   this.moveToVisualLine(visualLines, currentVisualLine, targetVisualLine);
 }
 
-export function moveWordBackwards(this: Editor, ): void {
+export function moveWordBackwards(this: Editor): void {
   this.lastAction = null;
   const currentLine = this.state.lines[this.state.cursorLine] || "";
 
@@ -189,7 +193,7 @@ export function moveWordBackwards(this: Editor, ): void {
   );
 }
 
-export function yank(this: Editor, ): void {
+export function yank(this: Editor): void {
   if (this.killRing.length === 0) return;
 
   this.pushUndoSnapshot();
@@ -200,7 +204,7 @@ export function yank(this: Editor, ): void {
   this.lastAction = "yank";
 }
 
-export function yankPop(this: Editor, ): void {
+export function yankPop(this: Editor): void {
   // Only works if we just yanked and have more than one entry
   if (this.lastAction !== "yank" || this.killRing.length <= 1) return;
 
@@ -246,15 +250,11 @@ export function insertYankedText(this: Editor, text: string): void {
 
     // Last line merges with text after cursor
     const lastLineIndex = this.state.cursorLine + lines.length - 1;
-    this.state.lines.splice(
-      lastLineIndex,
-      0,
-      (lines[lines.length - 1] || "") + after,
-    );
+    this.state.lines.splice(lastLineIndex, 0, (lines.at(-1) || "") + after);
 
     // Update cursor position
     this.state.cursorLine = lastLineIndex;
-    this.setCursorCol((lines[lines.length - 1] || "").length);
+    this.setCursorCol((lines.at(-1) || "").length);
   }
 
   if (this.onChange) {
@@ -262,7 +262,7 @@ export function insertYankedText(this: Editor, text: string): void {
   }
 }
 
-export function deleteYankedText(this: Editor, ): void {
+export function deleteYankedText(this: Editor): void {
   const yankedText = this.killRing.peek();
   if (!yankedText) return;
 
@@ -280,8 +280,7 @@ export function deleteYankedText(this: Editor, ): void {
     // Multi-line delete - cursor is at end of last yanked line
     const startLine = this.state.cursorLine - (yankLines.length - 1);
     const startCol =
-      (this.state.lines[startLine] || "").length -
-      (yankLines[0] || "").length;
+      (this.state.lines[startLine] || "").length - (yankLines[0] || "").length;
 
     // Get text after cursor on current line
     const afterCursor = (this.state.lines[this.state.cursorLine] || "").slice(
@@ -308,7 +307,11 @@ export function deleteYankedText(this: Editor, ): void {
   }
 }
 
-export function jumpToChar(this: Editor, char: string, direction: "forward" | "backward"): void {
+export function jumpToChar(
+  this: Editor,
+  char: string,
+  direction: "forward" | "backward",
+): void {
   this.lastAction = null;
   const isForward = direction === "forward";
   const lines = this.state.lines;
@@ -316,11 +319,7 @@ export function jumpToChar(this: Editor, char: string, direction: "forward" | "b
   const end = isForward ? lines.length : -1;
   const step = isForward ? 1 : -1;
 
-  for (
-    let lineIdx = this.state.cursorLine;
-    lineIdx !== end;
-    lineIdx += step
-  ) {
+  for (let lineIdx = this.state.cursorLine; lineIdx !== end; lineIdx += step) {
     const line = lines[lineIdx] || "";
     const isCurrentLine = lineIdx === this.state.cursorLine;
 
@@ -344,7 +343,7 @@ export function jumpToChar(this: Editor, char: string, direction: "forward" | "b
   // No match found - cursor stays in place
 }
 
-export function moveWordForwards(this: Editor, ): void {
+export function moveWordForwards(this: Editor): void {
   this.lastAction = null;
   const currentLine = this.state.lines[this.state.cursorLine] || "";
 
@@ -364,4 +363,3 @@ export function moveWordForwards(this: Editor, ): void {
     }),
   );
 }
-

@@ -10,11 +10,11 @@ interface KittyImageHeader {
 
 function parseKittyImageHeader(line: string): KittyImageHeader | undefined {
   const sequenceStart = line.indexOf(KITTY_SEQUENCE_PREFIX);
-  if (sequenceStart === -1) return undefined;
+  if (sequenceStart === -1) return;
 
   const paramsStart = sequenceStart + KITTY_SEQUENCE_PREFIX.length;
   const paramsEnd = line.indexOf(";", paramsStart);
-  if (paramsEnd === -1) return undefined;
+  if (paramsEnd === -1) return;
 
   const ids: number[] = [];
   let rows = 1;

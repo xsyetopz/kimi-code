@@ -1,12 +1,17 @@
 import { isImageLine } from "../terminal-image.ts";
-import { sliceByColumn, sliceWithWidth, visibleWidth, extractSegments } from "../utils.ts";
+import {
+  extractSegments,
+  sliceByColumn,
+  sliceWithWidth,
+  visibleWidth,
+} from "../utils.ts";
+import { SEGMENT_RESET } from "./constants.ts";
 import type { OverlayAnchor, OverlayOptions } from "./contracts.ts";
 import { parseSizeValue } from "./overlay-shared.ts";
-import { SEGMENT_RESET } from "./constants.ts";
-import type { OverlayStackEntry } from "./overlay-shared.ts";
 import type { TUI } from "./tui-class.ts";
 
-export function resolveOverlayLayout(this: TUI, 
+export function resolveOverlayLayout(
+  this: TUI,
   options: OverlayOptions | undefined,
   overlayHeight: number,
   termWidth: number,
@@ -39,8 +44,7 @@ export function resolveOverlayLayout(this: TUI,
   const availHeight = Math.max(1, termHeight - marginTop - marginBottom);
 
   // === Resolve width ===
-  let width =
-    parseSizeValue(opt.width, termWidth) ?? Math.min(80, availWidth);
+  let width = parseSizeValue(opt.width, termWidth) ?? Math.min(80, availWidth);
   // Apply minWidth
   if (opt.minWidth !== undefined) {
     width = Math.max(width, opt.minWidth);
@@ -68,10 +72,10 @@ export function resolveOverlayLayout(this: TUI,
   if (opt.row !== undefined) {
     if (typeof opt.row === "string") {
       // Percentage: 0% = top, 100% = bottom (overlay stays within bounds)
-      const match = opt.row.match(/^(\d+(?:\.\d+)?)%$/);
+      const match = opt.row.match(/^(\d+(?:\.\d+)?)%$/u);
       if (match) {
         const maxRow = Math.max(0, availHeight - effectiveHeight);
-        const percent = parseFloat(match[1]!) / 100;
+        const percent = Number.parseFloat(match[1]!) / 100;
         row = marginTop + Math.floor(maxRow * percent);
       } else {
         // Invalid format, fall back to center
@@ -100,10 +104,10 @@ export function resolveOverlayLayout(this: TUI,
   if (opt.col !== undefined) {
     if (typeof opt.col === "string") {
       // Percentage: 0% = left, 100% = right (overlay stays within bounds)
-      const match = opt.col.match(/^(\d+(?:\.\d+)?)%$/);
+      const match = opt.col.match(/^(\d+(?:\.\d+)?)%$/u);
       if (match) {
         const maxCol = Math.max(0, availWidth - width);
-        const percent = parseFloat(match[1]!) / 100;
+        const percent = Number.parseFloat(match[1]!) / 100;
         col = marginLeft + Math.floor(maxCol * percent);
       } else {
         // Invalid format, fall back to center
@@ -133,7 +137,8 @@ export function resolveOverlayLayout(this: TUI,
   return { width, row, col, maxHeight };
 }
 
-export function resolveAnchorRow(this: TUI, 
+export function resolveAnchorRow(
+  this: TUI,
   anchor: OverlayAnchor,
   height: number,
   availHeight: number,
@@ -155,7 +160,8 @@ export function resolveAnchorRow(this: TUI,
   }
 }
 
-export function resolveAnchorCol(this: TUI, 
+export function resolveAnchorCol(
+  this: TUI,
   anchor: OverlayAnchor,
   width: number,
   availWidth: number,
@@ -177,7 +183,8 @@ export function resolveAnchorCol(this: TUI,
   }
 }
 
-export function compositeOverlays(this: TUI, 
+export function compositeOverlays(
+  this: TUI,
   lines: string[],
   termWidth: number,
   termHeight: number,
@@ -267,7 +274,8 @@ export function compositeOverlays(this: TUI,
   return result;
 }
 
-export function compositeLineAt(this: TUI, 
+export function compositeLineAt(
+  this: TUI,
   baseLine: string,
   overlayLine: string,
   startCol: number,
@@ -325,4 +333,3 @@ export function compositeLineAt(this: TUI,
   // Truncate with strict=true to ensure we don't exceed totalWidth
   return sliceByColumn(result, 0, totalWidth, true);
 }
-

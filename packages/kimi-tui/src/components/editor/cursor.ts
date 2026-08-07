@@ -1,8 +1,6 @@
-import { findWordBackward, findWordForward } from "../../word-navigation.ts";
-import { isPasteMarker } from "./word-wrap.ts";
 import type { Editor } from "./component.ts";
 
-export function handleBackspace(this: Editor, ): void {
+export function handleBackspace(this: Editor): void {
   this.exitHistoryBrowsing();
   this.lastAction = null;
 
@@ -15,7 +13,7 @@ export function handleBackspace(this: Editor, ): void {
 
     // Find the last grapheme in the text before cursor
     const graphemes = [...this.segment(beforeCursor, "grapheme")];
-    const lastGrapheme = graphemes[graphemes.length - 1];
+    const lastGrapheme = graphemes.at(-1);
     const graphemeLength = lastGrapheme ? lastGrapheme.segment.length : 1;
 
     const before = line.slice(0, this.state.cursorCol - graphemeLength);
@@ -65,7 +63,8 @@ export function setCursorCol(this: Editor, col: number): void {
   this.snappedFromCursorCol = null;
 }
 
-export function moveToVisualLine(this: Editor, 
+export function moveToVisualLine(
+  this: Editor,
   visualLines: Array<{
     logicalLine: number;
     startCol: number;
@@ -89,7 +88,7 @@ export function moveToVisualLine(this: Editor,
       this.snappedFromCursorCol,
     );
     currentVisualCol =
-      this.snappedFromCursorCol - visualLines[vlIndex]!.startCol;
+      this.snappedFromCursorCol - visualLines[vlIndex]?.startCol;
   } else {
     currentVisualCol = this.state.cursorCol - currentVL.startCol;
   }
@@ -140,8 +139,8 @@ export function moveToVisualLine(this: Editor,
         let next = targetVisualLine + 1;
         while (
           next < visualLines.length &&
-          visualLines[next]!.logicalLine === targetVL.logicalLine &&
-          visualLines[next]!.startCol < segEnd
+          visualLines[next]?.logicalLine === targetVL.logicalLine &&
+          visualLines[next]?.startCol < segEnd
         ) {
           next++;
         }
@@ -164,7 +163,8 @@ export function moveToVisualLine(this: Editor,
   this.snappedFromCursorCol = null;
 }
 
-export function computeVerticalMoveColumn(this: Editor, 
+export function computeVerticalMoveColumn(
+  this: Editor,
   currentVisualCol: number,
   sourceMaxVisualCol: number,
   targetMaxVisualCol: number,
@@ -185,8 +185,7 @@ export function computeVerticalMoveColumn(this: Editor,
     return currentVisualCol;
   }
 
-  const targetCantFitPreferred =
-    targetMaxVisualCol < this.preferredVisualCol!; // U
+  const targetCantFitPreferred = targetMaxVisualCol < this.preferredVisualCol!; // U
   if (targetTooShort || targetCantFitPreferred) {
     // Cases 4 and 5
     return targetMaxVisualCol;
@@ -198,18 +197,18 @@ export function computeVerticalMoveColumn(this: Editor,
   return result;
 }
 
-export function moveToLineStart(this: Editor, ): void {
+export function moveToLineStart(this: Editor): void {
   this.lastAction = null;
   this.setCursorCol(0);
 }
 
-export function moveToLineEnd(this: Editor, ): void {
+export function moveToLineEnd(this: Editor): void {
   this.lastAction = null;
   const currentLine = this.state.lines[this.state.cursorLine] || "";
   this.setCursorCol(currentLine.length);
 }
 
-export function deleteToStartOfLine(this: Editor, ): void {
+export function deleteToStartOfLine(this: Editor): void {
   this.exitHistoryBrowsing();
 
   const currentLine = this.state.lines[this.state.cursorLine] || "";
@@ -252,7 +251,7 @@ export function deleteToStartOfLine(this: Editor, ): void {
   }
 }
 
-export function deleteToEndOfLine(this: Editor, ): void {
+export function deleteToEndOfLine(this: Editor): void {
   this.exitHistoryBrowsing();
 
   const currentLine = this.state.lines[this.state.cursorLine] || "";
@@ -293,7 +292,7 @@ export function deleteToEndOfLine(this: Editor, ): void {
   }
 }
 
-export function deleteWordBackwards(this: Editor, ): void {
+export function deleteWordBackwards(this: Editor): void {
   this.exitHistoryBrowsing();
 
   const currentLine = this.state.lines[this.state.cursorLine] || "";
@@ -311,8 +310,7 @@ export function deleteWordBackwards(this: Editor, ): void {
       this.lastAction = "kill";
 
       const previousLine = this.state.lines[this.state.cursorLine - 1] || "";
-      this.state.lines[this.state.cursorLine - 1] =
-        previousLine + currentLine;
+      this.state.lines[this.state.cursorLine - 1] = previousLine + currentLine;
       this.state.lines.splice(this.state.cursorLine, 1);
       this.state.cursorLine--;
       this.setCursorCol(previousLine.length);
@@ -343,7 +341,7 @@ export function deleteWordBackwards(this: Editor, ): void {
   }
 }
 
-export function deleteWordForward(this: Editor, ): void {
+export function deleteWordForward(this: Editor): void {
   this.exitHistoryBrowsing();
 
   const currentLine = this.state.lines[this.state.cursorLine] || "";
@@ -380,8 +378,7 @@ export function deleteWordForward(this: Editor, ): void {
     this.lastAction = "kill";
 
     this.state.lines[this.state.cursorLine] =
-      currentLine.slice(0, this.state.cursorCol) +
-      currentLine.slice(deleteTo);
+      currentLine.slice(0, this.state.cursorCol) + currentLine.slice(deleteTo);
   }
 
   if (this.onChange) {
@@ -389,7 +386,7 @@ export function deleteWordForward(this: Editor, ): void {
   }
 }
 
-export function handleForwardDelete(this: Editor, ): void {
+export function handleForwardDelete(this: Editor): void {
   this.exitHistoryBrowsing();
   this.lastAction = null;
 
@@ -438,4 +435,3 @@ export function handleForwardDelete(this: Editor, ): void {
     }
   }
 }
-

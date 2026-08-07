@@ -1,4 +1,10 @@
-import { Container, isFocusable, type Component, type OverlayHandle, type OverlayOptions } from "./contracts.ts";
+import {
+  type Component,
+  Container,
+  isFocusable,
+  type OverlayHandle,
+  type OverlayOptions,
+} from "./contracts.ts";
 import type {
   BlockedOverlayFocusRestoreState,
   OverlayFocusRestorePolicy,
@@ -7,13 +13,16 @@ import type {
 } from "./overlay-shared.ts";
 import type { TUI } from "./tui-class.ts";
 
-export function setFocusInternal(this: TUI, {
-  component,
-  overlayFocusRestore,
-}: {
-  component: Component | null;
-  overlayFocusRestore: OverlayFocusRestorePolicy;
-}): void {
+export function setFocusInternal(
+  this: TUI,
+  {
+    component,
+    overlayFocusRestore,
+  }: {
+    component: Component | null;
+    overlayFocusRestore: OverlayFocusRestorePolicy;
+  },
+): void {
   const previousFocus = this.focusedComponent;
   let nextFocus = component;
   const previousFocusedOverlay = previousFocus
@@ -92,11 +101,14 @@ export function setFocusInternal(this: TUI, {
   }
 }
 
-export function clearOverlayFocusRestore(this: TUI, ): void {
+export function clearOverlayFocusRestore(this: TUI): void {
   this.overlayFocusRestore = { status: "inactive" };
 }
 
-export function clearOverlayFocusRestoreFor(this: TUI, overlay: OverlayStackEntry): void {
+export function clearOverlayFocusRestoreFor(
+  this: TUI,
+  overlay: OverlayStackEntry,
+): void {
   if (
     this.overlayFocusRestore.status !== "inactive" &&
     this.overlayFocusRestore.overlay === overlay
@@ -105,7 +117,8 @@ export function clearOverlayFocusRestoreFor(this: TUI, overlay: OverlayStackEntr
   }
 }
 
-export function resolveBlockedOverlayFocusResume(this: TUI, 
+export function resolveBlockedOverlayFocusResume(
+  this: TUI,
   restoreState: BlockedOverlayFocusRestoreState,
 ): Component | null {
   if (restoreState.resume.status === "restore-overlay")
@@ -114,19 +127,24 @@ export function resolveBlockedOverlayFocusResume(this: TUI,
   return restoreState.resume.target;
 }
 
-export function getVisibleOverlayFocusRestore(this: TUI, ): OverlayFocusRestoreState {
+export function getVisibleOverlayFocusRestore(
+  this: TUI,
+): OverlayFocusRestoreState {
   const restoreState = this.overlayFocusRestore;
   if (restoreState.status === "inactive") return restoreState;
   if (
-    !this.overlayStack.includes(restoreState.overlay) ||
-    !this.isOverlayVisible(restoreState.overlay)
+    !(
+      this.overlayStack.includes(restoreState.overlay) &&
+      this.isOverlayVisible(restoreState.overlay)
+    )
   ) {
     return { status: "inactive" };
   }
   return restoreState;
 }
 
-export function isOverlayFocusAncestor(this: TUI, 
+export function isOverlayFocusAncestor(
+  this: TUI,
   entry: OverlayStackEntry,
   component: Component,
 ): boolean {
@@ -142,7 +160,10 @@ export function isOverlayFocusAncestor(this: TUI,
   return false;
 }
 
-export function retargetOverlayPreFocus(this: TUI, removed: OverlayStackEntry): void {
+export function retargetOverlayPreFocus(
+  this: TUI,
+  removed: OverlayStackEntry,
+): void {
   for (const overlay of this.overlayStack) {
     if (overlay !== removed && overlay.preFocus === removed.component) {
       overlay.preFocus = removed.preFocus;
@@ -156,13 +177,21 @@ export function isComponentMounted(this: TUI, component: Component): boolean {
   );
 }
 
-export function containsComponent(this: TUI, root: Component, target: Component): boolean {
+export function containsComponent(
+  this: TUI,
+  root: Component,
+  target: Component,
+): boolean {
   if (root === target) return true;
   if (!(root instanceof Container)) return false;
   return root.children.some((child) => this.containsComponent(child, target));
 }
 
-export function showOverlay(this: TUI, component: Component, options?: OverlayOptions): OverlayHandle {
+export function showOverlay(
+  this: TUI,
+  component: Component,
+  options?: OverlayOptions,
+): OverlayHandle {
   const entry: OverlayStackEntry = {
     component,
     ...(options === undefined ? {} : { options }),
@@ -217,7 +246,7 @@ export function showOverlay(this: TUI, component: Component, options?: OverlayOp
     },
     isHidden: () => entry.hidden,
     focus: () => {
-      if (!this.overlayStack.includes(entry) || !this.isOverlayVisible(entry))
+      if (!(this.overlayStack.includes(entry) && this.isOverlayVisible(entry)))
         return;
       entry.focusOrder = ++this.focusOrderCounter;
       this.setFocus(component);
@@ -228,7 +257,7 @@ export function showOverlay(this: TUI, component: Component, options?: OverlayOp
       const restoreState = this.overlayFocusRestore;
       const hasPendingRestore =
         restoreState.status !== "inactive" && restoreState.overlay === entry;
-      if (!isFocused && !hasPendingRestore) return;
+      if (!(isFocused || hasPendingRestore)) return;
       if (
         restoreState.status === "blocked" &&
         restoreState.overlay === entry &&
@@ -254,9 +283,7 @@ export function showOverlay(this: TUI, component: Component, options?: OverlayOp
           topVisible && topVisible !== entry
             ? topVisible.component
             : entry.preFocus;
-        this.setFocus(
-          unfocusOptions ? unfocusOptions.target : fallbackTarget,
-        );
+        this.setFocus(unfocusOptions ? unfocusOptions.target : fallbackTarget);
       }
       this.requestRender();
     },
@@ -264,8 +291,8 @@ export function showOverlay(this: TUI, component: Component, options?: OverlayOp
   };
 }
 
-export function hideOverlay(this: TUI, ): void {
-  const overlay = this.overlayStack[this.overlayStack.length - 1];
+export function hideOverlay(this: TUI): void {
+  const overlay = this.overlayStack.at(-1);
   if (!overlay) return;
   this.clearOverlayFocusRestoreFor(overlay);
   this.retargetOverlayPreFocus(overlay);
@@ -279,7 +306,7 @@ export function hideOverlay(this: TUI, ): void {
   this.requestRender();
 }
 
-export function hasOverlay(this: TUI, ): boolean {
+export function hasOverlay(this: TUI): boolean {
   return this.overlayStack.some((o) => this.isOverlayVisible(o));
 }
 
@@ -291,7 +318,9 @@ export function isOverlayVisible(this: TUI, entry: OverlayStackEntry): boolean {
   return true;
 }
 
-export function getTopmostVisibleOverlay(this: TUI, ): OverlayStackEntry | undefined {
+export function getTopmostVisibleOverlay(
+  this: TUI,
+): OverlayStackEntry | undefined {
   let topmost: OverlayStackEntry | undefined;
   for (const overlay of this.overlayStack) {
     if (overlay.options?.nonCapturing || !this.isOverlayVisible(overlay))
@@ -302,4 +331,3 @@ export function getTopmostVisibleOverlay(this: TUI, ): OverlayStackEntry | undef
   }
   return topmost;
 }
-

@@ -1,3 +1,4 @@
+import process from "node:process";
 import type { Terminal as XtermTerminalType } from "@xterm/headless";
 import xterm from "@xterm/headless";
 import type { Terminal } from "../src/terminal.ts";
@@ -9,7 +10,7 @@ const XtermTerminal = xterm.Terminal;
  * Virtual terminal for testing using xterm.js for accurate terminal emulation
  */
 export class VirtualTerminal implements Terminal {
-  private xterm: XtermTerminalType;
+  private readonly xterm: XtermTerminalType;
   private inputHandler?: (data: string) => void;
   private resizeHandler?: () => void;
   private _columns: number;

@@ -41,15 +41,15 @@ export function findWordBackward(
   // Skip trailing whitespace
   while (
     segments.length > 0 &&
-    !isAtomic?.(segments[segments.length - 1]?.segment || "") &&
-    isWhitespaceChar(segments[segments.length - 1]?.segment || "")
+    !isAtomic?.(segments.at(-1)?.segment || "") &&
+    isWhitespaceChar(segments.at(-1)?.segment || "")
   ) {
     newCursor -= segments.pop()?.segment.length || 0;
   }
 
   if (segments.length === 0) return newCursor;
 
-  const last = segments[segments.length - 1]!;
+  const last = segments.at(-1)!;
 
   if (isAtomic?.(last.segment)) {
     // Skip one atomic segment.
@@ -57,20 +57,20 @@ export function findWordBackward(
   } else if (last.isWordLike) {
     // Skip inside one word-like segment, preserving ASCII punctuation boundaries.
     const segment = last.segment;
-    const matches = [...segment.matchAll(new RegExp(PUNCTUATION_REGEX, "g"))];
+    const matches = [...segment.matchAll(new RegExp(PUNCTUATION_REGEX, "gu"))];
     if (matches.length <= 0) {
       newCursor -= segment.length;
     } else {
-      const lastMatch = matches[matches.length - 1]!;
+      const lastMatch = matches.at(-1)!;
       newCursor -= segment.length - (lastMatch.index + lastMatch[0].length);
     }
   } else {
     // Skip non-word non-whitespace run (punctuation)
     while (
       segments.length > 0 &&
-      !isAtomic?.(segments[segments.length - 1]?.segment || "") &&
-      !segments[segments.length - 1]?.isWordLike &&
-      !isWhitespaceChar(segments[segments.length - 1]?.segment || "")
+      !isAtomic?.(segments.at(-1)?.segment || "") &&
+      !segments.at(-1)?.isWordLike &&
+      !isWhitespaceChar(segments.at(-1)?.segment || "")
     ) {
       newCursor -= segments.pop()?.segment.length || 0;
     }
@@ -104,8 +104,7 @@ export function findWordForward(
 
   // Skip leading whitespace
   while (
-    !next.done &&
-    !isAtomic?.(next.value.segment) &&
+    !(next.done || isAtomic?.(next.value.segment)) &&
     isWhitespaceChar(next.value.segment)
   ) {
     newCursor += next.value.segment.length;
@@ -125,10 +124,12 @@ export function findWordForward(
   } else {
     // Skip non-word non-whitespace run (punctuation)
     while (
-      !next.done &&
-      !isAtomic?.(next.value.segment) &&
-      !next.value.isWordLike &&
-      !isWhitespaceChar(next.value.segment)
+      !(
+        next.done ||
+        isAtomic?.(next.value.segment) ||
+        next.value.isWordLike ||
+        isWhitespaceChar(next.value.segment)
+      )
     ) {
       newCursor += next.value.segment.length;
       next = iterator.next();

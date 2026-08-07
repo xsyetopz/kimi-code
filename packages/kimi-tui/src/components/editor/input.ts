@@ -17,8 +17,7 @@ export function handleInput(this: Editor, data: string): void {
     }
 
     const printable =
-      decodePrintableKey(data) ??
-      (data.charCodeAt(0) >= 32 ? data : undefined);
+      decodePrintableKey(data) ?? (data.charCodeAt(0) >= 32 ? data : undefined);
     if (printable !== undefined) {
       // Printable character - perform the jump
       const direction = this.jumpMode;
@@ -67,8 +66,7 @@ export function handleInput(this: Editor, data: string): void {
       ? data
       : undefined);
   if (
-    !this.disablePasteBurst &&
-    !isEnterKey &&
+    !(this.disablePasteBurst || isEnterKey) &&
     printableForBurst === undefined
   ) {
     this.pasteBurst.reset();
@@ -342,4 +340,3 @@ export function handleInput(this: Editor, data: string): void {
     this.insertCharacter(data);
   }
 }
-

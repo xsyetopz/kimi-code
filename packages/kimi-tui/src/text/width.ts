@@ -53,7 +53,7 @@ export function truncateFragmentToWidth(
 
   const hasAnsi = text.includes("\x1b");
   const hasTabs = text.includes("\t");
-  if (!hasAnsi && !hasTabs) {
+  if (!(hasAnsi || hasTabs)) {
     let result = "";
     let width = 0;
     for (const { segment } of graphemeSegmenter.segment(text)) {
@@ -217,7 +217,7 @@ export function visibleWidth(str: string): number {
   // Normalize: tabs to 3 spaces, strip ANSI escape codes
   let clean = str;
   if (str.includes("\t")) {
-    clean = clean.replace(/\t/g, "   ");
+    clean = clean.replace(/\t/gu, "   ");
   }
   if (clean.includes("\x1b")) {
     // Strip supported ANSI/OSC/APC escape sequences in one pass.
@@ -272,11 +272,11 @@ export function asciiVisibleWidth(
     const code = line.charCodeAt(i);
     if (code === 0x1b) {
       const ansi = extractAnsiCode(line, i);
-      if (!ansi) return undefined;
+      if (!ansi) return;
       i += ansi.length;
       continue;
     }
-    if (code < 0x20 || code > 0x7e) return undefined;
+    if (code < 0x20 || code > 0x7e) return;
     width++;
     if (width > limit) return width;
     i++;

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import process from "node:process";
 import { deleteKittyImage, isImageLine } from "../terminal-image.ts";
 import {
   asciiVisibleWidth,
@@ -8,17 +9,18 @@ import {
   sliceByColumn,
   visibleWidth,
 } from "../utils.ts";
+import { SEGMENT_RESET } from "./constants.ts";
 import { CURSOR_MARKER } from "./contracts.ts";
 import {
   EMPTY_IMAGE_IDS,
   extractKittyImageIds,
   extractKittyImageRows,
 } from "./kitty-line-images.ts";
-import { SEGMENT_RESET } from "./constants.ts";
 import { isTermuxSession } from "./overlay-shared.ts";
 import type { TUI } from "./tui-class.ts";
 
-export function unionKittyImageIds(this: TUI, 
+export function unionKittyImageIds(
+  this: TUI,
   lineImageIds: ReadonlyArray<number>[],
 ): Set<number> {
   const ids = new Set<number>();
@@ -38,7 +40,8 @@ export function deleteKittyImages(this: TUI, ids: Iterable<number>): string {
   return buffer;
 }
 
-export function getKittyImageReservedRows(this: TUI, 
+export function getKittyImageReservedRows(
+  this: TUI,
   lines: string[],
   index: number,
   maxIndex = lines.length - 1,
@@ -56,7 +59,8 @@ export function getKittyImageReservedRows(this: TUI,
   return reservedRows;
 }
 
-export function expandChangedRangeForKittyImages(this: TUI, 
+export function expandChangedRangeForKittyImages(
+  this: TUI,
   firstChanged: number,
   lastChanged: number,
   newLines: string[],
@@ -71,10 +75,7 @@ export function expandChangedRangeForKittyImages(this: TUI,
     for (let i = 0; i < lines.length; i++) {
       if ((lineImageIds[i] ?? EMPTY_IMAGE_IDS).length === 0) continue;
       const blockEnd = i + this.getKittyImageReservedRows(lines, i) - 1;
-      if (
-        i >= firstChanged ||
-        (i <= lastChanged && blockEnd >= firstChanged)
-      ) {
+      if (i >= firstChanged || (i <= lastChanged && blockEnd >= firstChanged)) {
         expandedFirstChanged = Math.min(expandedFirstChanged, i);
         expandedLastChanged = Math.max(expandedLastChanged, blockEnd);
       }
@@ -89,7 +90,8 @@ export function expandChangedRangeForKittyImages(this: TUI,
   };
 }
 
-export function deleteChangedKittyImages(this: TUI, 
+export function deleteChangedKittyImages(
+  this: TUI,
   firstChanged: number,
   lastChanged: number,
 ): string {
@@ -106,7 +108,8 @@ export function deleteChangedKittyImages(this: TUI,
   return this.deleteKittyImages(ids);
 }
 
-export function extractCursorPosition(this: TUI, 
+export function extractCursorPosition(
+  this: TUI,
   lines: string[],
   height: number,
 ): { row: number; col: number } | null {
@@ -131,12 +134,11 @@ export function extractCursorPosition(this: TUI,
   return null;
 }
 
-export function doRender(this: TUI, ): void {
+export function doRender(this: TUI): void {
   if (this.stopped) return;
   const width = this.terminal.columns;
   const height = this.terminal.rows;
-  const widthChanged =
-    this.previousWidth !== 0 && this.previousWidth !== width;
+  const widthChanged = this.previousWidth !== 0 && this.previousWidth !== width;
   const heightChanged =
     this.previousHeight !== 0 && this.previousHeight !== height;
   const previousBufferLength =
@@ -239,10 +241,7 @@ export function doRender(this: TUI, ): void {
     if (clear) {
       this.maxLinesRendered = newLines.length;
     } else {
-      this.maxLinesRendered = Math.max(
-        this.maxLinesRendered,
-        newLines.length,
-      );
+      this.maxLinesRendered = Math.max(this.maxLinesRendered, newLines.length);
     }
     const bufferLength = Math.max(height, newLines.length);
     this.previousViewportTop = Math.max(0, bufferLength - height);
@@ -255,7 +254,7 @@ export function doRender(this: TUI, ): void {
     this.previousHeight = height;
   };
 
-  const debugRedraw = process.env["PI_DEBUG_REDRAW"] === "1";
+  const debugRedraw = process.env.PI_DEBUG_REDRAW === "1";
   const logRedraw = (reason: string): void => {
     if (!debugRedraw) return;
     const logPath = path.join(os.homedir(), ".pi", "agent", "pi-debug.log");
@@ -281,9 +280,7 @@ export function doRender(this: TUI, ): void {
   // but Termux changes height when the software keyboard shows or hides.
   // In that environment, a full redraw causes the entire history to replay on every toggle.
   if (heightChanged && !isTermuxSession()) {
-    logRedraw(
-      `terminal height changed (${this.previousHeight} -> ${height})`,
-    );
+    logRedraw(`terminal height changed (${this.previousHeight} -> ${height})`);
     fullRender(true);
     return;
   }
@@ -306,8 +303,7 @@ export function doRender(this: TUI, ): void {
   let lastChanged = -1;
   const maxLines = Math.max(newLines.length, this.previousLines.length);
   for (let i = 0; i < maxLines; i++) {
-    const oldLine =
-      i < this.previousLines.length ? this.previousLines[i] : "";
+    const oldLine = i < this.previousLines.length ? this.previousLines[i] : "";
     const newLine = i < newLines.length ? newLines[i] : "";
 
     if (oldLine !== newLine) {
@@ -506,7 +502,7 @@ export function doRender(this: TUI, ): void {
 
   buffer += "\x1b[?2026l"; // End synchronized output
 
-  if (process.env["PI_TUI_DEBUG"] === "1") {
+  if (process.env.PI_TUI_DEBUG === "1") {
     const debugDir = "/tmp/tui";
     fs.mkdirSync(debugDir, { recursive: true });
     const debugPath = path.join(
@@ -600,4 +596,3 @@ export function positionHardwareCursor(
     this.terminal.hideCursor();
   }
 }
-

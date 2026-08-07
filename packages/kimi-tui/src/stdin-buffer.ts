@@ -17,7 +17,7 @@
  * MIT License - Copyright (c) 2025 opentui
  */
 
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 
 const ESC = "\x1b";
 const BRACKETED_PASTE_START = "\x1b[200~";
@@ -97,7 +97,7 @@ function isCompleteCsiSequence(data: string): "complete" | "incomplete" {
 
   // CSI sequences end with a byte in the range 0x40-0x7E (@-~)
   // This includes all letters and several special characters
-  const lastChar = payload[payload.length - 1]!;
+  const lastChar = payload.at(-1)!;
   const lastCharCode = lastChar.charCodeAt(0);
 
   if (lastCharCode >= 0x40 && lastCharCode <= 0x7e) {
@@ -105,7 +105,7 @@ function isCompleteCsiSequence(data: string): "complete" | "incomplete" {
     // Format: ESC[<B;X;Ym or ESC[<B;X;YM
     if (payload.startsWith("<")) {
       // Must have format: <digits;digits;digits[Mm]
-      const mouseMatch = /^<\d+;\d+;\d+[Mm]$/.test(payload);
+      const mouseMatch = /^<\d+;\d+;\d+[Mm]$/u.test(payload);
       if (mouseMatch) {
         return "complete";
       }
@@ -113,7 +113,7 @@ function isCompleteCsiSequence(data: string): "complete" | "incomplete" {
       if (lastChar === "M" || lastChar === "m") {
         // Check if we have the right structure
         const parts = payload.slice(1, -1).split(";");
-        if (parts.length === 3 && parts.every((p) => /^\d+$/.test(p))) {
+        if (parts.length === 3 && parts.every((p) => /^\d+$/u.test(p))) {
           return "complete";
         }
       }
@@ -186,10 +186,10 @@ function isCompleteApcSequence(data: string): "complete" | "incomplete" {
 function parseUnmodifiedKittyPrintableCodepoint(
   sequence: string,
 ): number | undefined {
-  const match = sequence.match(/^\x1b\[(\d+)(?::\d*)?(?::\d+)?u$/);
-  if (!match) return undefined;
+  const match = sequence.match(/^\x1b\[(\d+)(?::\d*)?(?::\d+)?u$/u);
+  if (!match) return;
 
-  const codepoint = parseInt(match[1]!, 10);
+  const codepoint = Number.parseInt(match[1]!, 10);
   return codepoint >= 32 ? codepoint : undefined;
 }
 
@@ -238,7 +238,8 @@ function extractCompleteSequences(buffer: string): {
           sequences.push(candidate);
           pos += seqEnd;
           break;
-        } else if (status === "incomplete") {
+        }
+        if (status === "incomplete") {
           seqEnd++;
         } else {
           // Should not happen when starting with ESC

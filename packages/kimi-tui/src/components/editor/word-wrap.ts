@@ -1,12 +1,17 @@
-import { cjkBreakRegex, isWhitespaceChar, getGraphemeSegmenter, visibleWidth } from "../../utils.ts";
+import {
+  cjkBreakRegex,
+  getGraphemeSegmenter,
+  isWhitespaceChar,
+  visibleWidth,
+} from "../../utils.ts";
 
 const graphemeSegmenter = getGraphemeSegmenter();
 
 /** Regex matching paste markers like `[paste #1 +123 lines]` or `[paste #2 1234 chars]`. */
-const PASTE_MARKER_REGEX = /\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]/g;
+const PASTE_MARKER_REGEX = /\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]/gu;
 
 /** Non-global version for single-segment testing. */
-const PASTE_MARKER_SINGLE = /^\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]$/;
+const PASTE_MARKER_SINGLE = /^\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]$/u;
 
 /** Check if a segment is a paste marker (i.e. was merged by segmentWithMarkers). */
 export function isPasteMarker(segment: string): boolean {
@@ -48,7 +53,7 @@ export function segmentWithMarkers(
 
   for (const seg of baseSegments) {
     // Skip past markers that are entirely before this segment.
-    while (markerIdx < markers.length && markers[markerIdx]!.end <= seg.index) {
+    while (markerIdx < markers.length && markers[markerIdx]?.end <= seg.index) {
       markerIdx++;
     }
 
@@ -185,7 +190,7 @@ export function wordWrapLine(
           endIndex: charIndex + sc.endIndex,
         });
       }
-      const last = subChunks[subChunks.length - 1]!;
+      const last = subChunks.at(-1)!;
       chunkStart = charIndex + last.startIndex;
       currentWidth = visibleWidth(last.text);
       wrapOppIndex = -1;

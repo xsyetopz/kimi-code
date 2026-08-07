@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { TUI } from "../src/tui.ts";
 import { extractSegments, sliceByColumn, visibleWidth } from "../src/utils.ts";

@@ -5,9 +5,9 @@ import { truncateToWidth, visibleWidth } from "../utils.ts";
  * Text component that truncates to fit viewport width
  */
 export class TruncatedText implements Component {
-  private text: string;
-  private paddingX: number;
-  private paddingY: number;
+  private readonly text: string;
+  private readonly paddingX: number;
+  private readonly paddingY: number;
 
   constructor(text: string, paddingX: number = 0, paddingY: number = 0) {
     this.text = text;

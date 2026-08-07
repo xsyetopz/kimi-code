@@ -1,7 +1,7 @@
 import { visibleWidth } from "../../utils.ts";
-import { wordWrapLine } from "./word-wrap.ts";
-import type { LayoutLine } from "./types.ts";
 import type { Editor } from "./component.ts";
+import type { LayoutLine } from "./types.ts";
+import { wordWrapLine } from "./word-wrap.ts";
 
 export function layoutText(this: Editor, contentWidth: number): LayoutLine[] {
   const layoutLines: LayoutLine[] = [];
@@ -96,4 +96,3 @@ export function layoutText(this: Editor, contentWidth: number): LayoutLine[] {
 
   return layoutLines;
 }
-

@@ -5,7 +5,7 @@
  * directly (no re-cloning) since they are already detached.
  */
 export class UndoStack<S> {
-  private stack: S[] = [];
+  private readonly stack: S[] = [];
 
   /** Push a deep clone of the given state onto the stack. */
   push(state: S): void {

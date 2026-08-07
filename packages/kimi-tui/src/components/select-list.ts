@@ -7,7 +7,7 @@ const PRIMARY_COLUMN_GAP = 2;
 const MIN_DESCRIPTION_WIDTH = 10;
 
 const normalizeToSingleLine = (text: string): string =>
-  text.replace(/[\r\n]+/g, " ").trim();
+  text.replace(/[\r\n]+/gu, " ").trim();
 const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(value, max));
 
@@ -40,12 +40,12 @@ export interface SelectListLayoutOptions {
 }
 
 export class SelectList implements Component {
-  private items: SelectItem[] = [];
+  private readonly items: SelectItem[] = [];
   private filteredItems: SelectItem[] = [];
   private selectedIndex: number = 0;
-  private maxVisible: number = 5;
-  private theme: SelectListTheme;
-  private layout: SelectListLayoutOptions;
+  private readonly maxVisible: number = 5;
+  private readonly theme: SelectListTheme;
+  private readonly layout: SelectListLayoutOptions;
 
   public onSelect?: (item: SelectItem) => void;
   public onCancel?: () => void;

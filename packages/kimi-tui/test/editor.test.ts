@@ -1,4 +1,5 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
+import process from "node:process";
 import { describe, it, mock } from "node:test";
 import { stripVTControlCharacters } from "node:util";
 import {
@@ -439,7 +440,6 @@ describe("Editor component", () => {
       const directions: Array<1 | -1> = [];
       editor.onRecall = (_entry, direction) => {
         directions.push(direction);
-        return undefined;
       };
 
       editor.handleInput("\x1b[A"); // Up -> "b" (-1)
@@ -1140,7 +1140,7 @@ describe("Editor component", () => {
           "Should be 1 content line before wrap",
         );
         assert.ok(
-          contentLines[0]!.endsWith("\x1b[7m \x1b[0m"),
+          contentLines[0]?.endsWith("\x1b[7m \x1b[0m"),
           "Cursor should be at end of line",
         );
 
@@ -1175,7 +1175,7 @@ describe("Editor component", () => {
       // Should NOT break mid-word
       // Line 1 should end with a complete word
       assert.ok(
-        !contentLines[0]!.endsWith("-"),
+        !contentLines[0]?.endsWith("-"),
         "Line should not end with hyphen (mid-word break)",
       );
 
@@ -1184,7 +1184,7 @@ describe("Editor component", () => {
         // Words at end of line should be complete (no partial words)
         const lastChar = line.trimEnd().slice(-1);
         assert.ok(
-          lastChar === "" || /[\w.,!?;:]/.test(lastChar),
+          lastChar === "" || /[\w.,!?;:]/u.test(lastChar),
           `Line ends unexpectedly with: "${lastChar}"`,
         );
       }
@@ -1207,7 +1207,7 @@ describe("Editor component", () => {
         // The line should either be all padding or start with a word character
         if (trimmedStart.length > 0) {
           assert.ok(
-            !/^\s+\S/.test(line.trimEnd()),
+            !/^\s+\S/u.test(line.trimEnd()),
             `Line ${i} starts with unexpected whitespace before content`,
           );
         }
@@ -1282,8 +1282,8 @@ describe("Editor component", () => {
       const chunks = wordWrapLine("hello world test", 11);
 
       assert.strictEqual(chunks.length, 2);
-      assert.strictEqual(chunks[0]!.text, "hello ");
-      assert.strictEqual(chunks[1]!.text, "world test");
+      assert.strictEqual(chunks[0]?.text, "hello ");
+      assert.strictEqual(chunks[1]?.text, "world test");
     });
 
     it("keeps whitespace at terminal width boundary on same line", () => {
@@ -1292,24 +1292,24 @@ describe("Editor component", () => {
       const chunks = wordWrapLine("hello world test", 12);
 
       assert.strictEqual(chunks.length, 2);
-      assert.strictEqual(chunks[0]!.text, "hello world ");
-      assert.strictEqual(chunks[1]!.text, "test");
+      assert.strictEqual(chunks[0]?.text, "hello world ");
+      assert.strictEqual(chunks[1]?.text, "test");
     });
 
     it("handles unbreakable word filling width exactly followed by space", () => {
       const chunks = wordWrapLine("aaaaaaaaaaaa aaaa", 12);
 
       assert.strictEqual(chunks.length, 2);
-      assert.strictEqual(chunks[0]!.text, "aaaaaaaaaaaa");
-      assert.strictEqual(chunks[1]!.text, " aaaa");
+      assert.strictEqual(chunks[0]?.text, "aaaaaaaaaaaa");
+      assert.strictEqual(chunks[1]?.text, " aaaa");
     });
 
     it("wraps word to next line when it fits width but not remaining space", () => {
       const chunks = wordWrapLine("      aaaaaaaaaaaa", 12);
 
       assert.strictEqual(chunks.length, 2);
-      assert.strictEqual(chunks[0]!.text, "      ");
-      assert.strictEqual(chunks[1]!.text, "aaaaaaaaaaaa");
+      assert.strictEqual(chunks[0]?.text, "      ");
+      assert.strictEqual(chunks[1]?.text, "aaaaaaaaaaaa");
     });
 
     it("keeps word with multi-space and following word together when they fit", () => {
@@ -1319,8 +1319,8 @@ describe("Editor component", () => {
       );
 
       assert.strictEqual(chunks.length, 2);
-      assert.strictEqual(chunks[0]!.text, "Lorem ipsum dolor sit ");
-      assert.strictEqual(chunks[1]!.text, "amet,    consectetur");
+      assert.strictEqual(chunks[0]?.text, "Lorem ipsum dolor sit ");
+      assert.strictEqual(chunks[1]?.text, "amet,    consectetur");
     });
 
     it("keeps word with multi-space and following word when they fill width exactly", () => {
@@ -1330,8 +1330,8 @@ describe("Editor component", () => {
       );
 
       assert.strictEqual(chunks.length, 2);
-      assert.strictEqual(chunks[0]!.text, "Lorem ipsum dolor sit ");
-      assert.strictEqual(chunks[1]!.text, "amet,              consectetur");
+      assert.strictEqual(chunks[0]?.text, "Lorem ipsum dolor sit ");
+      assert.strictEqual(chunks[1]?.text, "amet,              consectetur");
     });
 
     it("splits when word plus multi-space plus word exceeds width", () => {
@@ -1341,9 +1341,9 @@ describe("Editor component", () => {
       );
 
       assert.strictEqual(chunks.length, 3);
-      assert.strictEqual(chunks[0]!.text, "Lorem ipsum dolor sit ");
-      assert.strictEqual(chunks[1]!.text, "amet,               ");
-      assert.strictEqual(chunks[2]!.text, "consectetur");
+      assert.strictEqual(chunks[0]?.text, "Lorem ipsum dolor sit ");
+      assert.strictEqual(chunks[1]?.text, "amet,               ");
+      assert.strictEqual(chunks[2]?.text, "consectetur");
     });
 
     it("breaks long whitespace at line boundary", () => {
@@ -1353,9 +1353,9 @@ describe("Editor component", () => {
       );
 
       assert.strictEqual(chunks.length, 3);
-      assert.strictEqual(chunks[0]!.text, "Lorem ipsum dolor sit ");
-      assert.strictEqual(chunks[1]!.text, "amet,                         ");
-      assert.strictEqual(chunks[2]!.text, "consectetur");
+      assert.strictEqual(chunks[0]?.text, "Lorem ipsum dolor sit ");
+      assert.strictEqual(chunks[1]?.text, "amet,                         ");
+      assert.strictEqual(chunks[2]?.text, "consectetur");
     });
 
     it("breaks long whitespace at line boundary 2", () => {
@@ -1365,9 +1365,9 @@ describe("Editor component", () => {
       );
 
       assert.strictEqual(chunks.length, 3);
-      assert.strictEqual(chunks[0]!.text, "Lorem ipsum dolor sit ");
-      assert.strictEqual(chunks[1]!.text, "amet,                         ");
-      assert.strictEqual(chunks[2]!.text, " consectetur");
+      assert.strictEqual(chunks[0]?.text, "Lorem ipsum dolor sit ");
+      assert.strictEqual(chunks[1]?.text, "amet,                         ");
+      assert.strictEqual(chunks[2]?.text, " consectetur");
     });
 
     it("breaks whitespace spanning full lines", () => {
@@ -1377,9 +1377,9 @@ describe("Editor component", () => {
       );
 
       assert.strictEqual(chunks.length, 3);
-      assert.strictEqual(chunks[0]!.text, "Lorem ipsum dolor sit ");
-      assert.strictEqual(chunks[1]!.text, "amet,                         ");
-      assert.strictEqual(chunks[2]!.text, "            consectetur");
+      assert.strictEqual(chunks[0]?.text, "Lorem ipsum dolor sit ");
+      assert.strictEqual(chunks[1]?.text, "amet,                         ");
+      assert.strictEqual(chunks[2]?.text, "            consectetur");
     });
 
     it("force-breaks when wide char after word boundary wrap still overflows", () => {
@@ -1443,7 +1443,7 @@ describe("Editor component", () => {
         assert.ok(visibleWidth(chunk.text) <= 10);
       }
       // "B" ends up on the last line (either alone or with the marker tail)
-      assert.strictEqual(chunks[chunks.length - 1]!.text.includes("B"), true);
+      assert.strictEqual(chunks.at(-1)?.text.includes("B"), true);
 
       const reconstructed = chunks
         .map((c) => line.slice(c.startIndex, c.endIndex))
@@ -1464,7 +1464,7 @@ describe("Editor component", () => {
       for (const chunk of chunks) {
         assert.ok(visibleWidth(chunk.text) <= 10);
       }
-      assert.strictEqual(chunks[0]!.text, "A");
+      assert.strictEqual(chunks[0]?.text, "A");
 
       const reconstructed = chunks
         .map((c) => line.slice(c.startIndex, c.endIndex))
@@ -1526,7 +1526,7 @@ describe("Editor component", () => {
       }
 
       // Last chunk should contain "world" (normal wrapping resumes)
-      assert.strictEqual(chunks[chunks.length - 1]!.text, "world");
+      assert.strictEqual(chunks.at(-1)?.text, "world");
 
       const reconstructed = chunks
         .map((c) => line.slice(c.startIndex, c.endIndex))
@@ -2902,7 +2902,7 @@ describe("Editor component", () => {
           const beforeCursor = text.slice(0, cursorCol);
 
           // Check if we're in argument completion context: "/argtest <prefix>"
-          const argtestMatch = beforeCursor.match(/^\/argtest\s+(\S+)$/);
+          const argtestMatch = beforeCursor.match(/^\/argtest\s+(\S+)$/u);
           if (argtestMatch) {
             const argumentText = argtestMatch[1]!;
             const allArguments = [
@@ -2960,7 +2960,7 @@ describe("Editor component", () => {
           const beforeCursor = text.slice(0, cursorCol);
 
           // Check if we're in argument completion context
-          const argtestMatch = beforeCursor.match(/^\/argtest\s+(\S+)$/);
+          const argtestMatch = beforeCursor.match(/^\/argtest\s+(\S+)$/u);
           if (argtestMatch) {
             const argumentText = argtestMatch[1]!;
             const allArguments = [
@@ -3012,7 +3012,7 @@ describe("Editor component", () => {
           const text = lines[0] || "";
           const beforeCursor = text.slice(0, cursorCol);
 
-          const argtestMatch = beforeCursor.match(/^\/argtest\s+(\S+)$/);
+          const argtestMatch = beforeCursor.match(/^\/argtest\s+(\S+)$/u);
           if (argtestMatch) {
             const argumentText = argtestMatch[1]!;
             // Return all items - provider does not filter
@@ -3061,7 +3061,7 @@ describe("Editor component", () => {
           const text = lines[0] || "";
           const beforeCursor = text.slice(0, cursorCol);
 
-          const argtestMatch = beforeCursor.match(/^\/argtest\s+(\S+)$/);
+          const argtestMatch = beforeCursor.match(/^\/argtest\s+(\S+)$/u);
           if (argtestMatch) {
             const argumentText = argtestMatch[1]!;
             const allArguments = [
@@ -3109,7 +3109,7 @@ describe("Editor component", () => {
 
           // Check if we're in /model argument completion context
           // Use [^ ]+ to match any non-space characters (including hyphens)
-          const modelMatch = beforeCursor.match(/^\/model\s+(\S+)$/);
+          const modelMatch = beforeCursor.match(/^\/model\s+(\S+)$/u);
           if (modelMatch) {
             const modelText = modelMatch[1]!;
             const allModels = [
@@ -3977,7 +3977,7 @@ describe("Editor component", () => {
     it("creates a paste marker for large pastes", () => {
       const editor = new Editor(createTestTUI(), defaultEditorTheme);
       const text = pasteWithMarker(editor);
-      assert.match(text, /\[paste #\d+ \+\d+ lines\]/);
+      assert.match(text, /\[paste #\d+ \+\d+ lines\]/u);
     });
 
     it("treats paste marker as single unit for right arrow", () => {
@@ -3997,7 +3997,7 @@ describe("Editor component", () => {
 
       // Right arrow: should skip the entire marker
       editor.handleInput("\x1b[C");
-      const marker = editor.getText().match(/\[paste #\d+ \+\d+ lines\]/)![0];
+      const marker = editor.getText().match(/\[paste #\d+ \+\d+ lines\]/u)?.[0];
       assert.deepStrictEqual(editor.getCursor(), {
         line: 0,
         col: 1 + marker.length,
@@ -4021,7 +4021,7 @@ describe("Editor component", () => {
       // Left arrow: past "B"
       editor.handleInput("\x1b[D");
       const text = editor.getText();
-      const marker = text.match(/\[paste #\d+ \+\d+ lines\]/)![0];
+      const marker = text.match(/\[paste #\d+ \+\d+ lines\]/u)?.[0];
       assert.deepStrictEqual(editor.getCursor(), {
         line: 0,
         col: 1 + marker.length,
@@ -4043,7 +4043,7 @@ describe("Editor component", () => {
       editor.handleInput("B");
 
       const text = editor.getText();
-      const marker = text.match(/\[paste #\d+ \+\d+ lines\]/)![0];
+      const marker = text.match(/\[paste #\d+ \+\d+ lines\]/u)?.[0];
 
       // Position cursor right after the marker (before "B")
       editor.handleInput("\x01"); // Ctrl+A
@@ -4087,7 +4087,7 @@ describe("Editor component", () => {
       // Text: "X [paste #1 +20 lines] Y"
 
       const text = editor.getText();
-      const marker = text.match(/\[paste #\d+ \+\d+ lines\]/)![0];
+      const marker = text.match(/\[paste #\d+ \+\d+ lines\]/u)?.[0];
 
       // Go to start
       editor.handleInput("\x01"); // Ctrl+A
@@ -4133,7 +4133,7 @@ describe("Editor component", () => {
       pasteWithMarker(editor);
 
       const text = editor.getText();
-      const markers = [...text.matchAll(/\[paste #\d+ \+\d+ lines\]/g)];
+      const markers = [...text.matchAll(/\[paste #\d+ \+\d+ lines\]/gu)];
       assert.strictEqual(markers.length, 2);
 
       // Go to start
@@ -4143,21 +4143,21 @@ describe("Editor component", () => {
       editor.handleInput("\x1b[C");
       assert.deepStrictEqual(editor.getCursor(), {
         line: 0,
-        col: markers[0]![0].length,
+        col: markers[0]?.[0].length,
       });
 
       // Right arrow: past space
       editor.handleInput("\x1b[C");
       assert.deepStrictEqual(editor.getCursor(), {
         line: 0,
-        col: markers[0]![0].length + 1,
+        col: markers[0]?.[0].length + 1,
       });
 
       // Right arrow: should skip second marker atomically
       editor.handleInput("\x1b[C");
       assert.deepStrictEqual(editor.getCursor(), {
         line: 0,
-        col: markers[0]![0].length + 1 + markers[1]![0].length,
+        col: markers[0]?.[0].length + 1 + markers[1]?.[0].length,
       });
     });
 
@@ -4184,7 +4184,7 @@ describe("Editor component", () => {
       editor.handleInput(`\x1b[200~${bigContent}\x1b[201~`);
 
       const text = editor.getText();
-      const marker = text.match(/\[paste #\d+ \+\d+ lines\]/);
+      const marker = text.match(/\[paste #\d+ \+\d+ lines\]/u);
       assert.ok(marker, "paste marker should be created");
       assert.ok(
         visibleWidth(marker[0]) > 8,
@@ -4284,7 +4284,7 @@ describe("Editor component", () => {
 
       editor.handleInput(`\x1b[200~${pastedText}\x1b[201~`);
 
-      assert.match(editor.getText(), /\[paste #\d+ \+\d+ lines\]/);
+      assert.match(editor.getText(), /\[paste #\d+ \+\d+ lines\]/u);
       assert.strictEqual(editor.getExpandedText(), pastedText);
     });
 
@@ -4300,7 +4300,7 @@ describe("Editor component", () => {
       editor.render(80);
 
       const text = editor.getText();
-      const _marker = text.match(/\[paste #\d+ \d+ chars\]/)![0];
+      const _marker = text.match(/\[paste #\d+ \d+ chars\]/u)?.[0];
       // Line 0: "12345678901234567890"
       // Line 1: "" (empty)
       // Line 2: "hello [paste #1 2000 chars]"
@@ -4392,7 +4392,7 @@ describe("Editor component", () => {
       editor.render(20);
 
       const text = editor.getText();
-      const markerMatch = text.match(/\[paste #\d+ \+\d+ lines]/);
+      const markerMatch = text.match(/\[paste #\d+ \+\d+ lines]/u);
       assert.ok(markerMatch, "paste marker should be created");
       const markerLen = markerMatch[0].length; // 21
       assert.ok(markerLen > 20, "marker should be wider than terminal");

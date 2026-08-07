@@ -1,11 +1,11 @@
 const PATH_DELIMITERS = new Set([" ", "\t", '"', "'", "="]);
 
 export function toDisplayPath(value: string): string {
-  return value.replace(/\\/g, "/");
+  return value.replace(/\\/gu, "/");
 }
 
 function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
 }
 
 export function buildFdPathQuery(query: string): string {
@@ -15,7 +15,7 @@ export function buildFdPathQuery(query: string): string {
   }
 
   const hasTrailingSeparator = normalized.endsWith("/");
-  const trimmed = normalized.replace(/^\/+|\/+$/g, "");
+  const trimmed = normalized.replace(/^\/+|\/+$/gu, "");
   if (!trimmed) {
     return normalized;
   }

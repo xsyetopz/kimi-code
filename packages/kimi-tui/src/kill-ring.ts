@@ -6,7 +6,7 @@
  * (cycle through older entries).
  */
 export class KillRing {
-  private ring: string[] = [];
+  private readonly ring: string[] = [];
 
   /**
    * Add text to the kill ring.
@@ -29,7 +29,7 @@ export class KillRing {
 
   /** Get most recent entry without modifying the ring. */
   peek(): string | undefined {
-    return this.ring.length > 0 ? this.ring[this.ring.length - 1] : undefined;
+    return this.ring.length > 0 ? this.ring.at(-1) : undefined;
   }
 
   /** Move last entry to front (for yank-pop cycling). */

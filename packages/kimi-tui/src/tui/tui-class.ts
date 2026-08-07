@@ -1,56 +1,67 @@
+import process from "node:process";
 import type { Terminal } from "../terminal.ts";
-import { Container } from "./contracts.ts";
+import type { TerminalColorScheme } from "../terminal-colors.ts";
 import type { Component } from "./contracts.ts";
+import { Container } from "./contracts.ts";
+import {
+  consumeCellSizeResponse,
+  consumeOsc11BackgroundResponse,
+  consumeTerminalColorSchemeReport,
+  handleInput,
+  queryCellSize,
+} from "./inputHandlers.ts";
+import {
+  addInputListener,
+  dispatchInput,
+  onTerminalColorSchemeChange,
+  queryTerminalBackgroundColor,
+  queryTerminalColorScheme,
+  removeInputListener,
+  requestRender,
+  scheduleRender,
+  setTerminalColorSchemeNotifications,
+  start,
+  stop,
+} from "./lifecycle.ts";
 import type {
   InputListener,
   OverlayFocusRestoreState,
   OverlayStackEntry,
   PendingOsc11BackgroundQuery,
 } from "./overlay-shared.ts";
-import type { TerminalColorScheme } from "../terminal-colors.ts";
-import { setFocusInternal } from "./overlayFocus.ts";
-import { clearOverlayFocusRestore } from "./overlayFocus.ts";
-import { clearOverlayFocusRestoreFor } from "./overlayFocus.ts";
-import { resolveBlockedOverlayFocusResume } from "./overlayFocus.ts";
-import { getVisibleOverlayFocusRestore } from "./overlayFocus.ts";
-import { isOverlayFocusAncestor } from "./overlayFocus.ts";
-import { retargetOverlayPreFocus } from "./overlayFocus.ts";
-import { isComponentMounted } from "./overlayFocus.ts";
-import { containsComponent } from "./overlayFocus.ts";
-import { showOverlay } from "./overlayFocus.ts";
-import { hideOverlay } from "./overlayFocus.ts";
-import { hasOverlay } from "./overlayFocus.ts";
-import { isOverlayVisible } from "./overlayFocus.ts";
-import { getTopmostVisibleOverlay } from "./overlayFocus.ts";
-import { start } from "./lifecycle.ts";
-import { addInputListener } from "./lifecycle.ts";
-import { removeInputListener } from "./lifecycle.ts";
-import { onTerminalColorSchemeChange } from "./lifecycle.ts";
-import { setTerminalColorSchemeNotifications } from "./lifecycle.ts";
-import { queryCellSize } from "./inputHandlers.ts";
-import { stop } from "./lifecycle.ts";
-import { requestRender } from "./lifecycle.ts";
-import { scheduleRender } from "./lifecycle.ts";
-import { handleInput } from "./inputHandlers.ts";
-import { dispatchInput } from "./lifecycle.ts";
-import { consumeOsc11BackgroundResponse } from "./inputHandlers.ts";
-import { consumeTerminalColorSchemeReport } from "./inputHandlers.ts";
-import { consumeCellSizeResponse } from "./inputHandlers.ts";
-import { resolveOverlayLayout } from "./overlayLayout.ts";
-import { resolveAnchorRow } from "./overlayLayout.ts";
-import { resolveAnchorCol } from "./overlayLayout.ts";
-import { compositeOverlays } from "./overlayLayout.ts";
-import { unionKittyImageIds } from "./renderPipeline.ts";
-import { deleteKittyImages } from "./renderPipeline.ts";
-import { getKittyImageReservedRows } from "./renderPipeline.ts";
-import { expandChangedRangeForKittyImages } from "./renderPipeline.ts";
-import { deleteChangedKittyImages } from "./renderPipeline.ts";
-import { compositeLineAt } from "./overlayLayout.ts";
-import { extractCursorPosition } from "./renderPipeline.ts";
-import { doRender } from "./renderPipeline.ts";
-import { positionHardwareCursor } from "./renderPipeline.ts";
-import { queryTerminalBackgroundColor } from "./lifecycle.ts";
-import { queryTerminalColorScheme } from "./lifecycle.ts";
+import {
+  clearOverlayFocusRestore,
+  clearOverlayFocusRestoreFor,
+  containsComponent,
+  getTopmostVisibleOverlay,
+  getVisibleOverlayFocusRestore,
+  hasOverlay,
+  hideOverlay,
+  isComponentMounted,
+  isOverlayFocusAncestor,
+  isOverlayVisible,
+  resolveBlockedOverlayFocusResume,
+  retargetOverlayPreFocus,
+  setFocusInternal,
+  showOverlay,
+} from "./overlayFocus.ts";
+import {
+  compositeLineAt,
+  compositeOverlays,
+  resolveAnchorCol,
+  resolveAnchorRow,
+  resolveOverlayLayout,
+} from "./overlayLayout.ts";
+import {
+  deleteChangedKittyImages,
+  deleteKittyImages,
+  doRender,
+  expandChangedRangeForKittyImages,
+  extractCursorPosition,
+  getKittyImageReservedRows,
+  positionHardwareCursor,
+  unionKittyImageIds,
+} from "./renderPipeline.ts";
 
 export class TUI extends Container {
   public terminal: Terminal;
@@ -78,8 +89,8 @@ export class TUI extends Container {
   protected lastRenderAt = 0;
   protected cursorRow = 0; // Logical cursor row (end of rendered content)
   protected hardwareCursorRow = 0; // Actual terminal cursor row (may differ due to IME positioning)
-  protected showHardwareCursor = process.env["PI_HARDWARE_CURSOR"] === "1";
-  protected clearOnShrink = process.env["PI_CLEAR_ON_SHRINK"] === "1"; // Clear empty rows when content shrinks (default: off)
+  protected showHardwareCursor = process.env.PI_HARDWARE_CURSOR === "1";
+  protected clearOnShrink = process.env.PI_CLEAR_ON_SHRINK === "1"; // Clear empty rows when content shrinks (default: off)
   protected maxLinesRendered = 0; // Track terminal's working area (max lines ever rendered)
   protected previousViewportTop = 0; // Track previous viewport top for resize-aware cursor moves
   protected fullRedrawCount = 0;

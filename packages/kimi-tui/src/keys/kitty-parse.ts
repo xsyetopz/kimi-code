@@ -1,5 +1,5 @@
+import process from "node:process";
 import {
-  CODEPOINTS,
   FUNCTIONAL_CODEPOINTS,
   LOCK_MASK,
   MODIFIERS,
@@ -7,7 +7,6 @@ import {
   normalizeShiftedLetterIdentityCodepoint,
   SYMBOL_KEYS,
 } from "./key-id.ts";
-import { _kittyProtocolActive } from "./protocol-state.ts";
 
 export type KeyEventType = "press" | "repeat" | "release";
 
@@ -85,7 +84,7 @@ export function isKeyRepeat(data: string): boolean {
 
 function parseEventType(eventTypeStr: string | undefined): KeyEventType {
   if (!eventTypeStr) return "press";
-  const eventType = parseInt(eventTypeStr, 10);
+  const eventType = Number.parseInt(eventTypeStr, 10);
   if (eventType === 2) return "repeat";
   if (eventType === 3) return "release";
   return "press";
@@ -103,16 +102,18 @@ export function parseKittySequence(data: string): ParsedKittySequence | null {
   // With flag 2, event type is appended after modifier colon: 1=press, 2=repeat, 3=release
   // With flag 4, alternate keys are appended after codepoint with colons
   const csiUMatch = data.match(
-    /^\x1b\[(\d+)(?::(\d*))?(?::(\d+))?(?:;(\d+))?(?::(\d+))?u$/,
+    /^\x1b\[(\d+)(?::(\d*))?(?::(\d+))?(?:;(\d+))?(?::(\d+))?u$/u,
   );
   if (csiUMatch) {
-    const codepoint = parseInt(csiUMatch[1]!, 10);
+    const codepoint = Number.parseInt(csiUMatch[1]!, 10);
     const shiftedKey =
       csiUMatch[2] && csiUMatch[2].length > 0
-        ? parseInt(csiUMatch[2], 10)
+        ? Number.parseInt(csiUMatch[2], 10)
         : undefined;
-    const baseLayoutKey = csiUMatch[3] ? parseInt(csiUMatch[3], 10) : undefined;
-    const modValue = csiUMatch[4] ? parseInt(csiUMatch[4], 10) : 1;
+    const baseLayoutKey = csiUMatch[3]
+      ? Number.parseInt(csiUMatch[3], 10)
+      : undefined;
+    const modValue = csiUMatch[4] ? Number.parseInt(csiUMatch[4], 10) : 1;
     const eventType = parseEventType(csiUMatch[5]);
     _lastEventType = eventType;
     return {
@@ -125,9 +126,9 @@ export function parseKittySequence(data: string): ParsedKittySequence | null {
   }
 
   // Arrow keys with modifier: \x1b[1;<mod>A/B/C/D or \x1b[1;<mod>:<event>A/B/C/D
-  const arrowMatch = data.match(/^\x1b\[1;(\d+)(?::(\d+))?([ABCD])$/);
+  const arrowMatch = data.match(/^\x1b\[1;(\d+)(?::(\d+))?([ABCD])$/u);
   if (arrowMatch) {
-    const modValue = parseInt(arrowMatch[1]!, 10);
+    const modValue = Number.parseInt(arrowMatch[1]!, 10);
     const eventType = parseEventType(arrowMatch[2]);
     const arrowCodes: Record<string, number> = { A: -1, B: -2, C: -3, D: -4 };
     _lastEventType = eventType;
@@ -139,10 +140,10 @@ export function parseKittySequence(data: string): ParsedKittySequence | null {
   }
 
   // Functional keys: \x1b[<num>~ or \x1b[<num>;<mod>~ or \x1b[<num>;<mod>:<event>~
-  const funcMatch = data.match(/^\x1b\[(\d+)(?:;(\d+))?(?::(\d+))?~$/);
+  const funcMatch = data.match(/^\x1b\[(\d+)(?:;(\d+))?(?::(\d+))?~$/u);
   if (funcMatch) {
-    const keyNum = parseInt(funcMatch[1]!, 10);
-    const modValue = funcMatch[2] ? parseInt(funcMatch[2], 10) : 1;
+    const keyNum = Number.parseInt(funcMatch[1]!, 10);
+    const modValue = funcMatch[2] ? Number.parseInt(funcMatch[2], 10) : 1;
     const eventType = parseEventType(funcMatch[3]);
     const funcCodes: Record<number, number> = {
       2: FUNCTIONAL_CODEPOINTS.insert,
@@ -160,9 +161,9 @@ export function parseKittySequence(data: string): ParsedKittySequence | null {
   }
 
   // Home/End with modifier: \x1b[1;<mod>H/F or \x1b[1;<mod>:<event>H/F
-  const homeEndMatch = data.match(/^\x1b\[1;(\d+)(?::(\d+))?([HF])$/);
+  const homeEndMatch = data.match(/^\x1b\[1;(\d+)(?::(\d+))?([HF])$/u);
   if (homeEndMatch) {
-    const modValue = parseInt(homeEndMatch[1]!, 10);
+    const modValue = Number.parseInt(homeEndMatch[1]!, 10);
     const eventType = parseEventType(homeEndMatch[2]);
     const codepoint =
       homeEndMatch[3] === "H"
@@ -219,7 +220,7 @@ export function matchesKittySequence(
     const cp = normalizedCodepoint;
     const isLatinLetter = cp >= 97 && cp <= 122; // a-z
     const isKnownSymbol = SYMBOL_KEYS.has(String.fromCharCode(cp));
-    if (!isLatinLetter && !isKnownSymbol) return true;
+    if (!(isLatinLetter || isKnownSymbol)) return true;
   }
 
   return false;
@@ -228,10 +229,10 @@ export function matchesKittySequence(
 export function parseModifyOtherKeysSequence(
   data: string,
 ): ParsedModifyOtherKeysSequence | null {
-  const match = data.match(/^\x1b\[27;(\d+);(\d+)~$/);
+  const match = data.match(/^\x1b\[27;(\d+);(\d+)~$/u);
   if (!match) return null;
-  const modValue = parseInt(match[1]!, 10);
-  const codepoint = parseInt(match[2]!, 10);
+  const modValue = Number.parseInt(match[1]!, 10);
+  const codepoint = Number.parseInt(match[2]!, 10);
   return { codepoint, modifier: modValue - 1 };
 }
 
@@ -254,10 +255,10 @@ export function matchesModifyOtherKeys(
 
 export function isWindowsTerminalSession(): boolean {
   return (
-    Boolean(process.env["WT_SESSION"]) &&
-    !process.env["SSH_CONNECTION"] &&
-    !process.env["SSH_CLIENT"] &&
-    !process.env["SSH_TTY"]
+    Boolean(process.env.WT_SESSION) &&
+    !process.env.SSH_CONNECTION &&
+    !process.env.SSH_CLIENT &&
+    !process.env.SSH_TTY
   );
 }
 
@@ -270,7 +271,10 @@ export function isWindowsTerminalSession(): boolean {
  * Prefer explicit Kitty / CSI-u / modifyOtherKeys sequences whenever they are
  * available. Fall back to a Windows Terminal heuristic only for raw BS bytes.
  */
-export function matchesRawBackspace(data: string, expectedModifier: number): boolean {
+export function matchesRawBackspace(
+  data: string,
+  expectedModifier: number,
+): boolean {
   if (data === "\x7f") return expectedModifier === 0;
   if (data !== "\x08") return false;
   return isWindowsTerminalSession()
@@ -339,7 +343,7 @@ export function formatKeyNameWithModifiers(
   const effectiveMod = modifier & ~LOCK_MASK;
   const supportedModifierMask =
     MODIFIERS.shift | MODIFIERS.ctrl | MODIFIERS.alt | MODIFIERS.super;
-  if ((effectiveMod & ~supportedModifierMask) !== 0) return undefined;
+  if ((effectiveMod & ~supportedModifierMask) !== 0) return;
   if (effectiveMod & MODIFIERS.shift) mods.push("shift");
   if (effectiveMod & MODIFIERS.ctrl) mods.push("ctrl");
   if (effectiveMod & MODIFIERS.alt) mods.push("alt");
@@ -347,9 +351,7 @@ export function formatKeyNameWithModifiers(
   return mods.length > 0 ? `${mods.join("+")}+${keyName}` : keyName;
 }
 
-export function parseKeyId(
-  keyId: string,
-): {
+export function parseKeyId(keyId: string): {
   key: string;
   ctrl: boolean;
   shift: boolean;
@@ -357,7 +359,7 @@ export function parseKeyId(
   super: boolean;
 } | null {
   const parts = keyId.toLowerCase().split("+");
-  const key = parts[parts.length - 1];
+  const key = parts.at(-1);
   if (!key) return null;
   return {
     key,

@@ -5,11 +5,9 @@ import {
   parseTerminalColorSchemeReport,
 } from "../terminal-colors.ts";
 import { getCapabilities, setCellDimensions } from "../terminal-image.ts";
-import { isFocusable } from "./contracts.ts";
-import type { OverlayStackEntry } from "./overlay-shared.ts";
 import type { TUI } from "./tui-class.ts";
 
-export function queryCellSize(this: TUI, ): void {
+export function queryCellSize(this: TUI): void {
   // Only query if terminal supports images (cell size is only used for image rendering)
   if (!getCapabilities().images) {
     return;
@@ -105,7 +103,10 @@ export function handleInput(this: TUI, data: string): void {
   }
 }
 
-export function consumeOsc11BackgroundResponse(this: TUI, data: string): boolean {
+export function consumeOsc11BackgroundResponse(
+  this: TUI,
+  data: string,
+): boolean {
   if (this.pendingOsc11BackgroundReplies <= 0) {
     return false;
   }
@@ -129,7 +130,10 @@ export function consumeOsc11BackgroundResponse(this: TUI, data: string): boolean
   return true;
 }
 
-export function consumeTerminalColorSchemeReport(this: TUI, data: string): boolean {
+export function consumeTerminalColorSchemeReport(
+  this: TUI,
+  data: string,
+): boolean {
   const scheme = parseTerminalColorSchemeReport(data);
   if (!scheme) {
     return false;
@@ -143,13 +147,13 @@ export function consumeTerminalColorSchemeReport(this: TUI, data: string): boole
 
 export function consumeCellSizeResponse(this: TUI, data: string): boolean {
   // Response format: ESC [ 6 ; height ; width t
-  const match = data.match(/^\x1b\[6;(\d+);(\d+)t$/);
+  const match = data.match(/^\x1b\[6;(\d+);(\d+)t$/u);
   if (!match) {
     return false;
   }
 
-  const heightPx = parseInt(match[1]!, 10);
-  const widthPx = parseInt(match[2]!, 10);
+  const heightPx = Number.parseInt(match[1]!, 10);
+  const widthPx = Number.parseInt(match[2]!, 10);
   if (heightPx <= 0 || widthPx <= 0) {
     return true;
   }
@@ -160,4 +164,3 @@ export function consumeCellSizeResponse(this: TUI, data: string): boolean {
   this.requestRender();
   return true;
 }
-

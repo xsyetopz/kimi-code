@@ -10,7 +10,7 @@ function parseOsc8Hyperlink(
   ansiCode: string,
 ): ActiveHyperlink | null | undefined {
   if (!ansiCode.startsWith("\x1b]8;")) {
-    return undefined;
+    return;
   }
 
   const body = ansiCode.slice(4);
@@ -78,7 +78,7 @@ export class AnsiCodeTracker {
     }
 
     // Extract the parameters between \x1b[ and m
-    const match = ansiCode.match(/\x1b\[([\d;]*)m/);
+    const match = ansiCode.match(/\x1b\[([\d;]*)m/u);
     if (!match) return;
 
     const params = match[1]!;
@@ -108,7 +108,8 @@ export class AnsiCodeTracker {
           }
           i += 3;
           continue;
-        } else if (parts[i + 1] === "2" && parts[i + 4] !== undefined) {
+        }
+        if (parts[i + 1] === "2" && parts[i + 4] !== undefined) {
           // RGB color: 38;2;R;G;B or 48;2;R;G;B
           const colorCode = `${parts[i]};${parts[i + 1]};${parts[i + 2]};${parts[i + 3]};${parts[i + 4]}`;
           if (code === 38) {
@@ -270,7 +271,10 @@ export class AnsiCodeTracker {
   }
 }
 
-export function updateTrackerFromText(text: string, tracker: AnsiCodeTracker): void {
+export function updateTrackerFromText(
+  text: string,
+  tracker: AnsiCodeTracker,
+): void {
   let i = 0;
   while (i < text.length) {
     const ansiResult = extractAnsiCode(text, i);
@@ -294,7 +298,7 @@ export function extractAnsiCode(
   // CSI sequence: ESC [ ... m/G/K/H/J
   if (next === "[") {
     let j = pos + 2;
-    while (j < str.length && !/[mGKHJ]/.test(str[j]!)) j++;
+    while (j < str.length && !/[mGKHJ]/u.test(str[j]!)) j++;
     if (j < str.length)
       return { code: str.substring(pos, j + 1), length: j + 1 - pos };
     return null;

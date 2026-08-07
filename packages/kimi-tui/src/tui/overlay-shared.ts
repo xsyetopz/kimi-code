@@ -1,4 +1,5 @@
 /** Value that can be absolute (number) or percentage (string like "50%") */
+import process from "node:process";
 export type SizeValue = number | `${number}%`;
 
 /** Parse a SizeValue into absolute value given a reference size */
@@ -6,22 +7,20 @@ export function parseSizeValue(
   value: SizeValue | undefined,
   referenceSize: number,
 ): number | undefined {
-  if (value === undefined) return undefined;
+  if (value === undefined) return;
   if (typeof value === "number") return value;
   // Parse percentage string like "50%"
-  const match = value.match(/^(\d+(?:\.\d+)?)%$/);
+  const match = value.match(/^(\d+(?:\.\d+)?)%$/u);
   if (match) {
-    return Math.floor((referenceSize * parseFloat(match[1]!)) / 100);
+    return Math.floor((referenceSize * Number.parseFloat(match[1]!)) / 100);
   }
-  return undefined;
 }
 
 export function isTermuxSession(): boolean {
-  return Boolean(process.env["TERMUX_VERSION"]);
+  return Boolean(process.env.TERMUX_VERSION);
 }
 
-import type { Component } from "./contracts.ts";
-import type { OverlayOptions } from "./contracts.ts";
+import type { Component, OverlayOptions } from "./contracts.ts";
 
 export type OverlayStackEntry = {
   component: Component;
@@ -52,10 +51,14 @@ export type OverlayFocusRestoreState =
   | ActiveOverlayFocusRestoreState;
 export type OverlayFocusRestorePolicy = "clear" | "preserve";
 
-export type InputListenerResult = { consume?: boolean; data?: string } | undefined;
+export type InputListenerResult =
+  | { consume?: boolean; data?: string }
+  | undefined;
 export type InputListener = (data: string) => InputListenerResult;
 export type PendingOsc11BackgroundQuery = {
   settled: boolean;
-  resolve: ((rgb: import("../terminal-colors.ts").RgbColor | undefined) => void) | undefined;
+  resolve:
+    | ((rgb: import("../terminal-colors.ts").RgbColor | undefined) => void)
+    | undefined;
   timer: NodeJS.Timeout | undefined;
 };

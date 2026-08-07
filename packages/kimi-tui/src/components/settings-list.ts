@@ -35,15 +35,15 @@ export interface SettingsListOptions {
 }
 
 export class SettingsList implements Component {
-  private items: SettingItem[];
+  private readonly items: SettingItem[];
   private filteredItems: SettingItem[];
-  private theme: SettingsListTheme;
+  private readonly theme: SettingsListTheme;
   private selectedIndex = 0;
-  private maxVisible: number;
-  private onChange: (id: string, newValue: string) => void;
-  private onCancel: () => void;
-  private searchInput?: Input;
-  private searchEnabled: boolean;
+  private readonly maxVisible: number;
+  private readonly onChange: (id: string, newValue: string) => void;
+  private readonly onCancel: () => void;
+  private readonly searchInput?: Input;
+  private readonly searchEnabled: boolean;
 
   // Submenu state
   private submenuComponent: Component | null = null;
@@ -214,7 +214,7 @@ export class SettingsList implements Component {
     } else if (kb.matches(data, "tui.select.cancel")) {
       this.onCancel();
     } else if (this.searchEnabled && this.searchInput) {
-      const sanitized = data.replace(/ /g, "");
+      const sanitized = data.replace(/ /gu, "");
       if (!sanitized) {
         return;
       }

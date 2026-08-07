@@ -19,10 +19,10 @@ export class Loader extends Text {
   private intervalMs = DEFAULT_INTERVAL_MS;
   private currentFrame = 0;
   private intervalId: NodeJS.Timeout | null = null;
-  private ui: TUI | null = null;
+  private readonly ui: TUI | null = null;
   private renderIndicatorVerbatim = false;
-  private spinnerColorFn: (str: string) => string;
-  private messageColorFn: (str: string) => string;
+  private readonly spinnerColorFn: (str: string) => string;
+  private readonly messageColorFn: (str: string) => string;
   private message: string = "Loading...";
 
   constructor(

@@ -1,73 +1,4 @@
 // Low-level terminal I/O and text measurement primitives.
-export {
-  decodeKittyPrintable,
-  isKeyRelease,
-  isKeyRepeat,
-  isKittyProtocolActive,
-  Key,
-  type KeyEventType,
-  type KeyId,
-  matchesKey,
-  parseKey,
-  setKittyProtocolActive,
-} from "../keys.ts";
-export {
-  getKeybindings,
-  type Keybinding,
-  type KeybindingConflict,
-  type KeybindingDefinition,
-  type KeybindingDefinitions,
-  type Keybindings,
-  type KeybindingsConfig,
-  KeybindingsManager,
-  setKeybindings,
-  TUI_KEYBINDINGS,
-} from "../keybindings.ts";
-export {
-  StdinBuffer,
-  type StdinBufferEventMap,
-  type StdinBufferOptions,
-} from "../stdin-buffer.ts";
-export {
-  parseOsc11BackgroundColor,
-  parseTerminalColorSchemeReport,
-  type RgbColor,
-  type TerminalColorScheme,
-} from "../terminal-colors.ts";
-export {
-  allocateImageId,
-  type CellDimensions,
-  calculateImageRows,
-  deleteAllKittyImages,
-  deleteKittyImage,
-  detectCapabilities,
-  encodeITerm2,
-  encodeKitty,
-  getCapabilities,
-  getCellDimensions,
-  getGifDimensions,
-  getImageDimensions,
-  getJpegDimensions,
-  getPngDimensions,
-  getWebpDimensions,
-  hyperlink,
-  type ImageDimensions,
-  type ImageProtocol,
-  type ImageRenderOptions,
-  imageFallback,
-  renderImage,
-  resetCapabilitiesCache,
-  setCapabilities,
-  setCellDimensions,
-  type TerminalCapabilities,
-} from "../terminal-image.ts";
-export { ProcessTerminal, type Terminal } from "../terminal.ts";
-export {
-  sliceByColumn,
-  truncateToWidth,
-  visibleWidth,
-  wrapTextWithAnsi,
-} from "../utils.ts";
 
 // Pi-tui legacy framework (migrating under terminal/ over time).
 export {
@@ -115,6 +46,69 @@ export { TruncatedText } from "../components/truncated-text.ts";
 export type { EditorComponent } from "../editor-component.ts";
 export { type FuzzyMatch, fuzzyFilter, fuzzyMatch } from "../fuzzy.ts";
 export {
+  getKeybindings,
+  type Keybinding,
+  type KeybindingConflict,
+  type KeybindingDefinition,
+  type KeybindingDefinitions,
+  type Keybindings,
+  type KeybindingsConfig,
+  KeybindingsManager,
+  setKeybindings,
+  TUI_KEYBINDINGS,
+} from "../keybindings.ts";
+export {
+  decodeKittyPrintable,
+  isKeyRelease,
+  isKeyRepeat,
+  isKittyProtocolActive,
+  Key,
+  type KeyEventType,
+  type KeyId,
+  matchesKey,
+  parseKey,
+  setKittyProtocolActive,
+} from "../keys.ts";
+export {
+  StdinBuffer,
+  type StdinBufferEventMap,
+  type StdinBufferOptions,
+} from "../stdin-buffer.ts";
+export { ProcessTerminal, type Terminal } from "../terminal.ts";
+export {
+  parseOsc11BackgroundColor,
+  parseTerminalColorSchemeReport,
+  type RgbColor,
+  type TerminalColorScheme,
+} from "../terminal-colors.ts";
+export {
+  allocateImageId,
+  type CellDimensions,
+  calculateImageRows,
+  deleteAllKittyImages,
+  deleteKittyImage,
+  detectCapabilities,
+  encodeITerm2,
+  encodeKitty,
+  getCapabilities,
+  getCellDimensions,
+  getGifDimensions,
+  getImageDimensions,
+  getJpegDimensions,
+  getPngDimensions,
+  getWebpDimensions,
+  hyperlink,
+  type ImageDimensions,
+  type ImageProtocol,
+  type ImageRenderOptions,
+  imageFallback,
+  renderImage,
+  resetCapabilitiesCache,
+  setCapabilities,
+  setCellDimensions,
+  type TerminalCapabilities,
+} from "../terminal-image.ts";
+export {
   type Component,
   Container,
   CURSOR_MARKER,
@@ -128,3 +122,9 @@ export {
   type SizeValue,
   TUI,
 } from "../tui.ts";
+export {
+  sliceByColumn,
+  truncateToWidth,
+  visibleWidth,
+  wrapTextWithAnsi,
+} from "../utils.ts";

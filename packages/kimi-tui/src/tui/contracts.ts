@@ -1,3 +1,4 @@
+import process from "node:process";
 import { visibleWidth } from "../utils.ts";
 
 export interface Component {
@@ -90,22 +91,21 @@ export interface OverlayMargin {
 export type SizeValue = number | `${number}%`;
 
 /** Parse a SizeValue into absolute value given a reference size */
-function parseSizeValue(
+function _parseSizeValue(
   value: SizeValue | undefined,
   referenceSize: number,
 ): number | undefined {
-  if (value === undefined) return undefined;
+  if (value === undefined) return;
   if (typeof value === "number") return value;
   // Parse percentage string like "50%"
-  const match = value.match(/^(\d+(?:\.\d+)?)%$/);
+  const match = value.match(/^(\d+(?:\.\d+)?)%$/u);
   if (match) {
-    return Math.floor((referenceSize * parseFloat(match[1]!)) / 100);
+    return Math.floor((referenceSize * Number.parseFloat(match[1]!)) / 100);
   }
-  return undefined;
 }
 
-function isTermuxSession(): boolean {
-  return Boolean(process.env["TERMUX_VERSION"]);
+function _isTermuxSession(): boolean {
+  return Boolean(process.env.TERMUX_VERSION);
 }
 
 /**

@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import process from "node:process";
 
 export type ImageProtocol = "kitty" | "iterm2" | null;
 
@@ -68,16 +69,15 @@ function probeTmuxHyperlinks(): boolean {
 export function detectCapabilities(
   tmuxForwardsHyperlink: () => boolean = probeTmuxHyperlinks,
 ): TerminalCapabilities {
-  const termProgram = process.env["TERM_PROGRAM"]?.toLowerCase() || "";
-  const terminalEmulator =
-    process.env["TERMINAL_EMULATOR"]?.toLowerCase() || "";
-  const term = process.env["TERM"]?.toLowerCase() || "";
-  const colorTerm = process.env["COLORTERM"]?.toLowerCase() || "";
+  const termProgram = process.env.TERM_PROGRAM?.toLowerCase() || "";
+  const terminalEmulator = process.env.TERMINAL_EMULATOR?.toLowerCase() || "";
+  const term = process.env.TERM?.toLowerCase() || "";
+  const colorTerm = process.env.COLORTERM?.toLowerCase() || "";
   const hasTrueColorHint = colorTerm === "truecolor" || colorTerm === "24bit";
 
   // Emit OSC 8 hyperlinks only when tmux confirms it forwards.
   // Image protocols are unreliable under tmux, so leave `images: null`.
-  if (process.env["TMUX"] || term.startsWith("tmux")) {
+  if (process.env.TMUX || term.startsWith("tmux")) {
     return {
       images: null,
       trueColor: hasTrueColorHint,
@@ -90,36 +90,36 @@ export function detectCapabilities(
     return { images: null, trueColor: hasTrueColorHint, hyperlinks: false };
   }
 
-  if (process.env["KITTY_WINDOW_ID"] || termProgram === "kitty") {
+  if (process.env.KITTY_WINDOW_ID || termProgram === "kitty") {
     return { images: "kitty", trueColor: true, hyperlinks: true };
   }
 
   if (
     termProgram === "ghostty" ||
     term.includes("ghostty") ||
-    process.env["GHOSTTY_RESOURCES_DIR"]
+    process.env.GHOSTTY_RESOURCES_DIR
   ) {
     return { images: "kitty", trueColor: true, hyperlinks: true };
   }
 
-  if (process.env["WEZTERM_PANE"] || termProgram === "wezterm") {
+  if (process.env.WEZTERM_PANE || termProgram === "wezterm") {
     return { images: "kitty", trueColor: true, hyperlinks: true };
   }
 
   // Warp supports the Kitty graphics protocol and OSC 8 hyperlinks.
   if (
     termProgram === "warpterminal" ||
-    process.env["WARP_SESSION_ID"] ||
-    process.env["WARP_TERMINAL_SESSION_UUID"]
+    process.env.WARP_SESSION_ID ||
+    process.env.WARP_TERMINAL_SESSION_UUID
   ) {
     return { images: "kitty", trueColor: true, hyperlinks: true };
   }
 
-  if (process.env["ITERM_SESSION_ID"] || termProgram === "iterm.app") {
+  if (process.env.ITERM_SESSION_ID || termProgram === "iterm.app") {
     return { images: "iterm2", trueColor: true, hyperlinks: true };
   }
 
-  if (process.env["WT_SESSION"]) {
+  if (process.env.WT_SESSION) {
     return { images: null, trueColor: true, hyperlinks: true };
   }
 
@@ -431,13 +431,15 @@ export function getWebpDimensions(base64Data: string): ImageDimensions | null {
       const width = buffer.readUInt16LE(26) & 0x3fff;
       const height = buffer.readUInt16LE(28) & 0x3fff;
       return { widthPx: width, heightPx: height };
-    } else if (chunk === "VP8L") {
+    }
+    if (chunk === "VP8L") {
       if (buffer.length < 25) return null;
       const bits = buffer.readUInt32LE(21);
       const width = (bits & 0x3fff) + 1;
       const height = ((bits >> 14) & 0x3fff) + 1;
       return { widthPx: width, heightPx: height };
-    } else if (chunk === "VP8X") {
+    }
+    if (chunk === "VP8X") {
       if (buffer.length < 30) return null;
       const width =
         (buffer[24]! | (buffer[25]! << 8) | (buffer[26]! << 16)) + 1;

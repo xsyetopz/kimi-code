@@ -3,16 +3,13 @@ import {
   CODEPOINTS,
   FUNCTIONAL_CODEPOINTS,
   LEGACY_SEQUENCE_KEY_IDS,
-  MODIFIERS,
-  SYMBOL_KEYS,
   normalizeKittyFunctionalCodepoint,
   normalizeShiftedLetterIdentityCodepoint,
+  SYMBOL_KEYS,
 } from "./key-id.ts";
 import {
-  isWindowsTerminalSession,
   formatKeyNameWithModifiers,
-  matchesKittySequence,
-  matchesModifyOtherKeys,
+  isWindowsTerminalSession,
   parseKittySequence,
   parseModifyOtherKeysSequence,
 } from "./kitty-parse.ts";
@@ -73,7 +70,7 @@ function formatParsedKey(
   else if (SYMBOL_KEYS.has(String.fromCharCode(effectiveCodepoint)))
     keyName = String.fromCharCode(effectiveCodepoint);
 
-  if (!keyName) return undefined;
+  if (!keyName) return;
   return formatKeyNameWithModifiers(keyName, modifier);
 }
 
@@ -160,6 +157,4 @@ export function parseKey(data: string): string | undefined {
       return data;
     }
   }
-
-  return undefined;
 }

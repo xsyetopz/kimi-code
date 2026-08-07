@@ -1,4 +1,5 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
+import process from "node:process";
 import { describe, it } from "node:test";
 import type { Terminal as XtermTerminalType } from "@xterm/headless";
 import { Image } from "../src/components/image.ts";

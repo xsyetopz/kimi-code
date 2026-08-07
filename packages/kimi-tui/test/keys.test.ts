@@ -2,7 +2,8 @@
  * Tests for keyboard input handling
  */
 
-import assert from "node:assert";
+import assert from "node:assert/strict";
+import process from "node:process";
 import { describe, it } from "node:test";
 import {
   decodeKittyPrintable,

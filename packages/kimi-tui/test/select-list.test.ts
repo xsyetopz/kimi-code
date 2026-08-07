@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { SelectList } from "../src/components/select-list.ts";
 import { visibleWidth } from "../src/utils.ts";

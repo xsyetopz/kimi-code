@@ -2,7 +2,8 @@
  * Tests for terminal image detection and line handling
  */
 
-import assert from "node:assert";
+import assert from "node:assert/strict";
+import process from "node:process";
 import { describe, it } from "node:test";
 import { Image } from "../src/components/image.ts";
 import {

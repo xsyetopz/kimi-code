@@ -1,4 +1,4 @@
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { Chalk } from "chalk";
 import { TruncatedText } from "../src/components/truncated-text.ts";
@@ -45,7 +45,7 @@ describe("TruncatedText component", () => {
     assert.strictEqual(visibleWidth(lines[0]), 30);
 
     // Should contain ellipsis
-    const stripped = lines[0].replace(/\x1b\[[0-9;]*m/g, "");
+    const stripped = lines[0].replace(/\x1b\[[0-9;]*m/gu, "");
     assert.ok(stripped.includes("..."));
   });
 
@@ -89,7 +89,7 @@ describe("TruncatedText component", () => {
     assert.strictEqual(visibleWidth(lines[0]), 30);
 
     // Should NOT contain ellipsis
-    const stripped = lines[0].replace(/\x1b\[[0-9;]*m/g, "");
+    const stripped = lines[0].replace(/\x1b\[[0-9;]*m/gu, "");
     assert.ok(!stripped.includes("..."));
   });
 
@@ -110,7 +110,7 @@ describe("TruncatedText component", () => {
     assert.strictEqual(visibleWidth(lines[0]), 40);
 
     // Should only contain "First line"
-    const stripped = lines[0].replace(/\x1b\[[0-9;]*m/g, "").trim();
+    const stripped = lines[0].replace(/\x1b\[[0-9;]*m/gu, "").trim();
     assert.ok(stripped.includes("First line"));
     assert.ok(!stripped.includes("Second line"));
     assert.ok(!stripped.includes("Third line"));
@@ -126,7 +126,7 @@ describe("TruncatedText component", () => {
     assert.strictEqual(visibleWidth(lines[0]), 25);
 
     // Should contain ellipsis and not second line
-    const stripped = lines[0].replace(/\x1b\[[0-9;]*m/g, "");
+    const stripped = lines[0].replace(/\x1b\[[0-9;]*m/gu, "");
     assert.ok(stripped.includes("..."));
     assert.ok(!stripped.includes("Second line"));
   });

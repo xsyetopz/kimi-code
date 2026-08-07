@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { setKittyProtocolActive } from "./keys.ts";
 import { isNativeModifierPressed } from "./native-modifiers.ts";
@@ -23,26 +24,25 @@ export type KeyboardProtocolNegotiationSequence =
 export function parseKeyboardProtocolNegotiationSequence(
   sequence: string,
 ): KeyboardProtocolNegotiationSequence | undefined {
-  const kittyFlags = sequence.match(/^\x1b\[\?(\d+)u$/);
+  const kittyFlags = sequence.match(/^\x1b\[\?(\d+)u$/u);
   if (kittyFlags) {
     return { type: "kitty-flags", flags: Number.parseInt(kittyFlags[1]!, 10) };
   }
-  if (/^\x1b\[\?[\d;]*c$/.test(sequence)) {
+  if (/^\x1b\[\?[\d;]*c$/u.test(sequence)) {
     return { type: "device-attributes" };
   }
-  return undefined;
 }
 
 function isKeyboardProtocolNegotiationSequencePrefix(
   sequence: string,
 ): boolean {
-  return sequence === "\x1b[" || /^\x1b\[\?[\d;]*$/.test(sequence);
+  return sequence === "\x1b[" || /^\x1b\[\?[\d;]*$/u.test(sequence);
 }
 
 export function isAppleTerminalSession(): boolean {
   return (
     process.platform === "darwin" &&
-    process.env["TERM_PROGRAM"] === "Apple_Terminal"
+    process.env.TERM_PROGRAM === "Apple_Terminal"
   );
 }
 
@@ -118,8 +118,8 @@ export class ProcessTerminal implements Terminal {
   private stdinBuffer?: StdinBuffer;
   private stdinDataHandler?: (data: string) => void;
   private progressInterval?: ReturnType<typeof setInterval>;
-  private writeLogPath = (() => {
-    const env = process.env["PI_TUI_WRITE_LOG"] || "";
+  private readonly writeLogPath = (() => {
+    const env = process.env.PI_TUI_WRITE_LOG || "";
     if (!env) return "";
     try {
       if (fs.statSync(env).isDirectory()) {
@@ -146,7 +146,7 @@ export class ProcessTerminal implements Terminal {
     this.resizeHandler = onResize;
 
     // Save previous state and enable raw mode
-    this.wasRaw = process.stdin.isRaw || false;
+    this.wasRaw = process.stdin.isRaw;
     if (process.stdin.setRawMode) {
       process.stdin.setRawMode(true);
     }
@@ -211,7 +211,7 @@ export class ProcessTerminal implements Terminal {
 
     // Handler that pipes stdin data through the buffer
     this.stdinDataHandler = (data: string) => {
-      this.stdinBuffer!.process(data);
+      this.stdinBuffer?.process(data);
     };
   }
 
@@ -286,7 +286,6 @@ export class ProcessTerminal implements Terminal {
       this.setKeyboardProtocolNegotiationBuffer(sequence);
       return "pending";
     }
-    return undefined;
   }
 
   private setKeyboardProtocolNegotiationBuffer(sequence: string): void {
@@ -493,11 +492,11 @@ export class ProcessTerminal implements Terminal {
   }
 
   get columns(): number {
-    return process.stdout.columns || Number(process.env["COLUMNS"]) || 80;
+    return process.stdout.columns || Number(process.env.COLUMNS) || 80;
   }
 
   get rows(): number {
-    return process.stdout.rows || Number(process.env["LINES"]) || 24;
+    return process.stdout.rows || Number(process.env.LINES) || 24;
   }
 
   moveBy(lines: number): void {

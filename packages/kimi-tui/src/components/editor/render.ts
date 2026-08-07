@@ -36,10 +36,7 @@ export function render(this: Editor, width: number): string[] {
 
   // Clamp scroll offset to valid range
   const maxScrollOffset = Math.max(0, layoutLines.length - maxVisibleLines);
-  this.scrollOffset = Math.max(
-    0,
-    Math.min(this.scrollOffset, maxScrollOffset),
-  );
+  this.scrollOffset = Math.max(0, Math.min(this.scrollOffset, maxScrollOffset));
 
   // Get visible lines slice
   const visibleLines = layoutLines.slice(
@@ -139,4 +136,3 @@ export function render(this: Editor, width: number): string[] {
 
   return result;
 }
-

@@ -71,13 +71,14 @@ export function navigateHistory(this: Editor, direction: 1 | -1): void {
   }
 }
 
-export function exitHistoryBrowsing(this: Editor, ): void {
+export function exitHistoryBrowsing(this: Editor): void {
   this.historyIndex = -1;
   this.historyDraft = null;
   this.hostHistoryDraft = undefined;
 }
 
-export function setTextInternal(this: Editor, 
+export function setTextInternal(
+  this: Editor,
   text: string,
   cursorPlacement: "start" | "end" = "end",
 ): void {
@@ -97,4 +98,3 @@ export function setTextInternal(this: Editor,
     this.onChange(this.getText());
   }
 }
-

@@ -11,7 +11,7 @@ import { Loader } from "./loader.ts";
  * doWork(loader.signal).then(done);
  */
 export class CancellableLoader extends Loader {
-  private abortController = new AbortController();
+  private readonly abortController = new AbortController();
 
   /** Called when user presses Escape */
   onAbort?: () => void;

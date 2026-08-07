@@ -1,5 +1,5 @@
-const THAI_LAO_AM_REGEX = /[\u0e33\u0eb3]/;
-const THAI_LAO_AM_GLOBAL_REGEX = /[\u0e33\u0eb3]/g;
+const THAI_LAO_AM_REGEX = /[\u0e33\u0eb3]/u;
+const THAI_LAO_AM_GLOBAL_REGEX = /[\u0e33\u0eb3]/gu;
 
 export function normalizeTerminalOutput(str: string): string {
   if (!THAI_LAO_AM_REGEX.test(str)) return str;

@@ -1,7 +1,7 @@
 import type { AutocompleteProvider } from "../../autocomplete.ts";
 import type { Editor } from "./component.ts";
 
-export function getPaddingX(this: Editor, ): number {
+export function getPaddingX(this: Editor): number {
   return this.paddingX;
 }
 
@@ -15,11 +15,14 @@ export function setPaddingX(this: Editor, padding: number): void {
   }
 }
 
-export function getAutocompleteMaxVisible(this: Editor, ): number {
+export function getAutocompleteMaxVisible(this: Editor): number {
   return this.autocompleteMaxVisible;
 }
 
-export function setAutocompleteMaxVisible(this: Editor, maxVisible: number): void {
+export function setAutocompleteMaxVisible(
+  this: Editor,
+  maxVisible: number,
+): void {
   const newMaxVisible = Number.isFinite(maxVisible)
     ? Math.max(3, Math.min(20, Math.floor(maxVisible)))
     : 5;
@@ -36,13 +39,19 @@ export function setDisablePasteBurst(this: Editor, disabled: boolean): void {
   }
 }
 
-export function setAutocompleteProvider(this: Editor, provider: AutocompleteProvider): void {
+export function setAutocompleteProvider(
+  this: Editor,
+  provider: AutocompleteProvider,
+): void {
   this.cancelAutocomplete();
   this.autocompleteProvider = provider;
   this.setAutocompleteTriggerCharacters(provider.triggerCharacters ?? []);
 }
 
-export function setHistoryFilter(this: Editor, filter: ((entry: string) => boolean) | null): void {
+export function setHistoryFilter(
+  this: Editor,
+  filter: ((entry: string) => boolean) | null,
+): void {
   this.historyFilter = filter;
 }
 
@@ -58,11 +67,11 @@ export function addToHistory(this: Editor, text: string): void {
   }
 }
 
-export function invalidate(this: Editor, ): void {
+export function invalidate(this: Editor): void {
   // No cached state to invalidate currently
 }
 
-export function getText(this: Editor, ): string {
+export function getText(this: Editor): string {
   return this.state.lines.join("\n");
 }
 
@@ -78,15 +87,15 @@ export function expandPasteMarkers(this: Editor, text: string): string {
   return result;
 }
 
-export function getExpandedText(this: Editor, ): string {
+export function getExpandedText(this: Editor): string {
   return this.expandPasteMarkers(this.state.lines.join("\n"));
 }
 
-export function getLines(this: Editor, ): string[] {
+export function getLines(this: Editor): string[] {
   return [...this.state.lines];
 }
 
-export function getCursor(this: Editor, ): { line: number; col: number } {
+export function getCursor(this: Editor): { line: number; col: number } {
   return { line: this.state.cursorLine, col: this.state.cursorCol };
 }
 
@@ -111,7 +120,6 @@ export function insertTextAtCursor(this: Editor, text: string): void {
   this.insertTextAtCursorInternal(text);
 }
 
-export function isShowingAutocomplete(this: Editor, ): boolean {
+export function isShowingAutocomplete(this: Editor): boolean {
   return this.autocompleteState !== null;
 }
-

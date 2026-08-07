@@ -95,7 +95,7 @@ export function truncateToWidth(
   const hasAnsi = text.includes("\x1b");
   const hasTabs = text.includes("\t");
 
-  if (!hasAnsi && !hasTabs) {
+  if (!(hasAnsi || hasTabs)) {
     for (const { segment } of graphemeSegmenter.segment(text)) {
       const width = graphemeWidth(segment);
       if (keepContiguousPrefix && keptWidth + width <= targetWidth) {

@@ -13,8 +13,8 @@ type RenderCache = {
  */
 export class Box implements Component {
   children: Component[] = [];
-  private paddingX: number;
-  private paddingY: number;
+  private readonly paddingX: number;
+  private readonly paddingY: number;
   private bgFn?: (text: string) => string;
 
   // Cache for rendered output
@@ -60,7 +60,7 @@ export class Box implements Component {
   ): boolean {
     const cache = this.cache;
     return (
-      !!cache &&
+      Boolean(cache) &&
       cache.width === width &&
       cache.bgSample === bgSample &&
       cache.childLines.length === childLines.length &&
@@ -101,7 +101,7 @@ export class Box implements Component {
 
     // Check cache validity
     if (this.matchCache(width, childLines, bgSample)) {
-      return this.cache!.lines;
+      return this.cache?.lines;
     }
 
     // Apply background and padding

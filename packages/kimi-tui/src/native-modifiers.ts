@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import * as path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const cjsRequire = createRequire(import.meta.url);
@@ -25,9 +26,9 @@ function loadNativeModifiersHelper(): NativeModifiersHelper | undefined {
   if (nativeModifiersHelper !== undefined)
     return nativeModifiersHelper ?? undefined;
   nativeModifiersHelper = null;
-  if (process.platform !== "darwin") return undefined;
+  if (process.platform !== "darwin") return;
   const arch = process.arch;
-  if (arch !== "x64" && arch !== "arm64") return undefined;
+  if (arch !== "x64" && arch !== "arm64") return;
 
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const nativePath = path.join(
@@ -54,8 +55,6 @@ function loadNativeModifiersHelper(): NativeModifiersHelper | undefined {
       // Try the next possible packaging location.
     }
   }
-
-  return undefined;
 }
 
 export function isNativeModifierPressed(key: ModifierKey): boolean {
