@@ -11,7 +11,7 @@ import { Error2 } from '#/_base/errors/errors';
 
 import { IOAuthService } from '#/app/auth/auth';
 import { AuthErrors } from '#/app/auth/errors';
-import { getProviderAuthIntegration } from '#/app/auth/providerAuth';
+import { getProviderAuthIntegration, type ProviderTokenProvider } from '#/app/auth/providerAuth';
 import { nonEmpty } from '#/kosong/model/modelAuth';
 import { IModelOAuthTokens } from '#/kosong/model/modelOAuth';
 import type { OAuthRef } from '#/kosong/provider/provider';
@@ -60,6 +60,20 @@ export class ModelOAuthTokenAdapter implements IModelOAuthTokens {
       options?.force === true ? { force: true } : undefined,
     );
     return token.trim().length === 0 ? undefined : token;
+  }
+
+  async getExternalRequestHeaders(
+    provider: string,
+    providerType?: string,
+  ): Promise<Record<string, string> | undefined> {
+    if (
+      getProviderAuthIntegration(provider, providerType)?.kind !== 'external-oauth'
+    ) {
+      return undefined;
+    }
+    const tokenProvider = this.oauth.resolveTokenProvider(provider);
+    if (tokenProvider === undefined) return undefined;
+    return (tokenProvider as ProviderTokenProvider).getRequestHeaders?.();
   }
 }
 

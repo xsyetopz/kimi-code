@@ -36,6 +36,15 @@ export interface IModelOAuthTokens {
     providerType?: string,
     options?: { readonly force?: boolean },
   ): Promise<string | undefined>;
+
+  /**
+   * Resolve provider-owned per-request headers when external OAuth is active
+   * (for example Codex `ChatGPT-Account-Id`).
+   */
+  getExternalRequestHeaders?(
+    provider: string,
+    providerType?: string,
+  ): Promise<Record<string, string> | undefined>;
 }
 
 export const IModelOAuthTokens: ServiceIdentifier<IModelOAuthTokens> =

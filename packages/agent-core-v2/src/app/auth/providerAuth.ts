@@ -43,6 +43,11 @@ export interface ProviderTokenProvider {
    * token provider; readiness checks must not manufacture a protocol for them.
    */
   getCachedAccessToken?(): Promise<string | undefined>;
+  /**
+   * Optional per-request headers for provider-owned OAuth (for example Codex
+   * org subscriptions need `ChatGPT-Account-Id`).
+   */
+  getRequestHeaders?(): Promise<Record<string, string> | undefined>;
 }
 
 /**

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { TokenInfo, TokenStorage } from "@moonshot-ai/kimi-code-oauth";
 
 import { CodexAuthAdapter } from "#/app/auth/codexAuthAdapter";
+import { extractAccountIdFromTokens } from "#/app/auth/codexAccountId";
 
 class MemoryTokenStorage implements TokenStorage {
   token: TokenInfo | undefined;
@@ -25,6 +26,12 @@ class MemoryTokenStorage implements TokenStorage {
 }
 
 const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+function createTestJwt(payload: Record<string, unknown>): string {
+  const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url");
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${header}.${body}.sig`;
+}
 
 describe("CodexAuthAdapter", () => {
   it("starts Codex device authorization with the official client id", async () => {
@@ -142,6 +149,59 @@ describe("CodexAuthAdapter", () => {
         }).toString(),
       }),
     );
+  });
+
+  it("persists ChatGPT account id from OAuth id_token and exposes request headers", async () => {
+    const storage = new MemoryTokenStorage();
+    let releaseSleep: (() => void) | undefined;
+    const idToken = createTestJwt({ chatgpt_account_id: "org-acc-42" });
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({
+          device_auth_id: "device-auth-id",
+          user_code: "ABCD-1234",
+          interval: 1,
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          authorization_code: "auth-code",
+          code_verifier: "code-verifier",
+        }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          id_token: idToken,
+          access_token: "codex-access-token",
+          refresh_token: "codex-refresh-token",
+          expires_in: 3600,
+        }),
+      );
+    const adapter = new CodexAuthAdapter({
+      storage,
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      now: () => 1_000_000,
+      sleep: () =>
+        new Promise<void>((resolve) => {
+          releaseSleep = resolve;
+        }),
+    });
+
+    await adapter.startLogin("openai");
+    releaseSleep?.();
+    await flush();
+
+    expect(storage.token?.accountId).toBe("org-acc-42");
+    expect(
+      extractAccountIdFromTokens({
+        id_token: createTestJwt({ chatgpt_account_id: "from-id-token" }),
+        access_token: createTestJwt({ chatgpt_account_id: "from-access-token" }),
+      }),
+    ).toBe("from-id-token");
+    await expect(
+      adapter.resolveTokenProvider("openai")?.getRequestHeaders?.(),
+    ).resolves.toEqual({ "ChatGPT-Account-Id": "org-acc-42" });
   });
 
   it("refreshes an expired Codex access token", async () => {

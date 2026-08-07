@@ -21,6 +21,7 @@ import {
   toDeviceOAuthFlowStart,
   type DeviceOAuthFlow,
 } from "./deviceOAuthHelpers";
+import { extractAccountIdFromTokens } from "./codexAccountId";
 import type {
   OAuthFlowSnapshot,
   OAuthFlowStart,
@@ -45,6 +46,7 @@ const DEFAULT_TOKEN_EXPIRES_SEC = 3600;
 const REFRESH_SKEW_MS = 60_000;
 /** Codex device-flow polling safety margin (OpenCode Codex plugin). */
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3_000;
+const CODEX_ACCOUNT_ID_HEADER = "ChatGPT-Account-Id";
 const STORAGE_NAME = "openai-codex";
 const SCOPE = "openid profile email offline_access";
 
@@ -91,6 +93,7 @@ export class CodexAuthAdapter implements ProviderAuthAdapter {
     this.tokenProvider = {
       getAccessToken: (options) => this.accessToken(options?.force === true),
       getCachedAccessToken: () => this.cachedAccessToken(),
+      getRequestHeaders: () => this.requestHeaders(),
     };
   }
 
@@ -273,11 +276,19 @@ export class CodexAuthAdapter implements ProviderAuthAdapter {
     return token.expiresAt * 1000 > this.now() ? token.accessToken : undefined;
   }
 
+  private async requestHeaders(): Promise<Record<string, string> | undefined> {
+    const token = await this.storage.load(STORAGE_NAME);
+    if (token?.accountId === undefined || token.accountId === "") return undefined;
+    return { [CODEX_ACCOUNT_ID_HEADER]: token.accountId };
+  }
+
   private async saveToken(
     token: TokenResponse,
     existing?: TokenInfo,
   ): Promise<void> {
     const expiresIn = token.expires_in ?? DEFAULT_TOKEN_EXPIRES_SEC;
+    const accountId =
+      extractAccountIdFromTokens(token) ?? existing?.accountId;
     const stored: TokenInfo = {
       accessToken: token.access_token ?? existing?.accessToken ?? "",
       refreshToken: token.refresh_token ?? existing?.refreshToken ?? "",
@@ -285,6 +296,7 @@ export class CodexAuthAdapter implements ProviderAuthAdapter {
       expiresIn,
       scope: SCOPE,
       tokenType: "Bearer",
+      accountId,
     };
     await this.storage.save(STORAGE_NAME, stored);
   }

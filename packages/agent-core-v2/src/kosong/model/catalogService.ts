@@ -589,7 +589,14 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
           providerType,
           { force: options?.force === true },
         );
-        return { apiKey: apiKey ?? fallbackApiKey };
+        const headers = await tokens.getExternalRequestHeaders?.(
+          providerName,
+          providerType,
+        );
+        return {
+          apiKey: apiKey ?? fallbackApiKey,
+          headers,
+        };
       },
     };
   }
