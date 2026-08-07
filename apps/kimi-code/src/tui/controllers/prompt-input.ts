@@ -1,4 +1,4 @@
-import type { PromptPart } from "@moonshot-ai/kimi-code-sdk";
+import type { PromptPart, Session } from "@moonshot-ai/kimi-code-sdk";
 
 import {
   appendInputHistory,
@@ -9,6 +9,7 @@ import { getInputHistoryFile } from "#/utils/paths";
 import * as slashCommands from "../commands/dispatch";
 import type { SlashCommandHost } from "../commands/dispatch";
 import type { KimiSlashCommand } from "../commands";
+import { LLM_NOT_SET_MESSAGE } from "../constant/kimi-tui";
 import { ShellRunComponent } from "../components/messages/shell-run";
 import {
   routePromptEditorInput,
@@ -21,13 +22,18 @@ import {
 } from "../renderer/prompt-editor-state";
 import type { InkOverlayState } from "../renderer/ink/overlay-state";
 import { currentTheme } from "../theme";
-import type { ShellRunViewState, TranscriptEntry } from "../types";
+import type { AppState, ShellRunViewState, TranscriptEntry } from "../types";
 import { formatErrorMessage } from "../utils/event-payload";
+import type { ImageAttachmentStore } from "../utils/image-attachment-store";
+import { extractMediaAttachments } from "../utils/image-placeholder";
+import { formatBashOutputForDisplay } from "../utils/shell-output";
 import { markTranscriptComponent } from "../utils/transcript-component-metadata";
 import { nextTranscriptId } from "../utils/transcript-id";
 
+import type { BtwPanelController } from "./btw-panel";
 import type { EditorKeyboardController } from "./editor-keyboard";
 import type { InkDialogsController } from "./ink-dialogs";
+import type { MessageQueueController } from "./message-queue";
 import type { ShellOutputStreamEntry } from "./presentation-state";
 
 interface EnqueueMessageOptions {
@@ -40,7 +46,11 @@ export interface PromptInputHost extends SlashCommandHost {
   readonly inkOverlay: InkOverlayState;
   readonly inkDialogsController: InkDialogsController;
   readonly editorKeyboard: EditorKeyboardController;
+  readonly btwPanelController: BtwPanelController;
+  readonly messageQueueController: MessageQueueController;
   readonly shellOutputStreams: Map<string, ShellOutputStreamEntry>;
+  readonly engineV2: boolean;
+  readonly imageStore: ImageAttachmentStore;
 
   updateInkRenderer(): void;
   updateEditorBorderHighlight(text?: string): void;
@@ -51,13 +61,9 @@ export interface PromptInputHost extends SlashCommandHost {
     mode?: "prompt" | "bash",
   ): void;
   updateQueueDisplay(): void;
-  finishShellOutput(
-    commandId: string,
-    stdout: string,
-    stderr: string,
-    isError?: boolean,
-    backgrounded?: boolean,
-  ): void;
+  ensureSession(): Promise<Session | undefined>;
+  showError(message: string): void;
+  setAppState(patch: Partial<AppState>): void;
   syncShellRunTranscriptEntry(
     entryId: string,
     data: ShellRunViewState,
@@ -312,7 +318,7 @@ export class PromptInputController {
 
     void session.runShellCommand(command, { commandId }).then(
       ({ stdout, stderr, isError, backgrounded }) => {
-        this.host.finishShellOutput(
+        this.finishShellOutput(
           commandId,
           stdout,
           stderr,
@@ -322,10 +328,112 @@ export class PromptInputController {
       },
       (error: unknown) => {
         const message = formatErrorMessage(error);
-        this.host.finishShellOutput(commandId, "", message, true);
+        this.finishShellOutput(commandId, "", message, true);
         this.host.showError(`Shell command failed: ${message}`);
       },
     );
+  }
+
+  finishShellOutput(
+    commandId: string,
+    stdout: string,
+    stderr: string,
+    isError?: boolean,
+    backgrounded?: boolean,
+  ): void {
+    const stream = this.host.shellOutputStreams.get(commandId);
+    if (stream === undefined) return;
+    if (backgrounded === true) {
+      // The command was moved to the background; detachRunningShellCommand owns
+      // the UI and the model notification, so there is nothing to render here.
+      return;
+    }
+    stream.component.finish(stdout, stderr, isError);
+    // Keep the transcript entry's metadata in sync for anything that reads it
+    // (export / copy). The component renders itself.
+    stream.entry.content = formatBashOutputForDisplay(stdout, stderr, isError);
+    this.host.shellOutputStreams.delete(commandId);
+    // When the last shell command finishes, leave the shell streaming phase,
+    // release one queued message (if any), and refresh the activity pane.
+    if (this.host.shellOutputStreams.size === 0) {
+      this.host.setAppState({ streamingPhase: "idle" });
+      this.host.messageQueueController.drainOneQueuedMessage();
+    }
+  }
+
+  handleShellOutput(event: {
+    commandId: string;
+    update: { kind: string; text?: string };
+  }): void {
+    const stream = this.host.shellOutputStreams.get(event.commandId);
+    if (stream === undefined) return;
+    const text = event.update.text ?? "";
+    if (text.length === 0) return;
+    stream.component.append(text);
+  }
+
+  handleShellStarted(event: { commandId: string; taskId: string }): void {
+    const stream = this.host.shellOutputStreams.get(event.commandId);
+    if (stream === undefined) return;
+    this.host.shellOutputStreams.set(event.commandId, {
+      ...stream,
+      taskId: event.taskId,
+    });
+  }
+
+  cancelRunningShellCommand(): void {
+    const session = this.host.session;
+    if (session === undefined) return;
+    for (const commandId of this.host.shellOutputStreams.keys()) {
+      void session.cancelShellCommand(commandId).catch((error: unknown) => {
+        this.host.showError(
+          `Failed to cancel shell command: ${formatErrorMessage(error)}`,
+        );
+      });
+    }
+  }
+
+  async sendNormalUserInput(text: string): Promise<void> {
+    if (this.host.btwPanelController.sendUserInput(text)) return;
+    if (this.host.state.appState.model.trim().length === 0) {
+      this.host.showError(LLM_NOT_SET_MESSAGE);
+      return;
+    }
+    let extraction: ReturnType<typeof extractMediaAttachments>;
+    try {
+      // Pasted videos are copied into the cache and expand to a `file://`
+      // `video_url` part; the engine resolves (uploads or degrades) them
+      // inside the turn, so submission stays fully synchronous.
+      extraction = extractMediaAttachments(text, this.host.imageStore);
+    } catch (error) {
+      // A video cache copy failed (unwritable cache dir, vanished source…);
+      // nothing was dispatched.
+      this.host.showError(
+        `Failed to prepare media attachment: ${formatErrorMessage(error)}`,
+      );
+      return;
+    }
+    if (!this.validateMediaCapabilities(extraction)) return;
+    let session = this.host.session;
+    if (session === undefined) {
+      if (!this.host.engineV2) {
+        this.host.showError(LLM_NOT_SET_MESSAGE);
+        return;
+      }
+      session = await this.host.ensureSession();
+      if (session === undefined) return;
+    }
+    if (extraction.hasMedia) {
+      this.host.messageQueueController.sendMessage(session, text, {
+        hasMedia: true,
+        parts: extraction.parts,
+        imageAttachmentIds: extraction.imageAttachmentIds,
+      });
+    } else {
+      this.host.messageQueueController.sendMessage(session, text);
+    }
+    this.host.updateQueueDisplay();
+    this.host.state.ui.requestRender();
   }
 
   validateMediaCapabilities(extraction: {

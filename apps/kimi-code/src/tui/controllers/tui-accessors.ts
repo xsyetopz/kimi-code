@@ -69,7 +69,7 @@ export interface TuiAccessorsHost {
   exitForegroundTask: ((exitCode: number) => Promise<void>) | undefined;
 
   updateInkRenderer(): void;
-  updateEditorBorderHighlight(): void;
+  updateEditorBorderHighlight(text?: string): void;
   updateActivityPane(): void;
   updateQueueDisplay(): void;
   setupAutocomplete(): void;

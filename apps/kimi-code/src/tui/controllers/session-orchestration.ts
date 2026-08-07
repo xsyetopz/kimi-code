@@ -5,7 +5,7 @@ import type {
   KimiHarness,
   Session,
 } from "@moonshot-ai/kimi-code-sdk";
-import { effectiveModelAlias } from "@moonshot-ai/kimi-code-sdk";
+import { effectiveModelAlias, log } from "@moonshot-ai/kimi-code-sdk";
 
 import { copyTextToClipboard } from "#/utils/clipboard/clipboard-text";
 import { quoteShellArg } from "#/utils/shell-quote";
@@ -16,7 +16,9 @@ import type { SessionRow } from "../components/dialogs/session-picker";
 import {
   LLM_NOT_SET_MESSAGE,
   NO_ACTIVE_SESSION_MESSAGE,
+  PRODUCT_NAME,
 } from "../constant/kimi-tui";
+import { MAX_TERMINAL_TITLE_LENGTH } from "../constant/terminal";
 import { createApprovalRequestHandler } from "../reverse-rpc/approval/handler";
 import type { ApprovalController } from "../reverse-rpc/approval/controller";
 import { createQuestionAskHandler } from "../reverse-rpc/question/handler";
@@ -26,10 +28,14 @@ import type { AppState, KimiTUIOptions } from "../types";
 import type { TUIState } from "../tui-state";
 import { formatErrorMessage } from "../utils/event-payload";
 import { REPLAY_TURN_LIMIT } from "../utils/message-replay";
+import { sessionRowsForPicker } from "../utils/session-picker-rows";
 import { thinkingEffortFromConfig } from "../utils/thinking-config";
 
+import type { BtwPanelController } from "./btw-panel";
 import type { SessionEventHandler } from "./session-event-handler";
 import type { SessionReplayRenderer } from "./session-replay";
+import type { StreamingUIController } from "./streaming-ui";
+import type { TasksBrowserController } from "./tasks-browser";
 
 type MutableCreateSessionOptions = {
   -readonly [P in keyof CreateSessionOptions]: CreateSessionOptions[P];
@@ -51,17 +57,21 @@ export interface SessionOrchestrationHost {
   readonly questionController: QuestionController;
   readonly sessionEventHandler: SessionEventHandler;
   readonly sessionReplay: SessionReplayRenderer;
+  readonly streamingUI: StreamingUIController;
+  readonly tasksBrowserController: TasksBrowserController;
+  readonly btwPanelController: BtwPanelController;
+  aborted: boolean;
 
   setAppState(patch: Partial<AppState>): void;
   showError(message: string): void;
   showStatus(message: string, color?: ColorToken): void;
-  resetSessionRuntime(): void;
   refreshSkillCommands(session?: SkillListSession): Promise<void>;
   refreshPluginCommands(session?: Session): Promise<void>;
   showSessionWarnings(session: Session): Promise<void>;
   clearTranscriptAndRedraw(): void;
-  updateTerminalTitle(): void;
   hideSessionPicker(): void;
+  hasSessionContent(): boolean;
+  updateQueueDisplay(): void;
   appendApprovalTranscriptEntry(
     request: ApprovalRequest,
     response: ApprovalResponse,
@@ -73,6 +83,61 @@ export class SessionOrchestrationController {
   private ensureSessionPromise: Promise<Session | undefined> | null = null;
 
   constructor(private readonly host: SessionOrchestrationHost) {}
+
+  async fetchSessions(
+    scope: "cwd" | "all" = this.host.state.sessionsScope,
+  ): Promise<void> {
+    this.host.state.loadingSessions = true;
+    this.host.state.sessionsScope = scope;
+    try {
+      const sessions =
+        scope === "all"
+          ? await this.host.harness.listSessions({})
+          : await this.host.harness.listSessions({
+              workDir: this.host.state.appState.workDir,
+            });
+      this.host.state.sessions = sessionRowsForPicker(
+        sessions,
+        this.host.state.appState.sessionId,
+        this.host.hasSessionContent(),
+      );
+    } catch (error) {
+      // The picker must keep working (it renders the empty state), but a
+      // swallowed failure surfaces as a misleading "No sessions found." —
+      // keep a log trail so the real error stays discoverable.
+      log.warn("failed to fetch sessions for picker", { error: String(error) });
+    } finally {
+      this.host.state.loadingSessions = false;
+    }
+  }
+
+  updateTerminalTitle(): void {
+    const trimmed = this.host.state.appState.sessionTitle?.trim() ?? "";
+    const label =
+      trimmed.length > 0
+        ? trimmed.slice(0, MAX_TERMINAL_TITLE_LENGTH)
+        : PRODUCT_NAME;
+    this.host.state.terminal.setTitle(label);
+  }
+
+  resetSessionRuntime(): void {
+    this.host.aborted = false;
+    this.host.streamingUI.discardPending();
+    this.host.state.queuedMessages = [];
+    this.host.state.swarmModeEntry = undefined;
+    this.host.streamingUI.resetToolCallState();
+    this.host.streamingUI.resetToolUi();
+    this.host.sessionEventHandler.resetRuntimeState();
+    this.host.tasksBrowserController.close();
+    this.host.btwPanelController.clear();
+    this.host.state.footer.setBackgroundCounts({ bashTasks: 0, agentTasks: 0 });
+    this.host.streamingUI.setTodoList([]);
+    this.host.streamingUI.setTurnId(undefined);
+    this.host.setAppState({ mcpServersSummary: null });
+    this.host.streamingUI.setStep(0);
+    this.host.streamingUI.resetLiveText();
+    this.host.updateQueueDisplay();
+  }
 
   requireSession(): Session {
     if (this.host.session === undefined) {
@@ -236,7 +301,7 @@ export class SessionOrchestrationController {
       this.host.showError(`Failed to start a session: ${msg}`);
       return;
     }
-    this.host.resetSessionRuntime();
+    this.resetSessionRuntime();
     await this.setSession(session);
     this.host.setAppState({ sessionId: session.id });
     try {
@@ -439,10 +504,10 @@ export class SessionOrchestrationController {
     session: Session,
     statusMessage: string,
   ): Promise<void> {
-    this.host.resetSessionRuntime();
+    this.resetSessionRuntime();
     await this.setSession(session);
     await this.syncRuntimeState(session);
-    this.host.updateTerminalTitle();
+    this.updateTerminalTitle();
     try {
       await this.host.refreshSkillCommands(this.host.session);
       await this.host.refreshPluginCommands(this.host.session);
@@ -478,11 +543,11 @@ export class SessionOrchestrationController {
     this.host.approvalController.cancelAll("reloading session");
     this.host.questionController.cancelAll("reloading session");
 
-    this.host.resetSessionRuntime();
+    this.resetSessionRuntime();
     this.host.session = session;
     this.registerSessionHandlers(session);
     await this.syncRuntimeState(session);
-    this.host.updateTerminalTitle();
+    this.updateTerminalTitle();
     try {
       await this.host.refreshSkillCommands(session);
       await this.host.refreshPluginCommands(session);
@@ -513,7 +578,7 @@ export class SessionOrchestrationController {
       return;
     }
 
-    this.host.resetSessionRuntime();
+    this.resetSessionRuntime();
     await this.setSession(session);
     this.host.setAppState({ sessionId: session.id });
     try {

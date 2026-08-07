@@ -16,19 +16,25 @@ import {
 } from "#/tui/components/chrome/moon-loader";
 import { ShellRunComponent } from "#/tui/components/messages/shell-run";
 import { NO_ACTIVE_SESSION_MESSAGE } from "#/tui/constant/kimi-tui";
+import { TRANSCRIPT_EXPAND_TURNS } from "#/tui/utils/transcript-window";
 import {
   currentTheme,
   getBuiltInPalette,
+  getColorPalette,
   isBuiltInTheme,
   type ResolvedTheme,
+  type ThemeName,
 } from "#/tui/theme";
 import { resolveTerminalActivityMode } from "#/tui/renderer/terminal-view-state";
 import { formatErrorMessage } from "#/tui/utils/event-payload";
 import { pickForegroundTasks } from "#/tui/utils/foreground-task";
 import { installTerminalThemeTracking } from "#/tui/utils/terminal-theme";
+import { isExpandable } from "#/tui/utils/component-capabilities";
+import type { AppState } from "../types";
 import type { TUIState } from "../tui-state";
 import type { TranscriptEntry } from "../types";
 import type { SessionEventHandler } from "./session-event-handler";
+import type { TranscriptCoordinator } from "./transcript-coordinator";
 
 /** How long the one-shot "moved to background" footer hint stays visible. */
 const DETACH_HINT_DISPLAY_MS = 4_000;
@@ -47,11 +53,12 @@ export interface PresentationStateHost {
   readonly harness: KimiHarness;
   readonly deferUserMessages: boolean;
   readonly sessionEventHandler: SessionEventHandler;
+  readonly transcriptCoordinator: TranscriptCoordinator;
   readonly shellOutputStreams: Map<string, ShellOutputStreamEntry>;
 
   updateInkRenderer(): void;
   showError(msg: string): void;
-  updateEditorBorderHighlight(): void;
+  setAppState(patch: Partial<AppState>): void;
 }
 
 export class PresentationStateController {
@@ -209,6 +216,77 @@ export class PresentationStateController {
     );
   }
 
+  toggleToolOutputExpansion(): void {
+    this.host.state.toolOutputExpanded = !this.host.state.toolOutputExpanded;
+    const children = this.host.state.transcriptContainer.children;
+
+    // A component is expandable only if it sits at or after the start of the
+    // (totalTurns - expandTurns)-th turn — i.e. it belongs to one of the most
+    // recent `expandTurns` turns. Position-based so it also covers streaming
+    // components that have no entry in the metadata map.
+    const boundaries: number[] = [];
+    for (let i = 0; i < children.length; i++) {
+      if (
+        this.host.transcriptCoordinator.isTurnBoundaryComponent(children[i]!)
+      )
+        boundaries.push(i);
+    }
+    const expandCutoff =
+      TRANSCRIPT_EXPAND_TURNS <= 0
+        ? children.length
+        : boundaries.length > TRANSCRIPT_EXPAND_TURNS
+          ? boundaries[boundaries.length - TRANSCRIPT_EXPAND_TURNS]!
+          : 0;
+
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]!;
+      if (!isExpandable(child)) continue;
+      child.setExpanded(this.host.state.toolOutputExpanded && i >= expandCutoff);
+    }
+    // Differential render only — no destructive full redraw on expand/collapse.
+    // (When the expanded region reaches above the viewport, the engine's own
+    // fallback may still do a full render; that path is not forced from here.)
+    this.host.state.ui.requestRender();
+  }
+
+  toggleTodoPanelExpansion(): void {
+    this.host.state.todoPanel.toggleExpanded();
+    this.host.state.ui.requestRender();
+  }
+
+  updateEditorBorderHighlight(text?: string): void {
+    const trimmed = (text ?? this.host.state.editor.getText()).trimStart();
+    const isBash = this.host.state.appState.inputMode === "bash";
+    const highlighted =
+      this.host.state.appState.planMode || isBash || trimmed.startsWith("/");
+    this.host.state.editor.borderHighlighted = highlighted;
+    // Shell mode gets its own hue; plan-mode and slash context stay primary.
+    const borderToken = isBash
+      ? "shellMode"
+      : highlighted
+        ? "primary"
+        : "border";
+    this.host.state.editor.borderColor = (s: string) =>
+      currentTheme.fg(borderToken, s);
+    this.host.state.ui.requestRender();
+  }
+
+  async applyTheme(
+    themeName: ThemeName,
+    resolved?: ResolvedTheme,
+  ): Promise<void> {
+    const palette = await getColorPalette(
+      themeName === "auto" ? (resolved ?? "dark") : themeName,
+    );
+    currentTheme.setPalette(palette);
+    this.host.setAppState({ theme: themeName });
+    this.updateEditorBorderHighlight();
+    // Force every historical message to re-render so Markdown/Text caches
+    // (which hold old ANSI colour codes) are cleared.
+    this.host.state.transcriptContainer.invalidate();
+    this.host.state.ui.requestRender(true);
+  }
+
   async detachCurrentForegroundTask(): Promise<void> {
     // A running `!` shell command takes priority over agent foreground tasks.
     if (this.host.shellOutputStreams.size > 0) {
@@ -340,7 +418,7 @@ export class PresentationStateController {
     const palette = getBuiltInPalette(resolved);
     if (currentTheme.palette === palette) return;
     currentTheme.setPalette(palette);
-    this.host.updateEditorBorderHighlight();
+    this.updateEditorBorderHighlight();
     // Repaint already-rendered transcript entries (status/markdown caches hold
     // old ANSI codes), matching applyTheme()'s behaviour.
     this.host.state.transcriptContainer.invalidate();

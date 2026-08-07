@@ -1,29 +1,9 @@
-import type { DeviceAuthorization } from "@moonshot-ai/kimi-code-oauth";
-import type {
-  ApprovalRequest,
-  ApprovalResponse,
-  BackgroundTaskInfo,
-  KimiHarness,
-  PermissionMode,
-  PromptPart,
-  Session,
-} from "@moonshot-ai/kimi-code-sdk";
-import { log } from "@moonshot-ai/kimi-code-sdk";
-import { type Component, type Focusable } from "@moonshot-ai/kimi-tui";
-import type { CLIOptions } from "#/cli/options";
+import type { BackgroundTaskInfo, KimiHarness, PromptPart, Session } from "@moonshot-ai/kimi-code-sdk";
 import { detectFdPath } from "#/utils/process/fd-detect";
-import * as slashCommands from "./commands/dispatch.ts";
 import type { KimiSlashCommand } from "./commands/index.ts";
 import type { SessionRow } from "./components/dialogs/session-picker.ts";
 import type { TrustPromptChoice } from "./components/dialogs/trust-prompt.ts";
 import { ShellRunComponent } from "./components/messages/shell-run.ts";
-import type { TuiConfig } from "./config.ts";
-import {
-  LLM_NOT_SET_MESSAGE,
-  PRODUCT_NAME,
-} from "./constant/kimi-tui.ts";
-import { CHROME_GUTTER } from "./constant/rendering.ts";
-import { MAX_TERMINAL_TITLE_LENGTH } from "./constant/terminal.ts";
 import { AuthFlowController } from "./controllers/auth-flow.ts";
 import { BtwPanelController } from "./controllers/btw-panel.ts";
 import { EditorKeyboardController } from "./controllers/editor-keyboard.ts";
@@ -42,51 +22,30 @@ import { TasksBrowserController } from "./controllers/tasks-browser.ts";
 import { TuiAccessorsController } from "./controllers/tui-accessors.ts";
 import { TuiLifecycleController } from "./controllers/tui-lifecycle.ts";
 import {
-  type InkTerminalRenderer,
-  type InkTerminalRendererOptions,
-  mountInkTerminalRenderer,
-} from "./renderer/ink/terminal-renderer.ts";
+  createInitialAppState,
+  type KimiTUIStartupInput,
+} from "./kimi-tui-startup.ts";
 import {
-  type PromptEditorState,
-  promptEditorLineColumn,
-} from "./renderer/prompt-editor-state.ts";
-import { TerminalOwnership } from "./renderer/terminal-owner.ts";
-import {
-  type TerminalHelpCommandView,
-  type TerminalSessionView,
-  type TerminalViewState,
-  createTerminalViewState,
-} from "./renderer/terminal-view-state.ts";
+  KimiTuiTerminalsController,
+} from "./kimi-tui-terminals.ts";
+import type { InkTerminalRenderer } from "./renderer/ink/terminal-renderer.ts";
+import type { InkTerminalRendererOptions } from "./renderer/ink/terminal-renderer.ts";
+import type { PromptEditorState } from "./renderer/prompt-editor-state.ts";
+import type { TerminalViewState } from "./renderer/terminal-view-state.ts";
 import { registerReverseRPCHandlers } from "./reverse-rpc/index.ts";
 import { ApprovalController } from "./reverse-rpc/approval/controller.ts";
 import { QuestionController } from "./reverse-rpc/question/controller.ts";
-import type { ColorToken, ResolvedTheme, ThemeName } from "./theme/index.ts";
-import {
-  currentTheme,
-  getColorPalette,
-} from "./theme/index.ts";
-import type { AgentGroupViewState } from "./projections/tool-call/agent-group.ts";
-import type { ReadGroupViewState } from "./projections/tool-call/read-group.ts";
+import type { ResolvedTheme, ThemeName } from "./theme/index.ts";
 import { createTUIState, type TUIState } from "./tui-state.ts";
 import {
   type AppState,
-  type CompactionTranscriptData,
   type KimiTUIOptions,
   type LivePaneState,
-  type LoginProgressSpinnerHandle,
   type QueuedMessage,
-  type ShellRunViewState,
   type SteerInputItem,
-  type ToolCallBlockData,
   type TranscriptEntry,
 } from "./types.ts";
-import { isExpandable } from "./utils/component-capabilities.ts";
-import { formatErrorMessage } from "./utils/event-payload.ts";
 import { ImageAttachmentStore } from "./utils/image-attachment-store.ts";
-import { extractMediaAttachments } from "./utils/image-placeholder.ts";
-import { sessionRowsForPicker } from "./utils/session-picker-rows.ts";
-import { formatBashOutputForDisplay } from "./utils/shell-output.ts";
-import { TRANSCRIPT_EXPAND_TURNS } from "./utils/transcript-window.ts";
 
 export type { TUIState } from "./tui-state.ts";
 export { createTUIState } from "./tui-state.ts";
@@ -96,58 +55,13 @@ export type {
   TUIStartupOptions,
   TUIStartupState,
 } from "./types.ts";
-
-export interface KimiTUIStartupInput {
-  readonly cliOptions: CLIOptions;
-  /** Profile name resolved from cliOptions --agent/--agent-file (see resolveAgentProfileSelection). */
-  readonly agentProfile?: string;
-  readonly additionalDirs?: readonly string[];
-  readonly tuiConfig: TuiConfig;
-  readonly version: string;
-  readonly workDir: string;
-  readonly startupNotice?: string;
-  /** Enables the v2-only startup/session behavior for embedded callers. */
-  readonly engineV2?: boolean;
-}
-
-function createInitialAppState(input: KimiTUIStartupInput): AppState {
-  const startupPermission: PermissionMode = input.cliOptions.auto
-    ? "auto"
-    : input.cliOptions.yolo
-      ? "yolo"
-      : "manual";
-  return {
-    model: "",
-    workDir: input.workDir,
-    additionalDirs: [...(input.additionalDirs ?? [])],
-    sessionId: "",
-    permissionMode: startupPermission,
-    planMode: input.cliOptions.plan,
-    inputMode: "prompt",
-    swarmMode: false,
-    thinkingEffort: "off",
-    contextUsage: 0,
-    contextTokens: 0,
-    maxContextTokens: 0,
-    isCompacting: false,
-    isReplaying: false,
-    streamingPhase: "idle",
-    streamingStartTime: 0,
-    theme: input.tuiConfig.theme,
-    version: input.version,
-    editorCommand: input.tuiConfig.editorCommand,
-    disablePasteBurst: input.tuiConfig.disablePasteBurst,
-    notifications: input.tuiConfig.notifications,
-    upgrade: input.tuiConfig.upgrade,
-    statusLine: input.tuiConfig.statusLine,
-    availableModels: {},
-    availableProviders: {},
-    sessionTitle: null,
-    goal: null,
-    mcpServersSummary: null,
-    banner: undefined,
-  };
-}
+export type { KimiTUIStartupInput } from "./kimi-tui-startup.ts";
+export type {
+  KimiTUIDialogDelegates,
+} from "./kimi-tui-dialog-delegates.ts";
+export type {
+  KimiTUITranscriptDelegates,
+} from "./kimi-tui-transcript-delegates.ts";
 
 export class KimiTUI {
   readonly harness: KimiHarness;
@@ -168,8 +82,6 @@ export class KimiTUI {
   /** Whether the harness runs on the agent-core-v2 engine (lazy session creation). */
   readonly engineV2: boolean;
   startupNotice: string | undefined;
-  /** Optional Ink bridge used by the staged renderer migration. */
-  private inkRenderer: InkTerminalRenderer | undefined;
   readonly inkDialogsController: InkDialogsController;
   readonly transcriptCoordinator: TranscriptCoordinator;
   readonly sessionOrchestration: SessionOrchestrationController;
@@ -180,7 +92,7 @@ export class KimiTUI {
   readonly messageQueueController: MessageQueueController;
   readonly promptInputController: PromptInputController;
   readonly tuiLifecycleController: TuiLifecycleController;
-  private readonly terminalOwnership = new TerminalOwnership();
+  readonly terminalsController: KimiTuiTerminalsController;
 
   private get inkOverlay() {
     return this.state.inkOverlay;
@@ -228,7 +140,7 @@ export class KimiTUI {
 
   /** Current terminal owner, exposed for lifecycle diagnostics and tests. */
   get terminalRendererOwner(): "none" | "ink" {
-    return this.terminalOwnership.current;
+    return this.terminalsController.terminalRendererOwner;
   }
 
   constructor(harness: KimiHarness, startupInput: KimiTUIStartupInput) {
@@ -279,6 +191,7 @@ export class KimiTUI {
     this.messageQueueController = new MessageQueueController(this);
     this.promptInputController = new PromptInputController(this);
     this.tuiLifecycleController = new TuiLifecycleController(this);
+    this.terminalsController = new KimiTuiTerminalsController(this);
 
     this.reverseRpcDisposers.push(
       ...registerReverseRPCHandlers(
@@ -307,7 +220,7 @@ export class KimiTUI {
   // Autocomplete & Skill Commands
   // =========================================================================
 
-  private getSlashCommands(): readonly KimiSlashCommand[] {
+  getSlashCommands(): readonly KimiSlashCommand[] {
     return this.slashSetupController.getSlashCommands();
   }
 
@@ -498,24 +411,13 @@ export class KimiTUI {
     isError?: boolean,
     backgrounded?: boolean,
   ): void {
-    const stream = this.shellOutputStreams.get(commandId);
-    if (stream === undefined) return;
-    if (backgrounded === true) {
-      // The command was moved to the background; detachRunningShellCommand owns
-      // the UI and the model notification, so there is nothing to render here.
-      return;
-    }
-    stream.component.finish(stdout, stderr, isError);
-    // Keep the transcript entry's metadata in sync for anything that reads it
-    // (export / copy). The component renders itself.
-    stream.entry.content = formatBashOutputForDisplay(stdout, stderr, isError);
-    this.shellOutputStreams.delete(commandId);
-    // When the last shell command finishes, leave the shell streaming phase,
-    // release one queued message (if any), and refresh the activity pane.
-    if (this.shellOutputStreams.size === 0) {
-      this.setAppState({ streamingPhase: "idle" });
-      this.messageQueueController.drainOneQueuedMessage();
-    }
+    this.promptInputController.finishShellOutput(
+      commandId,
+      stdout,
+      stderr,
+      isError,
+      backgrounded,
+    );
   }
 
   enqueueMessage(
@@ -534,72 +436,19 @@ export class KimiTUI {
     commandId: string;
     update: { kind: string; text?: string };
   }): void {
-    const stream = this.shellOutputStreams.get(event.commandId);
-    if (stream === undefined) return;
-    const text = event.update.text ?? "";
-    if (text.length === 0) return;
-    stream.component.append(text);
+    this.promptInputController.handleShellOutput(event);
   }
 
   handleShellStarted(event: { commandId: string; taskId: string }): void {
-    const stream = this.shellOutputStreams.get(event.commandId);
-    if (stream === undefined) return;
-    stream.taskId = event.taskId;
+    this.promptInputController.handleShellStarted(event);
   }
 
   cancelRunningShellCommand(): void {
-    const session = this.session;
-    if (session === undefined) return;
-    for (const commandId of this.shellOutputStreams.keys()) {
-      void session.cancelShellCommand(commandId).catch((error: unknown) => {
-        this.showError(
-          `Failed to cancel shell command: ${formatErrorMessage(error)}`,
-        );
-      });
-    }
+    this.promptInputController.cancelRunningShellCommand();
   }
 
   async sendNormalUserInput(text: string): Promise<void> {
-    if (this.btwPanelController.sendUserInput(text)) return;
-    if (this.state.appState.model.trim().length === 0) {
-      this.showError(LLM_NOT_SET_MESSAGE);
-      return;
-    }
-    let extraction: ReturnType<typeof extractMediaAttachments>;
-    try {
-      // Pasted videos are copied into the cache and expand to a `file://`
-      // `video_url` part; the engine resolves (uploads or degrades) them
-      // inside the turn, so submission stays fully synchronous.
-      extraction = extractMediaAttachments(text, this.imageStore);
-    } catch (error) {
-      // A video cache copy failed (unwritable cache dir, vanished source…);
-      // nothing was dispatched.
-      this.showError(
-        `Failed to prepare media attachment: ${formatErrorMessage(error)}`,
-      );
-      return;
-    }
-    if (!this.validateMediaCapabilities(extraction)) return;
-    let session = this.session;
-    if (session === undefined) {
-      if (!this.engineV2) {
-        this.showError(LLM_NOT_SET_MESSAGE);
-        return;
-      }
-      session = await this.ensureSession();
-      if (session === undefined) return;
-    }
-    if (extraction.hasMedia) {
-      this.messageQueueController.sendMessage(session, text, {
-        hasMedia: true,
-        parts: extraction.parts,
-        imageAttachmentIds: extraction.imageAttachmentIds,
-      });
-    } else {
-      this.messageQueueController.sendMessage(session, text);
-    }
-    this.updateQueueDisplay();
-    this.state.ui.requestRender();
+    return this.promptInputController.sendNormalUserInput(text);
   }
 
   validateMediaCapabilities(extraction: {
@@ -787,56 +636,15 @@ export class KimiTUI {
   async fetchSessions(
     scope: "cwd" | "all" = this.state.sessionsScope,
   ): Promise<void> {
-    this.state.loadingSessions = true;
-    this.state.sessionsScope = scope;
-    try {
-      const sessions =
-        scope === "all"
-          ? await this.harness.listSessions({})
-          : await this.harness.listSessions({
-              workDir: this.state.appState.workDir,
-            });
-      this.state.sessions = sessionRowsForPicker(
-        sessions,
-        this.state.appState.sessionId,
-        this.hasSessionContent(),
-      );
-    } catch (error) {
-      // The picker must keep working (it renders the empty state), but a
-      // swallowed failure surfaces as a misleading "No sessions found." —
-      // keep a log trail so the real error stays discoverable.
-      log.warn("failed to fetch sessions for picker", { error: String(error) });
-    } finally {
-      this.state.loadingSessions = false;
-    }
+    return this.sessionOrchestration.fetchSessions(scope);
   }
 
   updateTerminalTitle(): void {
-    const trimmed = this.state.appState.sessionTitle?.trim() ?? "";
-    const label =
-      trimmed.length > 0
-        ? trimmed.slice(0, MAX_TERMINAL_TITLE_LENGTH)
-        : PRODUCT_NAME;
-    this.state.terminal.setTitle(label);
+    return this.sessionOrchestration.updateTerminalTitle();
   }
 
   resetSessionRuntime(): void {
-    this.aborted = false;
-    this.streamingUI.discardPending();
-    this.state.queuedMessages = [];
-    this.state.swarmModeEntry = undefined;
-    this.streamingUI.resetToolCallState();
-    this.streamingUI.resetToolUi();
-    this.sessionEventHandler.resetRuntimeState();
-    this.tasksBrowserController.close();
-    this.btwPanelController.clear();
-    this.state.footer.setBackgroundCounts({ bashTasks: 0, agentTasks: 0 });
-    this.streamingUI.setTodoList([]);
-    this.streamingUI.setTurnId(undefined);
-    this.setAppState({ mcpServersSummary: null });
-    this.streamingUI.setStep(0);
-    this.streamingUI.resetLiveText();
-    this.updateQueueDisplay();
+    return this.sessionOrchestration.resetSessionRuntime();
   }
 
   async switchToSession(
@@ -865,112 +673,6 @@ export class KimiTUI {
   }
 
   // =========================================================================
-  // Transcript Rendering
-  // =========================================================================
-
-  appendTranscriptEntry(entry: TranscriptEntry): void {
-    this.transcriptCoordinator.appendTranscriptEntry(entry);
-  }
-
-  syncToolCallTranscriptEntry(
-    toolCallId: string,
-    data: ToolCallBlockData,
-  ): void {
-    this.transcriptCoordinator.syncToolCallTranscriptEntry(toolCallId, data);
-  }
-
-  syncShellRunTranscriptEntry(
-    entryId: string,
-    data: ShellRunViewState,
-  ): void {
-    this.transcriptCoordinator.syncShellRunTranscriptEntry(entryId, data);
-  }
-
-  syncCompactionTranscriptEntry(
-    entryId: string,
-    data: CompactionTranscriptData,
-  ): void {
-    this.transcriptCoordinator.syncCompactionTranscriptEntry(entryId, data);
-  }
-
-  syncAgentGroupTranscriptEntry(
-    entryId: string,
-    data: AgentGroupViewState,
-    memberToolCallIds: readonly string[],
-  ): void {
-    this.transcriptCoordinator.syncAgentGroupTranscriptEntry(
-      entryId,
-      data,
-      memberToolCallIds,
-    );
-  }
-
-  syncReadGroupTranscriptEntry(
-    entryId: string,
-    data: ReadGroupViewState,
-    memberToolCallIds: readonly string[],
-  ): void {
-    this.transcriptCoordinator.syncReadGroupTranscriptEntry(
-      entryId,
-      data,
-      memberToolCallIds,
-    );
-  }
-
-  removeToolCallTranscriptEntry(toolCallId: string): void {
-    this.transcriptCoordinator.removeToolCallTranscriptEntry(toolCallId);
-  }
-
-  appendApprovalTranscriptEntry(
-    request: ApprovalRequest,
-    response: ApprovalResponse,
-  ): void {
-    this.transcriptCoordinator.appendApprovalTranscriptEntry(request, response);
-  }
-
-  clearTranscriptAndRedraw(): void {
-    this.transcriptCoordinator.clearTranscriptAndRedraw();
-  }
-
-  mergeCurrentTurnSteps(): boolean {
-    return this.transcriptCoordinator.mergeCurrentTurnSteps();
-  }
-
-  mergeCompletedTurnAssistants(): boolean {
-    return this.transcriptCoordinator.mergeCompletedTurnAssistants();
-  }
-
-  mergeAllTurnSteps(): void {
-    this.transcriptCoordinator.mergeAllTurnSteps();
-  }
-
-  showStatus(message: string, color?: ColorToken): void {
-    this.transcriptCoordinator.showStatus(message, color);
-  }
-
-  showNotice(title: string, detail?: string): void {
-    this.transcriptCoordinator.showNotice(title, detail);
-  }
-
-  showError(message: string): void {
-    this.transcriptCoordinator.showError(message);
-  }
-
-  showLoginProgressSpinner(label: string): LoginProgressSpinnerHandle {
-    return this.transcriptCoordinator.showLoginProgressSpinner(label);
-  }
-
-  showProgressSpinner(label: string): LoginProgressSpinnerHandle {
-    return this.transcriptCoordinator.showProgressSpinner(label);
-  }
-
-  showLoginAuthorizationPrompt(
-    auth: DeviceAuthorization,
-  ): LoginProgressSpinnerHandle {
-    return this.transcriptCoordinator.showLoginAuthorizationPrompt(auth);
-  }
-
-  // =========================================================================
   // Panes / Presentation State
   // =========================================================================
 
@@ -990,208 +692,45 @@ export class KimiTUI {
     this.presentationStateController.refreshTerminalThemeTracking();
   }
 
-  /** Snapshot terminal data for renderer implementations without UI objects. */
   getTerminalViewState(): TerminalViewState {
-    const helpCommands: readonly TerminalHelpCommandView[] =
-      this.getSlashCommands().map((command) => ({
-        name: command.name,
-        aliases: [...command.aliases],
-        description: command.description,
-      }));
-    const sessions: readonly TerminalSessionView[] = this.state.sessions.map(
-      (session) => ({
-        id: session.id,
-        title: session.title,
-        lastPrompt: session.last_prompt ?? null,
-        workDir: session.work_dir,
-        updatedAt: session.updated_at,
-      }),
-    );
-    return createTerminalViewState({
-      appState: this.state.appState,
-      startupState: this.state.startupState,
-      transcriptEntries: this.state.transcriptEntries,
-      livePane: this.state.livePane,
-      queuedMessages: this.state.queuedMessages,
-      editor: {
-        text: this.promptEditorState.text,
-        cursorLine: promptEditorLineColumn(this.promptEditorState).line,
-        cursorColumn: promptEditorLineColumn(this.promptEditorState).column,
-        inputMode: this.promptEditorState.inputMode,
-        autocomplete: this.promptEditorState.completion?.items ?? [],
-      },
-      activeDialog: this.state.activeDialog,
-      ...this.inkDialogsController.projectDialogFields(),
-      sessions,
-      loadingSessions: this.state.loadingSessions,
-      sessionsScope: this.state.sessionsScope,
-      helpCommands,
-      trustPrompt: this.startupPanelsController.getTrustPromptView(),
-      toolOutputExpanded: this.state.toolOutputExpanded,
-      externalEditorRunning: this.state.externalEditorRunning,
-      queuedMessageDispatchPending: this.state.queuedMessageDispatchPending,
-      swarmModeEntry: this.state.swarmModeEntry,
-      deferUserMessages: this.deferUserMessages,
-      activityTip: this.presentationStateController.getActivityTip(),
-    });
+    return this.terminalsController.getTerminalViewState();
   }
 
-  /**
-   * Mount the Ink renderer at the coordinator boundary.
-   *
-   * Ink is the sole terminal owner. The legacy kimi-tui differential renderer
-   * loop stays stopped so only one renderer attaches stdin/stdout at a time.
-   */
   mountInkRenderer(options?: InkTerminalRendererOptions): InkTerminalRenderer {
-    if (this.inkRenderer !== undefined) return this.inkRenderer;
-    this.inkRenderer = mountInkTerminalRenderer(
-      this.getTerminalViewState(),
-      options,
-    );
-    this.terminalOwnership.claim("ink");
-    return this.inkRenderer;
+    return this.terminalsController.mountInkRenderer(options);
   }
 
-  /** Push the latest coordinator snapshot to the mounted Ink bridge. */
   updateInkRenderer(): void {
-    this.inkRenderer?.update(this.getTerminalViewState());
+    this.terminalsController.updateInkRenderer();
   }
 
-  /** Refresh whichever renderer currently owns the terminal output. */
   requestTerminalRender(): void {
-    this.updateInkRenderer();
+    this.terminalsController.requestTerminalRender();
   }
 
-  /** Unmount the staged Ink bridge; safe to call repeatedly during shutdown. */
   unmountInkRenderer(): void {
-    const renderer = this.inkRenderer;
-    this.inkRenderer = undefined;
-    renderer?.unmount();
-    this.terminalOwnership.release("ink");
+    this.terminalsController.unmountInkRenderer();
   }
 
   toggleToolOutputExpansion(): void {
-    this.state.toolOutputExpanded = !this.state.toolOutputExpanded;
-    const children = this.state.transcriptContainer.children;
-
-    // A component is expandable only if it sits at or after the start of the
-    // (totalTurns - expandTurns)-th turn — i.e. it belongs to one of the most
-    // recent `expandTurns` turns. Position-based so it also covers streaming
-    // components that have no entry in the metadata map.
-    const boundaries: number[] = [];
-    for (let i = 0; i < children.length; i++) {
-      if (this.transcriptCoordinator.isTurnBoundaryComponent(children[i]!))
-        boundaries.push(i);
-    }
-    const expandCutoff =
-      TRANSCRIPT_EXPAND_TURNS <= 0
-        ? children.length
-        : boundaries.length > TRANSCRIPT_EXPAND_TURNS
-          ? boundaries[boundaries.length - TRANSCRIPT_EXPAND_TURNS]!
-          : 0;
-
-    for (let i = 0; i < children.length; i++) {
-      const child = children[i]!;
-      if (!isExpandable(child)) continue;
-      child.setExpanded(this.state.toolOutputExpanded && i >= expandCutoff);
-    }
-    // Differential render only — no destructive full redraw on expand/collapse.
-    // (When the expanded region reaches above the viewport, the engine's own
-    // fallback may still do a full render; that path is not forced from here.)
-    this.state.ui.requestRender();
+    this.presentationStateController.toggleToolOutputExpansion();
   }
 
   toggleTodoPanelExpansion(): void {
-    this.state.todoPanel.toggleExpanded();
-    this.state.ui.requestRender();
+    this.presentationStateController.toggleTodoPanelExpansion();
   }
 
   updateEditorBorderHighlight(text?: string): void {
-    const trimmed = (text ?? this.state.editor.getText()).trimStart();
-    const isBash = this.state.appState.inputMode === "bash";
-    const highlighted =
-      this.state.appState.planMode || isBash || trimmed.startsWith("/");
-    this.state.editor.borderHighlighted = highlighted;
-    // Shell mode gets its own hue; plan-mode and slash context stay primary.
-    const borderToken = isBash
-      ? "shellMode"
-      : highlighted
-        ? "primary"
-        : "border";
-    this.state.editor.borderColor = (s: string) =>
-      currentTheme.fg(borderToken, s);
-    this.state.ui.requestRender();
+    this.presentationStateController.updateEditorBorderHighlight(text);
   }
 
   async applyTheme(
     themeName: ThemeName,
     resolved?: ResolvedTheme,
   ): Promise<void> {
-    const palette = await getColorPalette(
-      themeName === "auto" ? (resolved ?? "dark") : themeName,
-    );
-    currentTheme.setPalette(palette);
-    this.setAppState({ theme: themeName });
-    this.updateEditorBorderHighlight();
-    // Force every historical message to re-render so Markdown/Text caches
-    // (which hold old ANSI colour codes) are cleared.
-    this.state.transcriptContainer.invalidate();
-    this.state.ui.requestRender(true);
-  }
-
-  // =========================================================================
-  // Dialogs / Selectors
-  // =========================================================================
-
-  mountEditorReplacement(panel: Component & Focusable): void {
-    this.startupPanelsController.mountEditorReplacement(panel);
-  }
-
-  restoreEditor(): void {
-    this.startupPanelsController.restoreEditor();
-  }
-
-  restoreInputText(text: string): void {
-    this.startupPanelsController.restoreInputText(text);
-  }
-
-  showHelpPanel(): void {
-    this.startupPanelsController.showHelpPanel();
-  }
-
-  hideHelpPanel(): void {
-    this.startupPanelsController.hideHelpPanel();
-  }
-
-  showApprovalPanel(
-    payload: Parameters<StartupPanelsController["showApprovalPanel"]>[0],
-  ): void {
-    this.startupPanelsController.showApprovalPanel(payload);
-  }
-
-  hideApprovalPanel(): void {
-    this.startupPanelsController.hideApprovalPanel();
-  }
-
-  showQuestionDialog(
-    payload: Parameters<StartupPanelsController["showQuestionDialog"]>[0],
-  ): void {
-    this.startupPanelsController.showQuestionDialog(payload);
-  }
-
-  hideQuestionDialog(): void {
-    this.startupPanelsController.hideQuestionDialog();
-  }
-
-  showSessionPicker(): Promise<void> {
-    return this.startupPanelsController.showSessionPicker();
-  }
-
-  hideSessionPicker(): void {
-    this.startupPanelsController.hideSessionPicker();
-  }
-
-  openUndoSelector(): void {
-    void slashCommands.handleUndoCommand(this, "");
+    return this.presentationStateController.applyTheme(themeName, resolved);
   }
 }
+
+import "./kimi-tui-transcript-delegates.ts";
+import "./kimi-tui-dialog-delegates.ts";
