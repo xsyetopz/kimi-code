@@ -12,6 +12,14 @@ import { randomUUID } from "node:crypto";
 import type { TokenInfo, TokenStorage } from "@moonshot-ai/kimi-code-oauth";
 
 import type { AuthStatus } from "./auth";
+import {
+  completeDeviceOAuthFlow,
+  failDeviceOAuthFlow,
+  sleepWithAbort,
+  toDeviceOAuthFlowSnapshot,
+  toDeviceOAuthFlowStart,
+  type DeviceOAuthFlow,
+} from "./deviceOAuthHelpers";
 import type {
   OAuthFlowSnapshot,
   OAuthFlowStart,
@@ -47,20 +55,6 @@ type TokenResponse = {
   readonly interval?: number;
 };
 
-type Flow = {
-  readonly flowId: string;
-  readonly provider: string;
-  readonly controller: AbortController;
-  readonly verificationUri: string;
-  readonly verificationUriComplete: string;
-  readonly userCode: string;
-  readonly expiresAt: number;
-  interval: number;
-  status: OAuthFlowSnapshot["status"];
-  resolvedAt?: string;
-  errorMessage?: string;
-};
-
 export interface CopilotAuthAdapterOptions {
   readonly storage: TokenStorage;
   readonly fetch?: typeof fetch;
@@ -75,7 +69,7 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => number;
   private readonly sleep: (ms: number, signal: AbortSignal) => Promise<void>;
-  private readonly flows = new Map<string, Flow>();
+  private readonly flows = new Map<string, DeviceOAuthFlow>();
   private readonly tokenProvider: ProviderTokenProvider;
 
   constructor(options: CopilotAuthAdapterOptions) {
@@ -105,7 +99,7 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
       device.verification_uri_complete ??
       `${verificationUri}?user_code=${encodeURIComponent(device.user_code)}`;
     const now = this.now();
-    const flow: Flow = {
+    const flow: DeviceOAuthFlow = {
       flowId: `copilot_${randomUUID()}`,
       provider,
       controller: new AbortController(),
@@ -118,12 +112,12 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
     };
     this.flows.set(provider, flow);
     void this.poll(flow, device.device_code);
-    return this.toStart(flow);
+    return toDeviceOAuthFlowStart(flow, this.now);
   }
 
   getFlow(provider: string): OAuthFlowSnapshot | undefined {
     const flow = this.flows.get(provider);
-    return flow === undefined ? undefined : this.toSnapshot(flow);
+    return flow === undefined ? undefined : toDeviceOAuthFlowSnapshot(flow, this.now);
   }
 
   async cancelLogin(provider: string): Promise<OAuthLoginCancelResponse> {
@@ -158,7 +152,7 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
     return this.cachedAccessToken();
   }
 
-  private async poll(flow: Flow, deviceCode: string): Promise<void> {
+  private async poll(flow: DeviceOAuthFlow, deviceCode: string): Promise<void> {
     try {
       while (!flow.controller.signal.aborted && this.now() < flow.expiresAt) {
         await this.sleep(
@@ -178,7 +172,7 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
         );
         if (typeof result.access_token === "string" && result.access_token !== "") {
           await this.saveGithubToken(result.access_token);
-          this.complete(flow, "authenticated");
+          completeDeviceOAuthFlow(flow, "authenticated", this.now);
           return;
         }
         if (result.error === "authorization_pending") continue;
@@ -192,18 +186,24 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
           }
           continue;
         }
-        this.fail(
+        failDeviceOAuthFlow(
           flow,
           result.error === undefined
             ? "Device authorization failed"
             : `Device authorization failed: ${result.error}`,
+          this.now,
         );
         return;
       }
-      if (!flow.controller.signal.aborted) this.complete(flow, "expired");
+      if (!flow.controller.signal.aborted)
+        completeDeviceOAuthFlow(flow, "expired", this.now);
     } catch (error) {
       if (flow.controller.signal.aborted) return;
-      this.fail(flow, error instanceof Error ? error.message : String(error));
+      failDeviceOAuthFlow(
+        flow,
+        error instanceof Error ? error.message : String(error),
+        this.now,
+      );
     }
   }
 
@@ -258,55 +258,6 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
     return response.json() as Promise<T>;
   }
 
-  private complete(
-    flow: Flow,
-    status: Extract<OAuthFlowSnapshot["status"], "authenticated" | "expired">,
-  ): void {
-    if (flow.status !== "pending") return;
-    flow.status = status;
-    flow.resolvedAt = new Date(this.now()).toISOString();
-  }
-
-  private fail(flow: Flow, message: string): void {
-    if (flow.status !== "pending") return;
-    flow.status = "denied";
-    flow.errorMessage = message;
-    flow.resolvedAt = new Date(this.now()).toISOString();
-  }
-
-  private toStart(flow: Flow): OAuthFlowStart {
-    return {
-      flow_id: flow.flowId,
-      provider: flow.provider,
-      status: "pending",
-      verification_uri: flow.verificationUri,
-      verification_uri_complete: flow.verificationUriComplete,
-      user_code: flow.userCode,
-      expires_in: Math.max(1, Math.ceil((flow.expiresAt - this.now()) / 1000)),
-      interval: flow.interval,
-      expires_at: new Date(flow.expiresAt).toISOString(),
-    };
-  }
-
-  private toSnapshot(flow: Flow): OAuthFlowSnapshot {
-    return {
-      flow_id: flow.flowId,
-      provider: flow.provider,
-      status: flow.status,
-      verification_uri: flow.verificationUri,
-      verification_uri_complete: flow.verificationUriComplete,
-      user_code: flow.userCode,
-      expires_in: Math.max(1, Math.ceil((flow.expiresAt - this.now()) / 1000)),
-      interval: flow.interval,
-      expires_at: new Date(flow.expiresAt).toISOString(),
-      ...(flow.resolvedAt === undefined
-        ? {}
-        : { resolved_at: flow.resolvedAt }),
-      ...(flow.errorMessage === undefined
-        ? {}
-        : { error_message: flow.errorMessage }),
-    };
-  }
 }
 
 function isDeviceResponse(value: unknown): value is DeviceResponse {
@@ -321,15 +272,3 @@ function isDeviceResponse(value: unknown): value is DeviceResponse {
   );
 }
 
-function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(done, ms);
-    const onAbort = () => done();
-    function done(): void {
-      clearTimeout(timer);
-      signal.removeEventListener("abort", onAbort);
-      resolve();
-    }
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
-}

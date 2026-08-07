@@ -99,6 +99,18 @@ registerProviderDefinition({
   endpoint: { apiKeyEnv: "OPENAI_API_KEY", baseUrlEnv: "OPENAI_BASE_URL" },
 });
 
+// NVIDIA NIM is API-key only (build.nvidia.com). No subscription OAuth exists
+// for the public integrate.api.nvidia.com catalog.
+registerProviderDefinition({
+  id: "nvidia",
+  baseProtocol: "openai",
+  traits: [],
+  endpoint: {
+    apiKeyEnv: "NVIDIA_API_KEY",
+    defaultBaseUrl: "https://integrate.api.nvidia.com/v1",
+  },
+});
+
 registerProviderDefinition({
   id: "google-genai",
   baseProtocol: "google-genai",

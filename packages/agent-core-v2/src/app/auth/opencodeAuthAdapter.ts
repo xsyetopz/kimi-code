@@ -12,6 +12,14 @@ import { randomUUID } from "node:crypto";
 import type { TokenInfo, TokenStorage } from "@moonshot-ai/kimi-code-oauth";
 
 import type { AuthStatus } from "./auth";
+import {
+  completeDeviceOAuthFlow,
+  failDeviceOAuthFlow,
+  sleepWithAbort,
+  toDeviceOAuthFlowSnapshot,
+  toDeviceOAuthFlowStart,
+  type DeviceOAuthFlow,
+} from "./deviceOAuthHelpers";
 import type {
   OAuthFlowSnapshot,
   OAuthFlowStart,
@@ -44,19 +52,6 @@ type TokenResponse = {
 
 type PendingResponse = { readonly error: string };
 
-type Flow = {
-  readonly flowId: string;
-  readonly provider: string;
-  readonly controller: AbortController;
-  readonly verificationUri: string;
-  readonly userCode: string;
-  readonly expiresAt: number;
-  readonly interval: number;
-  status: OAuthFlowSnapshot["status"];
-  resolvedAt?: string;
-  errorMessage?: string;
-};
-
 export interface OpenCodeAuthAdapterOptions {
   readonly storage: TokenStorage;
   readonly fetch?: typeof fetch;
@@ -73,7 +68,7 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
   private readonly now: () => number;
   private readonly sleep: (ms: number, signal: AbortSignal) => Promise<void>;
   private readonly server: string;
-  private readonly flows = new Map<string, Flow>();
+  private readonly flows = new Map<string, DeviceOAuthFlow>();
   private readonly tokenProvider: ProviderTokenProvider;
 
   constructor(options: OpenCodeAuthAdapterOptions) {
@@ -99,13 +94,15 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
       );
 
     const now = this.now();
-    const flow: Flow = {
+    const verificationUri = device.verification_uri_complete;
+    const flow: DeviceOAuthFlow = {
       flowId: `opencode_${randomUUID()}`,
       provider,
       controller: new AbortController(),
       // OpenCode publishes only verification_uri_complete. Preserve it verbatim
       // in both fields rather than manufacturing an undocumented bare URL.
-      verificationUri: device.verification_uri_complete,
+      verificationUri,
+      verificationUriComplete: verificationUri,
       userCode: device.user_code,
       expiresAt: now + device.expires_in * 1000,
       interval: device.interval,
@@ -113,12 +110,12 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
     };
     this.flows.set(provider, flow);
     void this.poll(flow, device.device_code);
-    return this.toStart(flow);
+    return toDeviceOAuthFlowStart(flow, this.now);
   }
 
   getFlow(provider: string): OAuthFlowSnapshot | undefined {
     const flow = this.flows.get(provider);
-    return flow === undefined ? undefined : this.toSnapshot(flow);
+    return flow === undefined ? undefined : toDeviceOAuthFlowSnapshot(flow, this.now);
   }
 
   async cancelLogin(provider: string): Promise<OAuthLoginCancelResponse> {
@@ -153,7 +150,7 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
     return this.cachedAccessToken();
   }
 
-  private async poll(flow: Flow, deviceCode: string): Promise<void> {
+  private async poll(flow: DeviceOAuthFlow, deviceCode: string): Promise<void> {
     let interval = flow.interval;
     try {
       while (!flow.controller.signal.aborted && this.now() < flow.expiresAt) {
@@ -171,7 +168,7 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
         );
         if (isTokenResponse(result)) {
           await this.saveToken(result);
-          this.complete(flow, "authenticated");
+          completeDeviceOAuthFlow(flow, "authenticated", this.now);
           return;
         }
         if (result.error === "authorization_pending") continue;
@@ -179,13 +176,22 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
           interval += 5;
           continue;
         }
-        this.fail(flow, `Device authorization failed: ${result.error}`);
+        failDeviceOAuthFlow(
+          flow,
+          `Device authorization failed: ${result.error}`,
+          this.now,
+        );
         return;
       }
-      if (!flow.controller.signal.aborted) this.complete(flow, "expired");
+      if (!flow.controller.signal.aborted)
+        completeDeviceOAuthFlow(flow, "expired", this.now);
     } catch (error) {
       if (flow.controller.signal.aborted) return;
-      this.fail(flow, error instanceof Error ? error.message : String(error));
+      failDeviceOAuthFlow(
+        flow,
+        error instanceof Error ? error.message : String(error),
+        this.now,
+      );
     }
   }
 
@@ -247,55 +253,6 @@ export class OpenCodeAuthAdapter implements ProviderAuthAdapter {
     return response.json() as Promise<T>;
   }
 
-  private complete(
-    flow: Flow,
-    status: Extract<OAuthFlowSnapshot["status"], "authenticated" | "expired">,
-  ): void {
-    if (flow.status !== "pending") return;
-    flow.status = status;
-    flow.resolvedAt = new Date(this.now()).toISOString();
-  }
-
-  private fail(flow: Flow, message: string): void {
-    if (flow.status !== "pending") return;
-    flow.status = "denied";
-    flow.errorMessage = message;
-    flow.resolvedAt = new Date(this.now()).toISOString();
-  }
-
-  private toStart(flow: Flow): OAuthFlowStart {
-    return {
-      flow_id: flow.flowId,
-      provider: flow.provider,
-      status: "pending",
-      verification_uri: flow.verificationUri,
-      verification_uri_complete: flow.verificationUri,
-      user_code: flow.userCode,
-      expires_in: Math.max(1, Math.ceil((flow.expiresAt - this.now()) / 1000)),
-      interval: flow.interval,
-      expires_at: new Date(flow.expiresAt).toISOString(),
-    };
-  }
-
-  private toSnapshot(flow: Flow): OAuthFlowSnapshot {
-    return {
-      flow_id: flow.flowId,
-      provider: flow.provider,
-      status: flow.status,
-      verification_uri: flow.verificationUri,
-      verification_uri_complete: flow.verificationUri,
-      user_code: flow.userCode,
-      expires_in: Math.max(1, Math.ceil((flow.expiresAt - this.now()) / 1000)),
-      interval: flow.interval,
-      expires_at: new Date(flow.expiresAt).toISOString(),
-      ...(flow.resolvedAt === undefined
-        ? {}
-        : { resolved_at: flow.resolvedAt }),
-      ...(flow.errorMessage === undefined
-        ? {}
-        : { error_message: flow.errorMessage }),
-    };
-  }
 }
 
 function isDeviceResponse(value: unknown): value is DeviceResponse {
@@ -320,15 +277,3 @@ function isTokenResponse(value: unknown): value is TokenResponse {
   );
 }
 
-function sleepWithAbort(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(done, ms);
-    const onAbort = () => done();
-    function done(): void {
-      clearTimeout(timer);
-      signal.removeEventListener("abort", onAbort);
-      resolve();
-    }
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
-}
