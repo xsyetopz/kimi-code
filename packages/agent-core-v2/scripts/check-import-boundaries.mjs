@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Import-boundary checker for `agent-core-v2`.
  *
