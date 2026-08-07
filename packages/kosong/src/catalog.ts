@@ -1,5 +1,10 @@
 import type { ModelCapability } from "./capability";
 import type { ProviderType } from "./providers";
+import type {
+  ModelProtocolProfile,
+  ProviderTransportProfile,
+  ServingProfile,
+} from "./protocol";
 
 /**
  * models.dev-style catalog: a public map of provider/model metadata. Callers
@@ -41,6 +46,11 @@ export interface CatalogModelEntry {
   readonly provider?: CatalogModelProviderOverride;
   /** Accepts message-level tool declarations (`messages[].tools`). Defaults to false. */
   readonly dynamically_loaded_tools?: boolean;
+  /**
+   * Per-model protocol profile override. When absent, callers fall back to the
+   * provider's {@link CatalogProviderEntry.transportProfile} and wire defaults.
+   */
+  readonly protocolProfile?: ModelProtocolProfile;
   readonly interleaved?: boolean | { readonly field?: string };
   readonly modalities?: {
     readonly input?: readonly string[];
@@ -79,6 +89,17 @@ export interface CatalogProviderEntry {
   readonly npm?: string;
   /** Explicit wire type extension; inferred from `npm`/`id` when absent. */
   readonly type?: string;
+  /**
+   * Declared transport/auth/endpoint profile for this provider. Populated by
+   * catalog importers or host config when the gateway deviates from the
+   * inferred wire defaults.
+   */
+  readonly transportProfile?: ProviderTransportProfile;
+  /**
+   * Inference-engine metadata when the provider is an OpenAI-compatible
+   * gateway (vLLM, SGLang, llama.cpp).
+   */
+  readonly servingProfile?: ServingProfile;
   readonly models?: Record<string, CatalogModelEntry>;
 }
 
@@ -112,6 +133,11 @@ export interface CatalogModel {
   readonly protocol?: "anthropic";
   /** Endpoint paired with {@link protocol}, adapted to the wire's SDK convention. */
   readonly baseUrl?: string;
+  /**
+   * Resolved conversation/tool/reasoning protocol profile for this model.
+   * Sourced from the catalog entry's `protocolProfile` when present.
+   */
+  readonly protocolProfile?: ModelProtocolProfile;
   readonly capability: ModelCapability;
 }
 
@@ -399,6 +425,7 @@ export function catalogModelToCapability(
     supportEfforts: thinking.efforts,
     offEffort: thinking.offEffort,
     alwaysThinking: thinking.alwaysThinking,
+    protocolProfile: model.protocolProfile,
     capability: {
       image_in: inputs.includes("image"),
       video_in: inputs.includes("video"),

@@ -43,6 +43,29 @@ export { classifyKimiQuotaError } from "./providers/kimi-errors";
 export { isUnknownCapability, UNKNOWN_CAPABILITY } from "./capability";
 export type { ModelCapability } from "./capability";
 
+// Protocol compatibility profiles
+export {
+  capabilityToProtocolCapability,
+  parseModelProtocolProfile,
+  parseProviderTransportProfile,
+  parseServingProfile,
+} from "./protocol";
+export type {
+  AuthStyle,
+  EndpointKind,
+  ModelProtocolCapability,
+  ModelProtocolProfile,
+  ModelProtocolReasoningProfile,
+  ModelProtocolRequestConstraints,
+  ModelProtocolToolsProfile,
+  ProtocolTransportFamily,
+  ProviderTransportProfile,
+  ReasoningMode,
+  ServingEngine,
+  ServingProfile,
+  ToolProtocolKind,
+} from "./protocol";
+
 // Model catalog (models.dev-style) metadata
 export {
   catalogBaseUrl,

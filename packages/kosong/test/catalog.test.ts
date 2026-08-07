@@ -1028,3 +1028,67 @@ describe("catalogProviderModels", () => {
     expect(models).toHaveLength(0);
   });
 });
+
+describe("protocol profile metadata", () => {
+  const openAiChatProfile = {
+    transport: "openai",
+    tools: {
+      protocol: "openai_chat",
+      parallel: true,
+      streaming: true,
+      requiresCallId: true,
+      requiresAssistantReplay: false,
+    },
+    reasoning: {
+      mode: "separate_field",
+      field: "reasoning_content",
+      replayWithToolCalls: true,
+    },
+  } as const;
+
+  it("catalogModelToCapability carries protocolProfile through", () => {
+    expect(
+      catalogModelToCapability({
+        id: "local-model",
+        limit: { context: 8192 },
+        protocolProfile: openAiChatProfile,
+      }),
+    ).toMatchObject({
+      id: "local-model",
+      protocolProfile: openAiChatProfile,
+    });
+  });
+
+  it("parseModelProtocolProfile accepts a well-formed profile", async () => {
+    const { parseModelProtocolProfile } = await import("../src/protocol");
+    expect(parseModelProtocolProfile(openAiChatProfile)).toEqual(
+      openAiChatProfile,
+    );
+  });
+
+  it("parseProviderTransportProfile rejects unknown auth styles", async () => {
+    const { parseProviderTransportProfile } = await import("../src/protocol");
+    expect(() =>
+      parseProviderTransportProfile({
+        family: "openai",
+        endpoint: "chat_completions",
+        auth: "mutual_tls",
+      }),
+    ).toThrow();
+  });
+
+  it("parseServingProfile accepts vllm engine metadata", async () => {
+    const { parseServingProfile } = await import("../src/protocol");
+    expect(
+      parseServingProfile({
+        engine: "vllm",
+        toolParser: "hermes",
+        reasoningParser: "deepseek_r1",
+      }),
+    ).toEqual({
+      engine: "vllm",
+      toolParser: "hermes",
+      reasoningParser: "deepseek_r1",
+    });
+  });
+});
