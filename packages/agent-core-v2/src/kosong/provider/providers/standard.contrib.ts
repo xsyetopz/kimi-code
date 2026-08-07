@@ -111,6 +111,19 @@ registerProviderDefinition({
   },
 });
 
+// Meta Model API (Muse Spark) is API-key only (dev.meta.ai). Muse Code's
+// browser sign-in is internal to Meta's CLI; third-party harnesses use
+// MODEL_API_KEY (or META_API_KEY) as a Bearer token against api.meta.ai.
+registerProviderDefinition({
+  id: "meta",
+  baseProtocol: "openai",
+  traits: [],
+  endpoint: {
+    apiKeyEnv: ["MODEL_API_KEY", "META_API_KEY"],
+    defaultBaseUrl: "https://api.meta.ai/v1",
+  },
+});
+
 registerProviderDefinition({
   id: "google-genai",
   baseProtocol: "google-genai",
