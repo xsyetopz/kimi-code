@@ -248,19 +248,16 @@ describe("SDKRpcClientV2 (agent-core-v2 wiring MVP)", () => {
     }
   });
 
-  it("fails loudly with not_implemented for methods not yet migrated", async () => {
+  it("returns session.not_found when deleteSession targets a missing id", async () => {
     const { harness } = await makeHarness();
     try {
-      // `deleteSession` is the permanent case: the v2 engine has no
-      // session-deletion capability, so it stays not_implemented by design
-      // (tracked in `.tmp/v2-migration-tracker.md`).
       await expect(
         harness.deleteSession("session_missing"),
       ).rejects.toThrowError(KimiError);
       await expect(
         harness.deleteSession("session_missing"),
       ).rejects.toMatchObject({
-        code: ErrorCodes.NOT_IMPLEMENTED,
+        code: ErrorCodes.SESSION_NOT_FOUND,
       });
     } finally {
       await harness.close();

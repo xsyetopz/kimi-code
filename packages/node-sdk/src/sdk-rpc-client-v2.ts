@@ -34,9 +34,8 @@
  *   {@link engineAccessor} where it does not (explicit session ids, resume,
  *   fork ids, the workspace-level add-dir surface). The v1 `SessionSummary` / `SessionMeta`
  *   shapes are restored by the pure mapping layer in
- *   `src/v2/session-mapper.ts`. `deleteSession` stays `not_implemented` —
- *   the v2 engine has no session-deletion capability anywhere (tracked in
- *   `.tmp/v2-migration-tracker.md`). The resumed results carry the full v1
+ *   `src/v2/session-mapper.ts`. `deleteSession` → `klient.session(id).delete()`
+ *   (engine `ISessionLifecycleService.delete`). The resumed results carry the full v1
  *   per-agent snapshot: the live slices are read from the restored agent
  *   scope (profile / permission / swarm services + the klient agent facade),
  *   while `replay` and `toolStore` are folded from each agent's `wire.jsonl`
@@ -195,6 +194,8 @@ import {
   ISessionSecondaryModelWarningService,
   ISessionSkillCatalog,
   ISessionWorkspaceContext,
+  IExplicitAgentProfileLoader,
+  IWireService,
   IWorkspaceAliases,
   IWorkspaceDirs,
   IWorkspaceMcpService,
@@ -202,6 +203,7 @@ import {
   IWorkspaceLifecycleService,
   IWorkspaceSkillCatalog,
   IWorkspaceTrust,
+  isError2,
   closeSessionById,
   followWorkspaceHandlers,
   getLiveSessionById,
@@ -223,6 +225,7 @@ import {
   resolveLoggingConfig,
   resolvePrintBackgroundMode,
   summarizeSkill,
+  type BindAgentInput,
   type IAgentScopeHandle,
   type IDisposable,
   type ISessionScopeHandle,
@@ -230,7 +233,9 @@ import {
   type SecondaryModelConfig,
   type ServicesAccessor,
 } from "@moonshot-ai/agent-core-v2";
+import { DEFAULT_PERMISSION_MODE_SECTION } from "@moonshot-ai/agent-core-v2/agent/permissionMode/configSection";
 import type { AgentHandle, Klient } from "@moonshot-ai/klient";
+import { RPCError } from "@moonshot-ai/klient";
 import { createKlient } from "@moonshot-ai/klient/memory";
 import {
   assertKimiHostIdentity,
@@ -1114,43 +1119,59 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         );
       }
     }
-    const handler = await this.engineAccessor
-      .get(IWorkspaceLifecycleService)
-      .handlerFor({ root: workDir });
-    const handle = await handler.accessor.get(ISessionLifecycleService).create({
-      sessionId: input.id,
-      workDir,
-      additionalDirs: input.additionalDirs,
-    });
-    // Wired before the optional main-agent materialization so a profile-bind
-    // warning (oversized AGENTS.md) reaches the listeners like v1's create.
-    this.wireSession(handle);
-    if (
-      input.model !== undefined ||
-      input.thinking !== undefined ||
-      input.permission !== undefined
-    ) {
-      const agent = await this.materializeMainAgent(handle, {
-        model: input.model,
-        thinking: input.thinking,
+    await this.assertValidMcpConfig(workDir);
+    try {
+      return await this.withSessionAgentFiles(workDir, input.agentFiles, async () => {
+        const mainAgentBinding = await this.resolveMainAgentBinding(input);
+        const handler = await this.engineAccessor
+          .get(IWorkspaceLifecycleService)
+          .handlerFor({ root: workDir });
+        const handle = await handler.accessor
+          .get(ISessionLifecycleService)
+          .create({
+            sessionId: input.id,
+            workDir,
+            additionalDirs: input.additionalDirs,
+            mainAgentBinding,
+          });
+        this.wireSession(handle);
+        try {
+          await this.applyPostCreateAgentOptions(
+            handle,
+            input,
+            mainAgentBinding !== undefined,
+          );
+          if (input.metadata !== undefined) {
+            await this.klient
+              .session(handle.id)
+              .update({ custom: { ...input.metadata } });
+          }
+        } catch (error) {
+          await this.deleteCreatedSession(handle.id);
+          throw error;
+        }
+        return {
+          ...(await this.liveSessionSummary(handle)),
+          metadata: input.metadata,
+        };
       });
-      if (input.permission !== undefined) {
-        agent.accessor
-          .get(IAgentPermissionModeService)
-          .setMode(input.permission);
+    } catch (error) {
+      throw this.asKimiError(error);
+    }
+  }
+
+  override async deleteSession(input: SessionIdRpcInput): Promise<void> {
+    try {
+      await this.klient.session(input.sessionId).delete();
+    } catch (error) {
+      if (
+        (error instanceof RPCError && error.code === 40404) ||
+        (isError2(error) && error.code === ErrorCodes.SESSION_NOT_FOUND)
+      ) {
+        throw SDKRpcClientV2.sessionNotFound(input.sessionId);
       }
+      throw error;
     }
-    if (input.metadata !== undefined) {
-      await this.klient
-        .session(handle.id)
-        .update({ custom: { ...input.metadata } });
-    }
-    // v1 returns the caller's metadata verbatim on create (not the merged
-    // custom map a later listing would report), so override it here too.
-    return {
-      ...(await this.liveSessionSummary(handle)),
-      metadata: input.metadata,
-    };
   }
 
   /**
@@ -1241,6 +1262,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       additionalDirs: input.additionalDirs,
     });
     if (handle === undefined) throw SDKRpcClientV2.sessionNotFound(input.id);
+    if (input.agentProfile !== undefined) {
+      this.assertResumeAgentProfile(handle, input.agentProfile);
+    }
     this.wireSession(handle);
     return this.resumedSessionSummary(handle, {
       includeSubagents: input.includeSubagents,
@@ -1398,15 +1422,20 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   private async materializeMainAgent(
     session: ISessionScopeHandle,
-    binding?: { readonly model?: string; readonly thinking?: string },
+    binding?: {
+      readonly profile?: string;
+      readonly model?: string;
+      readonly thinking?: string;
+    },
   ): Promise<IAgentScopeHandle> {
     await this.modelReady;
     const agent = await ensureMainAgent(session);
     const profile = agent.accessor.get(IAgentProfileService);
+    const profileName = binding?.profile ?? DEFAULT_AGENT_PROFILE_NAME;
     if (binding !== undefined || profile.data().profileName === undefined) {
       try {
         await profile.bind({
-          profile: DEFAULT_AGENT_PROFILE_NAME,
+          profile: profileName,
           model: binding?.model,
           thinking: binding?.thinking,
         });
@@ -2457,6 +2486,187 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       ISessionMcpHandle,
     );
     await mcp.connectionManager.reconnect(input.name);
+  }
+
+  private async assertValidMcpConfig(workDir: string): Promise<void> {
+    const handler = await this.engineAccessor
+      .get(IWorkspaceLifecycleService)
+      .handlerFor({ root: workDir });
+    const trusted = await handler.accessor.get(IWorkspaceTrust).get();
+    try {
+      await loadMcpServers({
+        fs: this.engineAccessor.get(IHostFileSystem),
+        cwd: workDir,
+        homeDir: this.homeDir,
+        includeProject: trusted,
+      });
+    } catch (error) {
+      throw this.asKimiError(error);
+    }
+  }
+
+  private async withSessionAgentFiles<T>(
+    workDir: string,
+    agentFiles: readonly string[] | undefined,
+    run: () => Promise<T>,
+  ): Promise<T> {
+    if (agentFiles === undefined || agentFiles.length === 0) {
+      return run();
+    }
+    const bootstrap = this.engineAccessor.get(IBootstrapService);
+    const previous = bootstrap.args.agentFiles;
+    (bootstrap.args as { agentFiles?: readonly string[] }).agentFiles =
+      agentFiles;
+    const handler = await this.engineAccessor
+      .get(IWorkspaceLifecycleService)
+      .handlerFor({ root: workDir });
+    try {
+      await handler.accessor.get(IExplicitAgentProfileLoader).reload();
+      return await run();
+    } finally {
+      (bootstrap.args as { agentFiles?: readonly string[] }).agentFiles =
+        previous;
+      await handler.accessor.get(IExplicitAgentProfileLoader).reload();
+    }
+  }
+
+  private async resolveMainAgentBinding(
+    input: CreateSessionOptions,
+  ): Promise<BindAgentInput | undefined> {
+    await this.modelReady;
+    const defaultModel = this.engineAccessor
+      .get(IConfigService)
+      .get<string>("defaultModel");
+    if (input.agentProfile !== undefined) {
+      return {
+        profile: input.agentProfile,
+        model: await this.resolveModelAliasForAgentProfile(input),
+        thinking: input.thinking,
+      };
+    }
+    if (input.model !== undefined) {
+      return {
+        profile: DEFAULT_AGENT_PROFILE_NAME,
+        model: input.model,
+        thinking: input.thinking,
+      };
+    }
+    if (input.thinking !== undefined && defaultModel !== undefined) {
+      return {
+        profile: DEFAULT_AGENT_PROFILE_NAME,
+        model: defaultModel,
+        thinking: input.thinking,
+      };
+    }
+    if (
+      input.thinking === undefined &&
+      input.permission === undefined &&
+      defaultModel !== undefined
+    ) {
+      return {
+        profile: DEFAULT_AGENT_PROFILE_NAME,
+        model: defaultModel,
+      };
+    }
+    return undefined;
+  }
+
+  private async resolveModelAliasForAgentProfile(
+    input: CreateSessionOptions,
+  ): Promise<string | undefined> {
+    if (input.model !== undefined) return input.model;
+    const defaultModel = this.engineAccessor
+      .get(IConfigService)
+      .get<string>("defaultModel");
+    if (defaultModel !== undefined) return defaultModel;
+    const configured = Object.keys(
+      this.engineAccessor.get(IModelService).list(),
+    );
+    if (configured.length === 1) return configured[0];
+    return undefined;
+  }
+
+  private async applyPostCreateAgentOptions(
+    handle: ISessionScopeHandle,
+    input: CreateSessionOptions,
+    boundAtCreate: boolean,
+  ): Promise<void> {
+    const needsAgent =
+      input.thinking !== undefined ||
+      input.permission !== undefined ||
+      (!boundAtCreate && (await this.hasConfiguredDefaultPermissionMode()));
+    if (!needsAgent) {
+      if (boundAtCreate && input.permission !== undefined) {
+        const agent = await ensureMainAgent(handle);
+        agent.accessor
+          .get(IAgentPermissionModeService)
+          .setMode(input.permission);
+        await agent.accessor.get(IWireService).flush();
+      }
+      return;
+    }
+    const agent = await ensureMainAgent(handle);
+    if (input.thinking !== undefined) {
+      agent.accessor.get(IAgentProfileService).setThinking(input.thinking);
+    }
+    if (input.permission !== undefined) {
+      agent.accessor.get(IAgentPermissionModeService).setMode(input.permission);
+    }
+    await agent.accessor.get(IWireService).flush();
+  }
+
+  private async hasConfiguredDefaultPermissionMode(): Promise<boolean> {
+    await this.configReady;
+    return (
+      this.engineAccessor.get(IConfigService).get(
+        DEFAULT_PERMISSION_MODE_SECTION,
+      ) !== undefined
+    );
+  }
+
+  private async deleteCreatedSession(sessionId: string): Promise<void> {
+    this.unwireSession(sessionId);
+    try {
+      await this.klient.session(sessionId).delete();
+    } catch {
+      await closeSessionById(this.engineAccessor, sessionId);
+    }
+  }
+
+  private assertResumeAgentProfile(
+    handle: ISessionScopeHandle,
+    requested: string,
+  ): void {
+    const main = handle.accessor
+      .get(IAgentLifecycleService)
+      .get(MAIN_AGENT_ID);
+    const bound = main?.accessor.get(IAgentProfileService).data().profileName;
+    if (bound !== undefined && bound !== requested) {
+      throw new ProfileError(
+        ProfileErrors.codes.PROFILE_ALREADY_BOUND,
+        `agent is already bound to profile "${bound}"; cannot switch to "${requested}" in this session`,
+        { current: bound, requested },
+      );
+    }
+  }
+
+  private asKimiError(error: unknown): unknown {
+    if (error instanceof KimiError) return error;
+    if (
+      error instanceof ProfileError &&
+      error.code === ProfileErrors.codes.PROFILE_UNKNOWN
+    ) {
+      return new KimiError(ErrorCodes.AGENT_NOT_FOUND, error.message, {
+        cause: error,
+      });
+    }
+    if (isError2(error)) {
+      return new KimiError(error.code, error.message, {
+        cause: error,
+        details: error.details,
+      });
+    }
+    return error;
   }
 }
 

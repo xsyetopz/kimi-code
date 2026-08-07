@@ -142,11 +142,11 @@ describe("KimiHarness.createSession transport link", () => {
       const configEvent = await waitForAgentWireEvent(
         homeDir,
         session.id,
-        "config.update",
+        "profile.bind",
         (event) => event["modelAlias"] === "kimi-test-model",
       );
       expect(configEvent).toMatchObject({
-        type: "config.update",
+        type: "profile.bind",
         modelAlias: "kimi-test-model",
       });
       expect(configEvent).not.toHaveProperty("provider");
@@ -219,11 +219,11 @@ effort = "medium"
       const configEvent = await waitForAgentWireEvent(
         homeDir,
         session.id,
-        "config.update",
+        "profile.bind",
         (event) => event["modelAlias"] === "alias-model",
       );
       expect(configEvent).toMatchObject({
-        type: "config.update",
+        type: "profile.bind",
         modelAlias: "alias-model",
       });
       expect(configEvent).not.toHaveProperty("provider");
@@ -369,7 +369,7 @@ effort = "medium"
           workDir,
           agentFiles: [join(workDir, "missing-agent.md")],
         }),
-      ).rejects.toThrow(/missing-agent\.md/);
+      ).rejects.toThrow(/missing-agent\.md|path does not exist/);
       expect(await harness.listSessions({ workDir })).toEqual([]);
     } finally {
       await harness.close();
@@ -707,12 +707,5 @@ effort = "medium"
 });
 
 function coreSessionIds(harness: KimiHarness): readonly string[] {
-  const core = (
-    harness as unknown as {
-      readonly rpc: {
-        readonly core: { readonly sessions: ReadonlyMap<string, unknown> };
-      };
-    }
-  ).rpc.core;
-  return Array.from(core.sessions.keys()).toSorted();
+  return Array.from(harness.sessions.keys()).toSorted();
 }
