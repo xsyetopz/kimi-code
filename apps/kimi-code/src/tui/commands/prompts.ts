@@ -35,6 +35,7 @@ export function promptPlatformSelection(
   return new Promise((resolve) => {
     const selector = new PlatformSelectorComponent({
       showCopilotOAuth: isExperimentalFlagEnabled("copilot-oauth"),
+      showCodexOAuth: isExperimentalFlagEnabled("codex-oauth"),
       onSelect: (platformId) => {
         host.restoreEditor();
         resolve(platformId);

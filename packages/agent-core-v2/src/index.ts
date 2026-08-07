@@ -463,6 +463,8 @@ export * from "#/app/auth/opencodeAuthAdapter";
 import "#/app/auth/opencodeAuthAdapterService";
 export * from "#/app/auth/copilotAuthAdapter";
 import "#/app/auth/copilotAuthAdapterService";
+export * from "#/app/auth/codexAuthAdapter";
+import "#/app/auth/codexAuthAdapterService";
 import "#/app/auth/flag";
 export * from "#/app/auth/authService";
 import "#/app/auth/authSummaryService";
