@@ -205,6 +205,7 @@ import {
   IWorkspaceSkillCatalog,
   IWorkspaceTrust,
   closeSessionById,
+  createCloudAppender,
   followWorkspaceHandlers,
   getLiveSessionById,
   handlerForSession,
@@ -237,6 +238,8 @@ import { createKlient } from "@moonshot-ai/klient/memory";
 import {
   assertKimiHostIdentity,
   createKimiDefaultHeaders,
+  createKimiDeviceId,
+  KIMI_CODE_PROVIDER_NAME,
 } from "@moonshot-ai/kimi-code-oauth";
 
 import { KimiAuthFacade } from "#/auth";
@@ -245,6 +248,7 @@ import {
   type KimiEngineAuthFacade,
 } from "#/engine-auth";
 import { KimiHarness } from "#/kimi-harness";
+import { resolveHarnessImageLimits } from "#/harness-image-limits";
 import {
   SDKRpcClientBase,
   type ActivateInlineSkillsRpcInput,
@@ -423,6 +427,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   private readonly sessionWirings = new Map<string, SessionEventWiring>();
   /** App-scope subscriptions (global event forwarding, lifecycle tracking), disposed in {@link close}. */
   private readonly appSubscriptions: IDisposable[] = [];
+  private disposed = false;
 
   constructor(options: SDKRpcClientV2Options = {}) {
     super();
@@ -474,7 +479,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     this.engineAuth = createKimiEngineAuthFacade(this.klient.global.auth);
     this.globalMcpConfig = new GlobalMcpConfigStore(this.homeDir);
     this.configReady = app.accessor.get(IConfigService).ready;
-    this.installEngineTelemetry(options.telemetry);
+    this.installEngineTelemetry(options);
     this.modelReady = Promise.all([
       this.configReady,
       app.accessor.get(IModelService).ready,
@@ -507,6 +512,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   }
 
   async close(): Promise<void> {
+    this.disposed = true;
     for (const wiring of this.sessionWirings.values()) {
       wiring.dispose();
     }
@@ -528,13 +534,39 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * gates them; the host keeps owning the client's lifecycle (flush /
    * shutdown stay with the host, matching the v1 core's arrangement).
    */
-  private installEngineTelemetry(client: TelemetryClient | undefined): void {
-    if (client === undefined) return;
+  private installEngineTelemetry(options: SDKRpcClientV2Options): void {
     const telemetry = this.app.accessor.get(ITelemetryService);
-    telemetry.setAppender(client);
+    const hostClient = options.telemetry;
+
+    if (hostClient !== undefined && hostClient !== disabledTelemetryClient) {
+      telemetry.setAppender(hostClient);
+      void this.configReady.then(() => {
+        if (this.disposed) return;
+        telemetry.setEnabled(
+          this.engineAccessor.get(IConfigService).get("telemetry") !== false,
+        );
+      });
+      return;
+    }
+
     void this.configReady.then(() => {
-      telemetry.setEnabled(
-        this.engineAccessor.get(IConfigService).get("telemetry") !== false,
+      if (this.disposed) return;
+      const enabled =
+        this.engineAccessor.get(IConfigService).get("telemetry") !== false;
+      telemetry.setEnabled(enabled);
+      if (!enabled) return;
+
+      const identity = assertKimiHostIdentity(this.identity);
+      const deviceId = createKimiDeviceId(this.homeDir);
+      telemetry.addAppender(
+        createCloudAppender(this.engineAccessor, {
+          deviceId,
+          appName: identity.productName,
+          version: identity.version,
+          uiMode: options.uiMode,
+          getAccessToken: () =>
+            this.auth.getCachedAccessToken(KIMI_CODE_PROVIDER_NAME),
+        }),
       );
     });
   }
@@ -2497,9 +2529,7 @@ export function createKimiHarnessV2(options: KimiHarnessOptions): KimiHarness {
     telemetry: rpc.telemetry,
     ensureConfigFile: () => rpc.ensureConfigFile(),
     onClose: () => rpc.close(),
-    // v1-core-owned ingestion limits; the v2 engine has no equivalent yet, so
-    // ingestion falls back to env / built-in defaults like daemon-client hosts.
-    imageLimits: undefined,
+    imageLimits: resolveHarnessImageLimits(rpc.configPath),
     sessionStartedProperties: options.sessionStartedProperties,
   });
 }
