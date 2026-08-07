@@ -183,8 +183,9 @@ KimiTUI.prototype.showProgressSpinner = function (
 KimiTUI.prototype.showLoginAuthorizationPrompt = function (
   this: KimiTUI,
   auth: DeviceAuthorization,
+  title?: string,
 ): LoginProgressSpinnerHandle {
-  return this.transcriptCoordinator.showLoginAuthorizationPrompt(auth);
+  return this.transcriptCoordinator.showLoginAuthorizationPrompt(auth, title);
 };
 
 declare module "./kimi-tui" {

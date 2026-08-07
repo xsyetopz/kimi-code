@@ -240,6 +240,10 @@ import {
 } from "@moonshot-ai/kimi-code-oauth";
 
 import { KimiAuthFacade } from "#/auth";
+import {
+  createKimiEngineAuthFacade,
+  type KimiEngineAuthFacade,
+} from "#/engine-auth";
 import { KimiHarness } from "#/kimi-harness";
 import {
   SDKRpcClientBase,
@@ -359,6 +363,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   readonly identity: KimiHostIdentity | undefined;
   readonly telemetry: TelemetryClient;
   readonly auth: KimiAuthFacade;
+  readonly engineAuth: KimiEngineAuthFacade;
   readonly klient: Klient;
 
   private readonly app: Scope;
@@ -466,6 +471,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     );
     this.app = app;
     this.klient = createKlient({ scope: app });
+    this.engineAuth = createKimiEngineAuthFacade(this.klient.global.auth);
     this.globalMcpConfig = new GlobalMcpConfigStore(this.homeDir);
     this.configReady = app.accessor.get(IConfigService).ready;
     this.installEngineTelemetry(options.telemetry);
@@ -2487,6 +2493,7 @@ export function createKimiHarnessV2(options: KimiHarnessOptions): KimiHarness {
     homeDir: rpc.homeDir,
     configPath: rpc.configPath,
     auth: rpc.auth,
+    engineAuth: rpc.engineAuth,
     telemetry: rpc.telemetry,
     ensureConfigFile: () => rpc.ensureConfigFile(),
     onClose: () => rpc.close(),

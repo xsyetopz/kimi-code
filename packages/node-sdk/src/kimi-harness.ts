@@ -9,6 +9,7 @@ import {
 
 import { Session } from "#/session";
 import type { KimiAuthFacade } from "#/auth";
+import type { KimiEngineAuthFacade } from "#/engine-auth";
 import type { SDKRpcClientBase } from "#/rpc";
 import type {
   AuthenticateMcpServerOptions,
@@ -47,6 +48,7 @@ export interface KimiHarnessRuntimeOptions {
   readonly homeDir: string;
   readonly configPath: string;
   readonly auth: KimiAuthFacade;
+  readonly engineAuth: KimiEngineAuthFacade;
   readonly telemetry: TelemetryClient;
   readonly ensureConfigFile: () => Promise<void>;
   readonly onClose: () => void | Promise<void>;
@@ -64,6 +66,7 @@ export class KimiHarness {
   readonly homeDir: string;
   readonly configPath: string;
   readonly auth: KimiAuthFacade;
+  readonly engineAuth: KimiEngineAuthFacade;
 
   private readonly identity: KimiHostIdentity | undefined;
   private readonly uiMode: string;
@@ -89,6 +92,7 @@ export class KimiHarness {
     this.configPath = options.configPath;
     this.telemetry = options.telemetry;
     this.auth = options.auth;
+    this.engineAuth = options.engineAuth;
     this.ensureConfigFileImpl = options.ensureConfigFile;
     this.closeImpl = options.onClose;
     this.sessionStartedProperties = options.sessionStartedProperties ?? {};

@@ -330,6 +330,18 @@ function oauthHarness(rpc: OAuthRpc): KimiHarness {
     homeDir: "/tmp/kimi-sdk-mcp-oauth-home",
     configPath: "/tmp/kimi-sdk-mcp-oauth-home/config.toml",
     auth: {} as never,
+    engineAuth: {
+      status: async () => ({ loggedIn: false }),
+      summarize: async () => [],
+      startLogin: async () => ({
+        flow_id: "flow",
+        provider: "opencode",
+        status: "authenticated" as const,
+      }),
+      flow: async () => undefined,
+      cancelLogin: async () => ({ cancelled: false, status: "cancelled" as const }),
+      logout: async () => ({ logged_out: true as const, provider: "opencode" }),
+    },
     telemetry: { track: () => undefined },
     ensureConfigFile: async () => undefined,
     onClose: async () => undefined,

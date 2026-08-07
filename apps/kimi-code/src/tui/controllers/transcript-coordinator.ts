@@ -747,11 +747,12 @@ export class TranscriptCoordinator {
 
   showLoginAuthorizationPrompt(
     auth: DeviceAuthorization,
+    title = "Sign in to Kimi Code",
   ): LoginProgressSpinnerHandle {
     openUrl(auth.verificationUriComplete);
     this.host.state.transcriptContainer.addChild(
       new DeviceCodeBoxComponent({
-        title: "Sign in to Kimi Code",
+        title,
         url: auth.verificationUriComplete,
         code: auth.userCode,
         hint: "Press Ctrl-C to cancel",

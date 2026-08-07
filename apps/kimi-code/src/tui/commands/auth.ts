@@ -4,13 +4,22 @@ import {
   filterModelsByPrefix,
   getOpenPlatformById,
   OpenPlatformApiError,
+  type DeviceAuthorization,
   type ManagedKimiCodeModelInfo,
   type ManagedKimiConfigShape,
   type OpenPlatformDefinition,
 } from "@moonshot-ai/kimi-code-oauth";
-import { log } from "@moonshot-ai/kimi-code-sdk";
+import {
+  log,
+  type EngineOAuthFlowSnapshot,
+  type EngineOAuthFlowStart,
+} from "@moonshot-ai/kimi-code-sdk";
 
 import type { ChoiceOption } from "../components/dialogs/choice-picker";
+import {
+  EXTERNAL_OAUTH_PROVIDER_IDS,
+  EXTERNAL_OAUTH_PROVIDER_LABELS,
+} from "../components/dialogs/platform-selector";
 import {
   DEFAULT_OAUTH_PROVIDER_NAME,
   PRODUCT_NAME,
@@ -25,6 +34,10 @@ import {
 } from "./prompts";
 import type { SlashCommandHost } from "./dispatch";
 
+const TERMINAL_OAUTH_FLOW_STATUSES = new Set<
+  EngineOAuthFlowSnapshot["status"]
+>(["authenticated", "denied", "expired", "cancelled"]);
+
 // ---------------------------------------------------------------------------
 // Auth: login / logout
 // ---------------------------------------------------------------------------
@@ -37,6 +50,11 @@ export async function handleLoginCommand(
 
   if (platformId === "kimi-code") {
     await handleKimiCodeOAuthLogin(host);
+    return;
+  }
+
+  if (EXTERNAL_OAUTH_PROVIDER_IDS.has(platformId)) {
+    await handleExternalOAuthLogin(host, platformId);
     return;
   }
 
@@ -109,6 +127,179 @@ async function handleKimiCodeOAuthLogin(host: SlashCommandHost): Promise<void> {
       host.cancelInFlight = undefined;
     }
   }
+}
+
+async function handleExternalOAuthLogin(
+  host: SlashCommandHost,
+  providerId: string,
+): Promise<void> {
+  const providerLabel =
+    EXTERNAL_OAUTH_PROVIDER_LABELS[providerId] ?? providerId;
+  const status = await host.harness.engineAuth.status(providerId);
+  const alreadyLoggedIn = status.loggedIn;
+
+  let spinner: LoginProgressSpinnerHandle | undefined;
+  const controller = new AbortController();
+  const cancelLogin = (): void => {
+    controller.abort();
+    void host.harness.engineAuth.cancelLogin(providerId).catch(() => undefined);
+  };
+  host.cancelInFlight = cancelLogin;
+
+  try {
+    const start = await host.harness.engineAuth.startLogin(providerId);
+    if (start.status === "authenticated") {
+      spinner = host.showLoginProgressSpinner("Logged in.");
+      spinner.stop({ ok: true, label: "Logged in." });
+      spinner = undefined;
+      await host.authFlow.refreshConfigAfterLogin();
+      host.track("login", {
+        provider: providerId,
+        method: "oauth",
+        already_logged_in: alreadyLoggedIn,
+      });
+      if (alreadyLoggedIn) {
+        host.showStatus(
+          `Already logged in to ${providerLabel}. Model configuration refreshed.`,
+          "success",
+        );
+      } else {
+        host.showStatus(`Logged in to ${providerLabel}.`, "success");
+      }
+      return;
+    }
+
+    spinner = host.showLoginAuthorizationPrompt(
+      toDeviceAuthorization(start),
+      `Sign in to ${providerLabel}`,
+    );
+
+    const flow = await waitForExternalOAuthFlow(host, providerId, start, {
+      signal: controller.signal,
+    });
+    if (controller.signal.aborted) {
+      spinner.stop({ ok: false, label: "Login cancelled." });
+      spinner = undefined;
+      return;
+    }
+    if (flow.status !== "authenticated") {
+      const message =
+        flow.error_message ??
+        `Login ${flow.status === "expired" ? "expired" : "failed"}.`;
+      throw new Error(message);
+    }
+
+    spinner.stop({ ok: true, label: "Logged in." });
+    spinner = undefined;
+    try {
+      await host.authFlow.refreshConfigAfterLogin();
+    } catch (refreshError) {
+      const message = formatErrorMessage(refreshError);
+      host.showError(
+        `Authentication successful, but failed to refresh config: ${message}`,
+      );
+      return;
+    }
+    host.track("login", {
+      provider: providerId,
+      method: "oauth",
+      already_logged_in: alreadyLoggedIn,
+    });
+    if (alreadyLoggedIn) {
+      host.showStatus(
+        `Already logged in to ${providerLabel}. Model configuration refreshed.`,
+        "success",
+      );
+    } else {
+      host.showStatus(`Logged in to ${providerLabel}.`, "success");
+    }
+  } catch (error) {
+    const cancelled = controller.signal.aborted;
+    spinner?.stop({
+      ok: false,
+      label: cancelled ? "Login cancelled." : "Login failed.",
+    });
+    spinner = undefined;
+    if (cancelled) return;
+    log.warn("external oauth login failed", {
+      providerId,
+      alreadyLoggedIn,
+      sessionId: host.session?.id,
+      error,
+    });
+    const message = formatErrorMessage(error);
+    host.showError(`Login failed: ${message}`);
+  } finally {
+    if (host.cancelInFlight === cancelLogin) {
+      host.cancelInFlight = undefined;
+    }
+  }
+}
+
+function toDeviceAuthorization(
+  start: Extract<EngineOAuthFlowStart, { status: "pending" }>,
+): DeviceAuthorization {
+  return {
+    userCode: start.user_code,
+    deviceCode: "",
+    verificationUri: start.verification_uri,
+    verificationUriComplete: start.verification_uri_complete,
+    expiresIn: start.expires_in,
+    interval: start.interval,
+  };
+}
+
+async function waitForExternalOAuthFlow(
+  host: SlashCommandHost,
+  providerId: string,
+  start: Extract<EngineOAuthFlowStart, { status: "pending" }>,
+  options: { readonly signal: AbortSignal },
+): Promise<EngineOAuthFlowSnapshot> {
+  let intervalSec = start.interval;
+  while (!options.signal.aborted) {
+    await sleepMs(intervalSec * 1000, options.signal);
+    if (options.signal.aborted) {
+      return {
+        flow_id: start.flow_id,
+        provider: providerId,
+        status: "cancelled",
+        verification_uri: start.verification_uri,
+        verification_uri_complete: start.verification_uri_complete,
+        user_code: start.user_code,
+        expires_in: start.expires_in,
+        expires_at: start.expires_at,
+        interval: start.interval,
+      };
+    }
+    const flow = await host.harness.engineAuth.flow(providerId);
+    if (flow === undefined) continue;
+    if (TERMINAL_OAUTH_FLOW_STATUSES.has(flow.status)) return flow;
+    if (flow.interval > intervalSec) intervalSec = flow.interval;
+  }
+  return {
+    flow_id: start.flow_id,
+    provider: providerId,
+    status: "cancelled",
+    verification_uri: start.verification_uri,
+    verification_uri_complete: start.verification_uri_complete,
+    user_code: start.user_code,
+    expires_in: start.expires_in,
+    expires_at: start.expires_at,
+    interval: start.interval,
+  };
+}
+
+function sleepMs(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(done, ms);
+    const onAbort = () => done();
+    function done(): void {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 async function handleOpenPlatformLogin(
@@ -223,6 +414,43 @@ export async function handleLogoutCommand(
       description: "OAuth login",
     });
   }
+  const optionIds = new Set(options.map((option) => option.value));
+  for (const providerId of EXTERNAL_OAUTH_PROVIDER_IDS) {
+    if (optionIds.has(providerId)) continue;
+    try {
+      const status = await host.harness.engineAuth.status(providerId);
+      if (!status.loggedIn) continue;
+      options.push({
+        value: providerId,
+        label: EXTERNAL_OAUTH_PROVIDER_LABELS[providerId] ?? providerId,
+        description: "OAuth login",
+      });
+      optionIds.add(providerId);
+    } catch (error) {
+      log.warn("logout external oauth status failed", { providerId, error });
+    }
+  }
+  try {
+    const engineStatuses = await host.harness.engineAuth.summarize();
+    for (const status of engineStatuses) {
+      if (!status.loggedIn || status.provider === undefined) continue;
+      if (
+        status.provider === DEFAULT_OAUTH_PROVIDER_NAME ||
+        optionIds.has(status.provider)
+      ) {
+        continue;
+      }
+      options.push({
+        value: status.provider,
+        label:
+          EXTERNAL_OAUTH_PROVIDER_LABELS[status.provider] ?? status.provider,
+        description: "OAuth login",
+      });
+      optionIds.add(status.provider);
+    }
+  } catch (error) {
+    log.warn("logout provider discovery failed", { error });
+  }
   for (const id of apiKeyProviderIds) {
     const baseUrl = config.providers[id]?.baseUrl;
     options.push({
@@ -251,6 +479,8 @@ export async function handleLogoutCommand(
 
   if (target === DEFAULT_OAUTH_PROVIDER_NAME) {
     await host.harness.auth.logout(DEFAULT_OAUTH_PROVIDER_NAME);
+  } else if (EXTERNAL_OAUTH_PROVIDER_IDS.has(target)) {
+    await host.harness.engineAuth.logout(target);
   } else {
     await host.harness.removeProvider(target);
   }
@@ -267,6 +497,9 @@ export async function handleLogoutCommand(
   }
 
   host.track("logout", { provider: target });
-  const label = target === DEFAULT_OAUTH_PROVIDER_NAME ? PRODUCT_NAME : target;
+  const label =
+    target === DEFAULT_OAUTH_PROVIDER_NAME
+      ? PRODUCT_NAME
+      : (EXTERNAL_OAUTH_PROVIDER_LABELS[target] ?? target);
   host.showStatus(`Logged out from ${label}.`);
 }

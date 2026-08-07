@@ -175,6 +175,7 @@ export interface SlashCommandHost {
   showLoginProgressSpinner(label: string): LoginProgressSpinnerHandle;
   showLoginAuthorizationPrompt(
     auth: DeviceAuthorization,
+    title?: string,
   ): LoginProgressSpinnerHandle;
   showProgressSpinner(label: string): LoginProgressSpinnerHandle;
 

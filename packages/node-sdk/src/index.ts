@@ -4,6 +4,15 @@ export type { KimiHarnessRuntimeOptions } from "#/kimi-harness";
 export { Session } from "#/session";
 export { KimiAuthFacade } from "#/auth";
 export {
+  createKimiEngineAuthFacade,
+  type EngineAuthStatus,
+  type EngineOAuthFlowSnapshot,
+  type EngineOAuthFlowStart,
+  type EngineOAuthLoginCancelResponse,
+  type EngineOAuthLogoutResponse,
+  type KimiEngineAuthFacade,
+} from "#/engine-auth";
+export {
   createKimiHarnessV2,
   SDKRpcClientV2,
   type SDKRpcClientV2Options,

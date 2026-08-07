@@ -214,6 +214,21 @@ function makeHarness(
       logout: vi.fn(),
       getManagedUsage: vi.fn(),
     },
+    engineAuth: {
+      status: vi.fn(async () => ({ loggedIn: false })),
+      summarize: vi.fn(async () => []),
+      startLogin: vi.fn(async () => ({
+        flow_id: "flow-1",
+        provider: "opencode",
+        status: "authenticated" as const,
+      })),
+      flow: vi.fn(async () => undefined),
+      cancelLogin: vi.fn(async () => ({
+        cancelled: true,
+        status: "cancelled" as const,
+      })),
+      logout: vi.fn(async () => ({ logged_out: true as const, provider: "opencode" })),
+    },
     ...overrides,
   };
 }

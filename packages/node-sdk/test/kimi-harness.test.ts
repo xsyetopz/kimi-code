@@ -79,6 +79,18 @@ read_byte_budget = 65536
       homeDir: "/tmp/home",
       configPath: "/tmp/config.toml",
       auth: { status: async () => ({ providers: [] }) } as never,
+      engineAuth: {
+        status: async () => ({ loggedIn: false }),
+        summarize: async () => [],
+        startLogin: async () => ({
+          flow_id: "flow",
+          provider: "opencode",
+          status: "authenticated" as const,
+        }),
+        flow: async () => undefined,
+        cancelLogin: async () => ({ cancelled: false, status: "cancelled" as const }),
+        logout: async () => ({ logged_out: true as const, provider: "opencode" }),
+      },
       telemetry: recordingTelemetry([]),
       ensureConfigFile: async () => undefined,
       onClose: () => undefined,
