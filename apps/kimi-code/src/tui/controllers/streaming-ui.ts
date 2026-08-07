@@ -22,6 +22,7 @@ import type {
   QueuedMessage,
   ToolCallBlockData,
   ToolResultBlockData,
+  CompactionTranscriptData,
   TranscriptEntry,
 } from "../types";
 import type { TUIState } from "../tui-state";
@@ -46,6 +47,10 @@ export interface StreamingUIHost {
     toolCallId: string,
     data: ToolCallBlockData,
   ): void;
+  syncCompactionTranscriptEntry(
+    entryId: string,
+    data: CompactionTranscriptData,
+  ): void;
 }
 
 export class StreamingUIController {
@@ -69,6 +74,7 @@ export class StreamingUIController {
   } | null = null;
   private _activeThinkingComponent: ThinkingComponent | undefined = undefined;
   private _activeCompactionBlock: CompactionComponent | undefined = undefined;
+  private _activeCompactionEntryId: string | undefined = undefined;
   private _activeToolCalls = new Map<string, ToolCallBlockData>();
   private _streamingToolCallArguments = new Map<
     string,
@@ -784,17 +790,39 @@ export class StreamingUIController {
     if (this._activeCompactionBlock !== undefined) {
       this._activeCompactionBlock.markDone();
       this._activeCompactionBlock = undefined;
+      this._activeCompactionEntryId = undefined;
     }
+    const entryId = nextTranscriptId();
+    const tip = currentWorkingTip()?.text;
+    const mirrorCompactionToInk = (): void => {
+      if (this.host.terminalRenderer !== "ink") return;
+      if (this._activeCompactionEntryId === undefined) return;
+      if (this._activeCompactionBlock === undefined) return;
+      this.host.syncCompactionTranscriptEntry(
+        this._activeCompactionEntryId,
+        this._activeCompactionBlock.captureCompactionTranscriptData(),
+      );
+    };
     const block = new CompactionComponent(
       state.ui,
       instruction,
-      currentWorkingTip()?.text,
+      tip,
+      mirrorCompactionToInk,
     );
     this._activeCompactionBlock = block;
+    this._activeCompactionEntryId = entryId;
     state.transcriptContainer.addChild(block);
     if (state.toolOutputExpanded) {
       block.setExpanded(true);
     }
+    this.host.pushTranscriptEntry({
+      id: entryId,
+      kind: "status",
+      renderMode: "plain",
+      content: "",
+      compactionData: block.captureCompactionTranscriptData(),
+    });
+    mirrorCompactionToInk();
     this.host.requestTerminalRender();
   }
 
@@ -807,6 +835,7 @@ export class StreamingUIController {
     if (block === undefined) return;
     block.markDone(tokensBefore, tokensAfter, summary);
     this._activeCompactionBlock = undefined;
+    this._activeCompactionEntryId = undefined;
     this.host.requestTerminalRender();
   }
 
@@ -815,6 +844,7 @@ export class StreamingUIController {
     if (block === undefined) return;
     block.markCanceled();
     this._activeCompactionBlock = undefined;
+    this._activeCompactionEntryId = undefined;
     this.host.requestTerminalRender();
   }
 

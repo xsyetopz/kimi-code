@@ -18,6 +18,7 @@ import type { TUI } from "@moonshot-ai/kimi-tui";
 
 import { STATUS_BULLET } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";
+import type { CompactionTranscriptData } from "#/tui/types";
 
 const BLINK_INTERVAL = 500;
 
@@ -36,12 +37,19 @@ export class CompactionComponent extends Container {
   private summary: string | undefined;
   private summaryText: Text | undefined;
   private expanded = false;
+  private onStateChange: (() => void) | undefined;
 
-  constructor(ui?: TUI, instruction?: string | undefined, tip?: string) {
+  constructor(
+    ui?: TUI,
+    instruction?: string | undefined,
+    tip?: string,
+    onStateChange?: () => void,
+  ) {
     super();
     this.ui = ui;
     this.instruction = instruction;
     this.tip = tip;
+    this.onStateChange = onStateChange;
 
     // Top margin so the block isn't glued to the previous transcript
     // entry (status line, tool result, etc.).
@@ -51,6 +59,41 @@ export class CompactionComponent extends Container {
     this.addInstructionChild();
 
     this.startBlink();
+  }
+
+  setStateListener(listener: (() => void) | undefined): void {
+    this.onStateChange = listener;
+  }
+
+  captureCompactionTranscriptData(): CompactionTranscriptData {
+    if (this.canceled) {
+      return {
+        phase: "cancelled",
+        instruction: this.instruction,
+        tip: this.tip,
+      };
+    }
+    if (this.done) {
+      return {
+        phase: "done",
+        instruction: this.instruction,
+        tip: this.tip,
+        tokensBefore: this.tokensBefore,
+        tokensAfter: this.tokensAfter,
+        summary: this.summary,
+        expanded: this.expanded,
+      };
+    }
+    return {
+      phase: "running",
+      instruction: this.instruction,
+      tip: this.tip,
+      blinkOn: this.blinkOn,
+    };
+  }
+
+  private notifyStateChange(): void {
+    this.onStateChange?.();
   }
 
   private addInstructionChild(): void {
@@ -105,6 +148,7 @@ export class CompactionComponent extends Container {
     if (this.expanded) {
       this.addSummaryChild();
     }
+    this.notifyStateChange();
     this.ui?.requestRender();
   }
 
@@ -113,6 +157,7 @@ export class CompactionComponent extends Container {
     this.canceled = true;
     this.stopBlink();
     this.headerText.setText(this.buildHeader());
+    this.notifyStateChange();
     this.ui?.requestRender();
   }
 
@@ -125,6 +170,7 @@ export class CompactionComponent extends Container {
       this.removeSummaryChild();
     }
     this.headerText.setText(this.buildHeader());
+    this.notifyStateChange();
     this.ui?.requestRender();
   }
 
@@ -192,6 +238,7 @@ export class CompactionComponent extends Container {
     this.blinkTimer = setInterval(() => {
       this.blinkOn = !this.blinkOn;
       this.headerText.setText(this.buildHeader());
+      this.notifyStateChange();
       this.ui?.requestRender();
     }, BLINK_INTERVAL);
   }

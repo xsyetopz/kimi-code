@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { CompactionComponent } from "#/tui/components/dialogs/compaction";
+import { projectCompactionLines } from "#/tui/projections/compaction";
 import { currentTheme, darkColors, lightColors } from "#/tui/theme";
 
 afterEach(() => {
@@ -193,6 +194,48 @@ describe("CompactionComponent", () => {
       expect(after).not.toBe(before);
     } finally {
       chalk.level = previousLevel;
+      component.dispose();
+    }
+  });
+});
+
+describe("projectCompactionLines", () => {
+  it("matches the live component for a running compaction", () => {
+    const component = new CompactionComponent(
+      undefined,
+      "keep the recent files only",
+      "ctrl+s: steer mid-turn",
+    );
+    try {
+      const projected = projectCompactionLines({
+        data: component.captureCompactionTranscriptData(),
+        blinkOn: true,
+      });
+      const live = component.render(120).map(strip).join("\n");
+      for (const line of projected) {
+        expect(live).toContain(strip(line).trimEnd());
+      }
+    } finally {
+      component.dispose();
+    }
+  });
+
+  it("matches the live component for a completed compaction summary", () => {
+    const component = new CompactionComponent(
+      undefined,
+      "keep the recent files only",
+    );
+    try {
+      component.markDone(120, 24, "Keep the src/tui compaction notes.");
+      component.setExpanded(true);
+      const projected = projectCompactionLines({
+        data: component.captureCompactionTranscriptData(),
+      });
+      const live = component.render(120).map(strip).join("\n");
+      for (const line of projected) {
+        expect(live).toContain(strip(line).trimEnd());
+      }
+    } finally {
       component.dispose();
     }
   });
