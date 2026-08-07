@@ -32,6 +32,7 @@ import {
   type ServiceIdentifier,
 } from "#/_base/di/instantiation";
 import type { Event, IWaitUntil } from "#/_base/event";
+import type { ModelProtocolProfile } from "#/kosong/protocol/profile";
 import type { Protocol } from "#/kosong/protocol/protocol";
 
 import type { OAuthRef } from "../provider/provider";
@@ -47,6 +48,7 @@ export interface ModelOverride {
   supportEfforts?: string[];
   defaultEffort?: string;
   offEffort?: string;
+  protocolProfile?: ModelProtocolProfile;
 }
 
 export interface ModelRecord {

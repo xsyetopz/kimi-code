@@ -194,6 +194,51 @@ describe("Model assembly (pure data)", () => {
     }
   });
 
+  it("resolves Kimi protocol profile with requiresAssistantReplay", () => {
+    const { host, catalog } = createHost(kimiSections);
+    try {
+      const model = catalog.get("k1");
+      expect(model.protocolProfile).toMatchObject({
+        transport: "kimi",
+        tools: { requiresAssistantReplay: true },
+        reasoning: { replayWithToolCalls: true, field: "reasoning_content" },
+      });
+    } finally {
+      host.dispose();
+    }
+  });
+
+  it("resolves DeepSeek protocol profile with replayWithToolCalls", () => {
+    const { host, catalog } = createHost({
+      providers: {
+        deepseek: {
+          type: "openai",
+          apiKey: "sk-deepseek",
+          baseUrl: "https://api.deepseek.com/v1",
+        },
+      },
+      models: {
+        ds: {
+          provider: "deepseek",
+          model: "deepseek-reasoner",
+          maxContextSize: 64000,
+        },
+      },
+    });
+    try {
+      const model = catalog.get("ds");
+      expect(model.protocolProfile).toMatchObject({
+        tools: { requiresAssistantReplay: false },
+        reasoning: {
+          replayWithToolCalls: true,
+          field: "reasoning_content",
+        },
+      });
+    } finally {
+      host.dispose();
+    }
+  });
+
   it("the Model carries no morphs and no request driver — pure data only", () => {
     const { host, catalog } = createHost(kimiSections);
     try {

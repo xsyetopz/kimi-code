@@ -38,6 +38,7 @@ import {
 import type { ModelCapability } from "#/kosong/contract/capability";
 import type { ProviderRequestAuth } from "#/kosong/contract/provider";
 import type { TokenUsage } from "#/kosong/contract/usage";
+import type { ModelProtocolProfile } from "#/kosong/protocol/profile";
 import type {
   Protocol,
   ProtocolProviderOptions,
@@ -91,6 +92,7 @@ export interface Model {
 
   readonly authProvider: AuthProvider;
   readonly providerOptions?: ProtocolProviderOptions;
+  readonly protocolProfile?: ModelProtocolProfile;
 }
 
 export interface ModelPingResult {

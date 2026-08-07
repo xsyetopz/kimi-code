@@ -34,6 +34,7 @@ import { defineState } from '#/_base/state/stateRegistry';
 import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
 import {
   IAgentContextProjectorService,
+  type ContextProjectionOptions,
   type MediaStripSnapshot,
 } from '#/agent/contextProjector/contextProjector';
 import { IAgentTokenCountingService } from '#/agent/tokenCounting/tokenCounting';
@@ -345,22 +346,29 @@ export class AgentLLMRequesterService implements IAgentLLMRequesterService {
   ): Promise<AgentLLMRequestFinish> {
     const shaped = this.toolSelect.shapeHistory(request.messages);
     let mediaStripSnapshot = this.mediaStripSnapshotForTurn(request.source);
+    const projectionOptions: ContextProjectionOptions = {
+      protocolProfile: request.model.protocolProfile,
+    };
     const requestInput = (projection: RequestProjection) => {
       return {
         systemPrompt: request.systemPrompt,
         tools: request.tools,
         messages:
           projection === 'strict'
-            ? this.projector.projectStrict(shaped)
+            ? this.projector.projectStrict(shaped, projectionOptions)
             : projection === 'media-degraded'
-              ? this.projector.projectMediaDegraded(shaped)
+              ? this.projector.projectMediaDegraded(shaped, projectionOptions)
               : projection === 'media-stripped'
                 ? this.projector.projectMediaStripped(
                     shaped,
                     (mediaStripSnapshot ??=
-                      this.projector.captureMediaStripSnapshot(shaped)),
+                      this.projector.captureMediaStripSnapshot(
+                        shaped,
+                        projectionOptions,
+                      )),
+                    projectionOptions,
                   )
-                : this.projector.project(shaped),
+                : this.projector.project(shaped, projectionOptions),
       };
     };
 

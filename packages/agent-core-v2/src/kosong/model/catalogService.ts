@@ -120,6 +120,10 @@ import { IModelOAuthTokens } from './modelOAuth';
 import type { ResolvedModelAuthMaterial } from './model.types';
 import type { ModelRequester } from './modelRequester';
 import { ModelRequesterImpl } from './modelRequesterImpl';
+import {
+  catalogWireDialect,
+  resolveModelProtocolProfile,
+} from './catalogProfiles';
 import { drivesThinkingThroughTraits } from './thinking';
 
 type MutableProtocolProviderOptions = {
@@ -399,6 +403,19 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
     trace.capture(TRACE.hostHeaders, this.hostRequestHeaders.headers);
     trace.capture(TRACE.thirdPartyHeaders, this.hostRequestHeaders.thirdPartyHeaders);
     trace.capture(TRACE.identitySlug, this.hostRequestHeaders.identitySlug);
+    const wireDialect = catalogWireDialect(
+      protocol,
+      providerType,
+      providerOptions?.vertexai === true,
+    );
+    const protocolProfile = resolveModelProtocolProfile(
+      wireName,
+      wireDialect,
+      model.protocolProfile ?? configuredModel.protocolProfile,
+      providerName,
+      configuredModel.protocol ?? protocol,
+    );
+    trace.capture(TRACE.protocolProfile, protocolProfile);
     return {
       id,
       name: wireName,
@@ -423,6 +440,7 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
       providerName,
       authProvider,
       providerOptions,
+      protocolProfile,
     };
   }
 

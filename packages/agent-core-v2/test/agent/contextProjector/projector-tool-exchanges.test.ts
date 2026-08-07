@@ -23,6 +23,10 @@ import {
 import { IAgentStateService } from "#/agent/state/agentState";
 import { AgentStateService } from "#/agent/state/agentStateService";
 import type { Message } from "#/kosong/contract/message";
+import {
+  DEEPSEEK_PROTOCOL_PROFILE,
+  KIMI_K2_PROTOCOL_PROFILE,
+} from "#/kosong/protocol/presets";
 import { ITelemetryService } from "#/app/telemetry/telemetry";
 import {
   recordingTelemetry,
@@ -1010,6 +1014,65 @@ describe("projector tool-exchange normalization", () => {
         .flatMap((message) => message.content)
         .find((part) => part.type === "image_url");
       expect(image).toMatchObject({ imageUrl: { url, id: "new-id" } });
+    });
+  });
+
+  describe("protocol profile replay invariants", () => {
+    it("skips consecutive assistant merge when requiresAssistantReplay is set", () => {
+      const projected = projector.projectStrict(
+        [user("go"), assistant("one"), assistant("two")],
+        { protocolProfile: KIMI_K2_PROTOCOL_PROFILE },
+      );
+      expect(projected.filter((message) => message.role === "assistant")).toHaveLength(
+        2,
+      );
+    });
+
+    it("keeps assistant think blocks after duplicate tool-call dedupe when replayWithToolCalls is set", () => {
+      const projected = projector.projectStrict(
+        [
+          user("go"),
+          assistant("first", ["dup"]),
+          toolResult("dup", "one"),
+          {
+            role: "assistant",
+            content: [{ type: "think", think: "" }],
+            toolCalls: [
+              {
+                type: "function",
+                id: "dup",
+                name: "Lookup",
+                arguments: "{}",
+              },
+            ],
+          },
+          toolResult("dup", "two"),
+          user("next"),
+        ],
+        { protocolProfile: DEEPSEEK_PROTOCOL_PROFILE },
+      );
+
+      const replayAssistant = projected.find(
+        (message, index) =>
+          message.role === "assistant" &&
+          index > 0 &&
+          message.content.some((part) => part.type === "think"),
+      );
+      expect(replayAssistant?.content).toEqual(
+        expect.arrayContaining([{ type: "think", think: "" }]),
+      );
+    });
+
+    it("preserves opaqueProviderState on projected messages", () => {
+      const projected = projector.project([
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "hi" }],
+          toolCalls: [],
+          opaqueProviderState: { item_id: "resp-1" },
+        },
+      ]);
+      expect(projected[0]?.opaqueProviderState).toEqual({ item_id: "resp-1" });
     });
   });
 });

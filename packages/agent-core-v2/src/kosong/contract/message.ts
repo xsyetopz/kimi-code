@@ -10,6 +10,7 @@
  * Pure types and pure functions only — no other domain, no I/O, no SDKs.
  */
 
+import type { OpaqueProviderState } from "./opaqueProviderState";
 import type { Tool } from "./tool";
 
 export type Role = "system" | "user" | "assistant" | "tool";
@@ -53,6 +54,7 @@ export interface ToolCall {
   name: string;
   arguments: string | null;
   extras?: Record<string, unknown>;
+  opaqueProviderState?: OpaqueProviderState;
   _streamIndex?: number | string;
 }
 
@@ -72,6 +74,7 @@ export interface Message {
   readonly toolCallId?: string;
   readonly partial?: boolean;
   readonly tools?: readonly Tool[];
+  readonly opaqueProviderState?: OpaqueProviderState;
 }
 
 export function isContentPart(part: StreamedMessagePart): part is ContentPart {

@@ -118,6 +118,8 @@ export * from "#/kosong/protocol/errors";
 export * from "#/kosong/protocol/protocol";
 export * from "#/kosong/protocol/protocolBase";
 export * from "#/kosong/protocol/protocolTrait";
+export * from "#/kosong/protocol/profile";
+export * from "#/kosong/protocol/presets";
 import "#/app/kosongConfig/envOverlay";
 import "#/app/kosongConfig/secondaryModelOverlay";
 export * from "#/kosong/model/completionBudget";
@@ -340,6 +342,7 @@ export * from "#/agent/tools/cron/cron-delete/cron-delete";
 import "#/agent/tools/cron/cron-delete/cronDeleteTool";
 
 import "#/session/agentLifecycle/profile/profiles";
+import "#/session/agentLifecycle/profile/orchestrator";
 export * from "#/session/agentLifecycle/agentLifecycle";
 export * from "#/session/agentLifecycle/agentLifecycleService";
 export * from "#/session/agentLifecycle/mainAgent";

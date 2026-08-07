@@ -38,8 +38,13 @@ import type { ContentPart, Message } from '#/kosong/contract/message';
 import { ITelemetryService } from '#/app/telemetry/telemetry';
 import {
   IAgentContextProjectorService,
+  type ContextProjectionOptions,
   type MediaStripSnapshot,
 } from './contextProjector';
+import {
+  profileReplayReasoningWithToolCalls,
+  profileRequiresAssistantReplay,
+} from '#/kosong/protocol/profile';
 
 export const contextProjectorLastRepairSignatureKey = defineState<string | null>(
   'contextProjector.lastRepairSignature',
@@ -65,30 +70,37 @@ export class AgentContextProjectorService implements IAgentContextProjectorServi
     this.states.set(contextProjectorLastRepairSignatureKey, value);
   }
 
-  project(messages: readonly ContextMessage[]): readonly Message[] {
-    return this.projectWithTrace(messages, project);
+  project(messages: readonly ContextMessage[], options?: ContextProjectionOptions): readonly Message[] {
+    return this.projectWithTrace(messages, project, options);
   }
 
-  projectStrict(messages: readonly ContextMessage[]): readonly Message[] {
-    return this.projectWithTrace(messages, projectStrict);
+  projectStrict(messages: readonly ContextMessage[], options?: ContextProjectionOptions): readonly Message[] {
+    return this.projectWithTrace(messages, projectStrict, options);
   }
 
-  projectMediaDegraded(messages: readonly ContextMessage[]): readonly Message[] {
+  projectMediaDegraded(
+    messages: readonly ContextMessage[],
+    options?: ContextProjectionOptions,
+  ): readonly Message[] {
     return degradeOlderMediaParts(
-      this.projectWithTrace(messages, project),
+      this.projectWithTrace(messages, project, options),
       MEDIA_DEGRADE_KEEP_RECENT,
     );
   }
 
-  captureMediaStripSnapshot(messages: readonly ContextMessage[]): MediaStripSnapshot {
-    return captureMediaStripSnapshot(this.projectWithTrace(messages, project));
+  captureMediaStripSnapshot(
+    messages: readonly ContextMessage[],
+    options?: ContextProjectionOptions,
+  ): MediaStripSnapshot {
+    return captureMediaStripSnapshot(this.projectWithTrace(messages, project, options));
   }
 
   projectMediaStripped(
     messages: readonly ContextMessage[],
     snapshot?: MediaStripSnapshot,
+    options?: ContextProjectionOptions,
   ): readonly Message[] {
-    const projected = this.projectWithTrace(messages, project);
+    const projected = this.projectWithTrace(messages, project, options);
     return stripMediaPartsBySnapshot(
       projected,
       snapshot ?? captureMediaStripSnapshot(projected),
@@ -97,10 +109,15 @@ export class AgentContextProjectorService implements IAgentContextProjectorServi
 
   private projectWithTrace(
     messages: readonly ContextMessage[],
-    fn: (history: readonly ContextMessage[], onAnomaly?: (anomaly: ProjectionAnomaly) => void) => Message[],
+    fn: (
+      history: readonly ContextMessage[],
+      onAnomaly?: (anomaly: ProjectionAnomaly) => void,
+      options?: ContextProjectionOptions,
+    ) => Message[],
+    options?: ContextProjectionOptions,
   ): readonly Message[] {
     const anomalies: ProjectionAnomaly[] = [];
-    const result = fn(messages, (anomaly) => anomalies.push(anomaly));
+    const result = fn(messages, (anomaly) => anomalies.push(anomaly), options);
     this.reportProjectionRepairs(anomalies);
     return result;
   }
@@ -315,15 +332,30 @@ export function degradeOlderMediaParts(
   });
 }
 
-function projectStrict(history: readonly ContextMessage[], onAnomaly?: OnAnomaly): Message[] {
-  const projected = project(history, onAnomaly);
+function projectStrict(
+  history: readonly ContextMessage[],
+  onAnomaly?: OnAnomaly,
+  options?: ContextProjectionOptions,
+): Message[] {
+  const projected = project(history, onAnomaly, options);
   return dropLeadingNonUserMessages(
-    mergeConsecutiveAssistantMessages(dedupeDuplicateToolCalls(projected, onAnomaly), onAnomaly),
+    mergeConsecutiveAssistantMessages(
+      dedupeDuplicateToolCalls(projected, onAnomaly, options),
+      onAnomaly,
+      options,
+    ),
     onAnomaly,
   );
 }
 
-function dedupeDuplicateToolCalls(messages: readonly Message[], onAnomaly?: OnAnomaly): Message[] {
+function dedupeDuplicateToolCalls(
+  messages: readonly Message[],
+  onAnomaly?: OnAnomaly,
+  options?: ContextProjectionOptions,
+): Message[] {
+  const replayWithToolCalls = profileReplayReasoningWithToolCalls(
+    options?.protocolProfile,
+  );
   const seenToolCallIds = new Set<string>();
   const keptToolResultIndexes = new Map<string, number>();
   const out: Message[] = [];
@@ -337,9 +369,15 @@ function dedupeDuplicateToolCalls(messages: readonly Message[], onAnomaly?: OnAn
         seenToolCallIds.add(toolCall.id);
         return true;
       });
+      const hasReplayableThink =
+        replayWithToolCalls && message.content.some((part) => part.type === 'think');
       if (kept.length === message.toolCalls.length) {
         out.push(message);
-      } else if (kept.length > 0 || !message.content.every(isVacuousContentPart)) {
+      } else if (
+        kept.length > 0 ||
+        !message.content.every(isVacuousContentPart) ||
+        hasReplayableThink
+      ) {
         out.push({ ...message, toolCalls: kept });
       } else if (message.content.length > 0) {
         onAnomaly?.({ kind: 'vacuous_message_dropped', role: message.role });
@@ -366,7 +404,11 @@ function dedupeDuplicateToolCalls(messages: readonly Message[], onAnomaly?: OnAn
 function mergeConsecutiveAssistantMessages(
   messages: readonly Message[],
   onAnomaly?: OnAnomaly,
+  options?: ContextProjectionOptions,
 ): Message[] {
+  if (profileRequiresAssistantReplay(options?.protocolProfile)) {
+    return [...messages];
+  }
   const out: Message[] = [];
   for (const message of messages) {
     const previous = out.at(-1);
@@ -393,7 +435,11 @@ function dropLeadingNonUserMessages(messages: readonly Message[], onAnomaly?: On
   return start === 0 ? [...messages] : messages.slice(start);
 }
 
-function project(history: readonly ContextMessage[], onAnomaly?: OnAnomaly): Message[] {
+function project(
+  history: readonly ContextMessage[],
+  onAnomaly?: OnAnomaly,
+  options?: ContextProjectionOptions,
+): Message[] {
   const hasAssistant = history.some(
     (message) => message.partial !== true && message.role === 'assistant',
   );
@@ -621,6 +667,7 @@ function toWireMessage(message: ContextMessage, content: ContentPart[]): Message
     toolCallId: message.toolCallId,
     partial: message.partial,
     tools: message.tools,
+    opaqueProviderState: message.opaqueProviderState,
   };
 }
 

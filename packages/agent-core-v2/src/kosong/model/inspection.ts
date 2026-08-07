@@ -30,6 +30,7 @@ import type {
   Protocol,
   ProtocolProviderOptions,
 } from "#/kosong/protocol/protocol";
+import type { ModelProtocolProfile } from "#/kosong/protocol/profile";
 
 import type { AnthropicModelProfile } from "../provider/bases/anthropic/anthropic-profile";
 import type { ProviderConfig } from "../provider/provider";
@@ -63,6 +64,7 @@ export interface InspectedResolvedModel {
   readonly alwaysThinking: boolean;
   readonly headers: Readonly<Record<string, string>>;
   readonly providerOptions?: ProtocolProviderOptions;
+  readonly protocolProfile?: ModelProtocolProfile;
 }
 
 export interface ModelInspection {
@@ -101,6 +103,7 @@ export const TRACE = {
   hostHeaders: "hostHeaders",
   thirdPartyHeaders: "thirdPartyHeaders",
   identitySlug: "identitySlug",
+  protocolProfile: "protocolProfile",
 } as const;
 
 export class ResolutionTraceCollector implements ResolutionTrace {
@@ -277,6 +280,7 @@ interface ResolvedModelLike {
   readonly alwaysThinking: boolean;
   readonly headers: Readonly<Record<string, string>>;
   readonly providerOptions?: ProtocolProviderOptions;
+  readonly protocolProfile?: ModelProtocolProfile;
 }
 
 const CAPABILITY_KEYS = [
@@ -479,6 +483,7 @@ export function assembleModelInspection(args: {
       alwaysThinking: model.alwaysThinking,
       headers: model.headers,
       providerOptions: model.providerOptions,
+      protocolProfile: model.protocolProfile,
     },
     sources: Object.fromEntries(sources),
   };
