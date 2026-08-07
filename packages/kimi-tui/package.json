@@ -2,7 +2,7 @@
   "name": "@moonshot-ai/kimi-tui",
   "version": "0.80.8",
   "private": true,
-  "description": "Terminal UI engine for Kimi Code — differential rendering, editor, markdown, and Ink host adapters",
+  "description": "Shared UI kit for Kimi Code — React components, Ink adapters, and terminal primitives",
   "license": "MIT",
   "author": "Moonshot AI",
   "homepage": "https://github.com/MoonshotAI/kimi-code/tree/main/packages/kimi-tui#readme",
@@ -37,6 +37,12 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./react": {
+      "types": "./src/react/index.ts",
+      "default": "./src/react/index.ts"
+    },
+    "./react/theme.css": "./src/react/theme/theme.css",
+    "./react/components.css": "./src/react/theme/components.css",
     "./ink": {
       "types": "./src/ink/index.ts",
       "default": "./src/ink/index.ts"
@@ -55,6 +61,13 @@
         "import": "./dist/index.mjs",
         "default": "./dist/index.mjs"
       },
+      "./react": {
+        "types": "./dist/react/index.d.mts",
+        "import": "./dist/react/index.mjs",
+        "default": "./dist/react/index.mjs"
+      },
+      "./react/theme.css": "./dist/react/theme/theme.css",
+      "./react/components.css": "./dist/react/theme/components.css",
       "./ink": {
         "types": "./dist/ink/index.d.mts",
         "import": "./dist/ink/index.mjs",
@@ -79,6 +92,7 @@
     "marked": "18.0.5"
   },
   "devDependencies": {
+    "@types/react": "^19.1.2",
     "@xterm/headless": "5.5.0",
     "chalk": "^5.4.1",
     "react": "^19.2.8"

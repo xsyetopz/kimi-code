@@ -155,6 +155,7 @@
         "marked": "18.0.5",
       },
       "devDependencies": {
+        "@types/react": "^19.1.2",
         "@xterm/headless": "5.5.0",
         "chalk": "^5.4.1",
         "react": "^19.2.8",

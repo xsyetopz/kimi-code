@@ -1,7 +1,6 @@
 import type {
   AgentReplayRecord,
   ContextMessage,
-  GoalChange,
   PermissionMode,
   PromptOrigin,
   ResumedAgentState,
@@ -12,14 +11,13 @@ import type {
 import { ToolCallComponent } from "../components/messages/tool-call";
 import { ReplayTurnBoundaryComponent } from "../components/messages/user-message";
 import { currentTheme } from "../theme";
-import type { TodoItem } from "../components/chrome/todo-panel";
 import type {
   AppState,
   BackgroundAgentMetadata,
   ToolResultBlockData,
   TranscriptEntry,
 } from "../types";
-import { formatErrorMessage, isTodoItemShape } from "../utils/event-payload";
+import { formatErrorMessage } from "../utils/event-payload";
 import { formatBackgroundAgentTranscript } from "../utils/background-agent-status";
 import { formatBackgroundTaskTranscript } from "../utils/background-task-status";
 import { buildGoalCompletionMessage } from "../utils/goal-completion";
@@ -30,13 +28,10 @@ import {
   backgroundOrigin,
   collectReplayMessageContent,
   contentPartsToText,
-  countActiveBackgroundTasks,
   createReplayRenderContext,
   formatHookResultMessageForTranscript,
-  isTerminalBackgroundTask,
   limitReplayRecordsByTurn,
   REPLAY_TURN_LIMIT,
-  replayBackgroundProjection,
   replayEntry,
   skillActivationFromOrigin,
   pluginCommandFromOrigin,
@@ -49,13 +44,25 @@ import {
 import type { StreamingUIController } from "./streaming-ui";
 import type { SessionEventHandler } from "./session-event-handler";
 import type { TUIState } from "../tui-state";
+import {
+  applyTerminalBackgroundAgentStatusesOnReplay,
+  hydrateSessionReplayBackgroundState,
+  hydrateSessionReplayTodoPanel,
+} from "./session-replay-hydrate";
+import {
+  extractBashTag,
+  extractCronPrompt,
+  goalLifecycleReplayContent,
+  isModelBlockedGoalLifecycle,
+  isResumeNormalizationGoalPause,
+  type GoalReplayLifecycleChange,
+} from "./session-replay-helpers";
 
 type GoalReplayRecord = Extract<AgentReplayRecord, { type: "goal_updated" }>;
 type CompactionReplayRecord = Extract<
   AgentReplayRecord,
   { type: "compaction" }
 >;
-type GoalReplayLifecycleChange = GoalChange & { readonly kind: "lifecycle" };
 
 export interface SessionReplayHost {
   state: TUIState;
@@ -65,22 +72,6 @@ export interface SessionReplayHost {
   showError(msg: string): void;
   appendTranscriptEntry(entry: TranscriptEntry): void;
   mergeAllTurnSteps(): void;
-}
-
-function extractBashTag(
-  text: string,
-  tag: "bash-input" | "bash-stdout" | "bash-stderr",
-): string | undefined {
-  const match = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(text);
-  return match?.[1] === undefined ? undefined : unescapeBashXml(match[1]);
-}
-
-function unescapeBashXml(text: string): string {
-  return text
-    .replaceAll("&lt;", "<")
-    .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", '"')
-    .replaceAll("&amp;", "&");
 }
 
 export class SessionReplayRenderer {
@@ -97,7 +88,7 @@ export class SessionReplayRenderer {
 
       this.hydrateSnapshot(main);
       this.renderRecords(main);
-      this.applyTerminalBackgroundAgentStatuses(main);
+      applyTerminalBackgroundAgentStatusesOnReplay(this.host, main);
       this.host.mergeAllTurnSteps();
       return true;
     } catch (error) {
@@ -115,79 +106,8 @@ export class SessionReplayRenderer {
 
   private hydrateSnapshot(agent: ResumedAgentState): void {
     this.host.setAppState(appStateFromResumeAgent(agent));
-    this.hydrateTodoPanel(agent);
-    this.hydrateBackgroundState(agent);
-  }
-
-  private hydrateTodoPanel(agent: ResumedAgentState): void {
-    const rawTodos = agent.toolStore?.["todo"];
-    if (!Array.isArray(rawTodos)) {
-      this.host.streamingUI.setTodoList([]);
-      return;
-    }
-
-    const todos = rawTodos
-      .filter((todo): todo is TodoItem => isTodoItemShape(todo))
-      .map((todo) => ({ title: todo.title, status: todo.status }));
-    if (todos.length > 0 && todos.every((todo) => todo.status === "done")) {
-      this.host.streamingUI.setTodoList([]);
-      return;
-    }
-
-    this.host.streamingUI.setTodoList(todos);
-  }
-
-  /**
-   * Push real terminal status into each replayed `Agent` card whose
-   * backing background task is already in a terminal state. Runs AFTER
-   * `renderRecords` because the tool call components only exist once the
-   * replay has mounted them — `hydrateBackgroundState` runs too early to
-   * reach them. Without this, terminated bg agents (including ones that
-   * reconcile reclassified as `lost`) keep the spawn-success ToolResult's
-   * default of `✓ Completed`.
-   */
-  private applyTerminalBackgroundAgentStatuses(agent: ResumedAgentState): void {
-    for (const info of agent.background) {
-      if (info.kind !== "agent") continue;
-      if (!isTerminalBackgroundTask(info)) continue;
-      const status = info.status;
-      if (
-        status !== "completed" &&
-        status !== "failed" &&
-        status !== "timed_out" &&
-        status !== "killed" &&
-        status !== "lost"
-      ) {
-        continue;
-      }
-      this.host.streamingUI.applyBackgroundTaskTerminalStatus({
-        agentId: info.agentId,
-        description: info.description,
-        status,
-      });
-    }
-  }
-
-  private hydrateBackgroundState(agent: ResumedAgentState): void {
-    const { state, sessionEventHandler } = this.host;
-    const projection = replayBackgroundProjection(agent.background);
-    sessionEventHandler.subAgentEventHandler.backgroundAgentMetadata = new Map(
-      projection.backgroundAgentMetadata,
-    );
-    sessionEventHandler.backgroundTasks.clear();
-    for (const info of agent.background) {
-      sessionEventHandler.backgroundTasks.set(info.taskId, info);
-    }
-    sessionEventHandler.backgroundTaskTranscriptedTerminal.clear();
-    for (const info of agent.background) {
-      if (isTerminalBackgroundTask(info)) {
-        sessionEventHandler.backgroundTaskTranscriptedTerminal.add(info.taskId);
-      }
-    }
-    state.footer.setBackgroundCounts(
-      countActiveBackgroundTasks(sessionEventHandler.backgroundTasks),
-    );
-    state.ui.requestRender();
+    hydrateSessionReplayTodoPanel(this.host, agent);
+    hydrateSessionReplayBackgroundState(this.host, agent);
   }
 
   // ---------------------------------------------------------------------------
@@ -839,62 +759,4 @@ export class SessionReplayRenderer {
       meta.agentId,
     );
   }
-}
-
-const RESUME_NORMALIZATION_GOAL_PAUSE_REASONS = new Set([
-  "Paused after agent resume",
-  "Paused after session resume",
-]);
-
-function isResumeNormalizationGoalPause(
-  change: GoalReplayLifecycleChange,
-): boolean {
-  return (
-    change.status === "paused" &&
-    change.reason !== undefined &&
-    RESUME_NORMALIZATION_GOAL_PAUSE_REASONS.has(change.reason)
-  );
-}
-
-function goalLifecycleReplayContent(change: GoalReplayLifecycleChange): string {
-  switch (change.status) {
-    case "paused":
-      return "Goal paused";
-    case "active":
-      return "Goal resumed";
-    case "blocked":
-      return "Goal blocked";
-    case "complete":
-    case undefined:
-      return "Goal updated";
-  }
-}
-
-function isModelBlockedGoalLifecycle(
-  change: GoalReplayLifecycleChange,
-): boolean {
-  return change.status === "blocked" && change.actor === "model";
-}
-
-function extractCronPrompt(text: string): string {
-  const open = "<prompt>\n";
-  const close = "\n</prompt>";
-  const start = text.indexOf(open);
-  const end = text.lastIndexOf(close);
-  if (start >= 0 && end >= start + open.length) {
-    return text.slice(start + open.length, end);
-  }
-  return stripCronEnvelope(text);
-}
-
-function stripCronEnvelope(text: string): string {
-  const lines = text.split("\n");
-  if (
-    lines.length >= 2 &&
-    lines[0]?.startsWith("<cron-fire ") &&
-    lines.at(-1) === "</cron-fire>"
-  ) {
-    return lines.slice(1, -1).join("\n");
-  }
-  return text;
 }
