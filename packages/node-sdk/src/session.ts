@@ -638,6 +638,34 @@ export class Session {
     });
   }
 
+  async activateInlineSkills(
+    invocations: readonly { name: string; args?: string | undefined }[],
+    userText: string,
+  ): Promise<void> {
+    this.ensureOpen();
+    if (invocations.length === 0) {
+      throw new KimiError(
+        ErrorCodes.REQUEST_INVALID,
+        "Inline skill invocations must not be empty",
+      );
+    }
+    const normalized = invocations.map((invocation) => ({
+      name: normalizeRequiredString(
+        invocation.name,
+        "Skill name cannot be empty",
+        ErrorCodes.SKILL_NAME_EMPTY,
+      ),
+      ...(normalizeOptionalString(invocation.args) !== undefined
+        ? { args: normalizeOptionalString(invocation.args) }
+        : {}),
+    }));
+    await this.rpc.activateInlineSkills({
+      sessionId: this.id,
+      invocations: normalized,
+      userText,
+    });
+  }
+
   async activatePluginCommand(
     pluginId: string,
     commandName: string,

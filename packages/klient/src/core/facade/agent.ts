@@ -60,6 +60,10 @@ export interface AgentFacade {
     name: string;
     args?: string;
   }): Promise<PromptLaunchResult>;
+  activateInlineSkills(input: {
+    invocations: readonly { name: string; args?: string }[];
+    userText: string;
+  }): Promise<PromptLaunchResult>;
   cancel(input?: { turnId?: number }): Promise<void>;
   runShellCommand(input: {
     command: string;
@@ -109,6 +113,8 @@ export function createAgentFacade(
     steer: (input) => rpc("steer", input) as Promise<PromptLaunchResult>,
     activateSkill: (input) =>
       rpc("activateSkill", input) as Promise<PromptLaunchResult>,
+    activateInlineSkills: (input) =>
+      rpc("activateInlineSkills", input) as Promise<PromptLaunchResult>,
     cancel: (input) => rpc("cancel", input ?? {}) as Promise<void>,
     runShellCommand: (input) =>
       call(scope, "agentShellCommandService", "run", [

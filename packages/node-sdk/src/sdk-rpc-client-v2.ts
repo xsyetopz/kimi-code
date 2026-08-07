@@ -242,6 +242,7 @@ import { KimiAuthFacade } from "#/auth";
 import { KimiHarness } from "#/kimi-harness";
 import {
   SDKRpcClientBase,
+  type ActivateInlineSkillsRpcInput,
   type ActivatePluginCommandRpcInput,
   type ActivateSkillRpcInput,
   type ImportContextRpcInput,
@@ -1797,6 +1798,22 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       await this.updatePromptMetadata(
         input.sessionId,
         promptMetadataTextFromSkill(input),
+      );
+    }
+  }
+
+  override async activateInlineSkills(
+    input: ActivateInlineSkillsRpcInput,
+  ): Promise<void> {
+    const agent = await this.agentScope(input.sessionId);
+    await agent.accessor
+      .get(IAgentSkillService)
+      .activateInline(input.invocations, input.userText);
+    const first = input.invocations[0];
+    if (this.interactiveAgentId === MAIN_AGENT_ID && first !== undefined) {
+      await this.updatePromptMetadata(
+        input.sessionId,
+        promptMetadataTextFromSkill(first),
       );
     }
   }

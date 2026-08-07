@@ -14,9 +14,25 @@ import path from "pathe";
 import type { SkillRoot, SkillSource } from "./types";
 
 const USER_BRAND_DIRS = ["skills"] as const;
-const USER_GENERIC_DIRS = [".agents/skills"] as const;
+/** Cross-tool skill dirs under the OS home; first existing wins when merge is off. */
+const USER_GENERIC_DIRS = [
+  ".agents/skills",
+  ".cursor/skills",
+  ".kimi-code/skills",
+  ".pi/skills",
+  ".gemini/skills",
+  ".claude/skills",
+  ".codex/skills",
+] as const;
 const PROJECT_BRAND_DIRS = [".kimi-code/skills"] as const;
-const PROJECT_GENERIC_DIRS = [".agents/skills"] as const;
+const PROJECT_GENERIC_DIRS = [
+  ".agents/skills",
+  ".cursor/skills",
+  ".pi/skills",
+  ".gemini/skills",
+  ".claude/skills",
+  ".codex/skills",
+] as const;
 
 export interface SkillRootsOptions {
   readonly mergeAllAvailableSkills?: boolean;
@@ -36,7 +52,13 @@ export async function userRoots(
     "user",
     mergeAllAvailableSkills,
   );
-  await pushFirstExisting(roots, USER_GENERIC_DIRS, osHomeDir, "user");
+  await pushGenericGroup(
+    roots,
+    USER_GENERIC_DIRS,
+    osHomeDir,
+    "user",
+    mergeAllAvailableSkills,
+  );
   return roots;
 }
 
@@ -54,7 +76,13 @@ export async function projectRoots(
     "project",
     mergeAllAvailableSkills,
   );
-  await pushFirstExisting(roots, PROJECT_GENERIC_DIRS, projectRoot, "project");
+  await pushGenericGroup(
+    roots,
+    PROJECT_GENERIC_DIRS,
+    projectRoot,
+    "project",
+    mergeAllAvailableSkills,
+  );
   return roots;
 }
 
@@ -116,6 +144,22 @@ async function pushFirstExisting(
 }
 
 async function pushBrandGroup(
+  out: SkillRoot[],
+  dirs: readonly string[],
+  base: string,
+  source: SkillSource,
+  mergeAllAvailableSkills: boolean,
+): Promise<void> {
+  if (!mergeAllAvailableSkills) {
+    await pushFirstExisting(out, dirs, base, source);
+    return;
+  }
+  for (const dir of dirs) {
+    await pushExistingRoot(out, path.join(base, dir), source);
+  }
+}
+
+async function pushGenericGroup(
   out: SkillRoot[],
   dirs: readonly string[],
   base: string,

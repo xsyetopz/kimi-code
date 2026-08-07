@@ -224,6 +224,11 @@ export interface ActivateSkillPayload {
   readonly args?: string | undefined;
 }
 
+export interface ActivateInlineSkillsPayload {
+  readonly invocations: readonly ActivateSkillPayload[];
+  readonly userText: string;
+}
+
 export interface ActivatePluginCommandPayload {
   readonly pluginId: string;
   readonly commandName: string;
@@ -327,6 +332,9 @@ export interface AgentAPI {
   cancelCompaction: (payload: EmptyPayload) => void;
   activateSkill: (
     payload: ActivateSkillPayload,
+  ) => PromptLaunchResult | undefined;
+  activateInlineSkills: (
+    payload: ActivateInlineSkillsPayload,
   ) => PromptLaunchResult | undefined;
   activatePluginCommand: (payload: ActivatePluginCommandPayload) => void;
   getContext: (payload: EmptyPayload) => AgentContextData;

@@ -499,6 +499,18 @@ export class KimiTUI {
     );
   }
 
+  sendInlineSkillActivation(
+    session: Session,
+    invocations: readonly { skillName: string; args: string }[],
+    userText: string,
+  ): void {
+    this.messageQueueController.sendInlineSkillActivation(
+      session,
+      invocations,
+      userText,
+    );
+  }
+
   activatePluginCommand(
     session: Session,
     pluginId: string,

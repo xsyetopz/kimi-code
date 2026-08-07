@@ -11,6 +11,10 @@ export interface IAgentSkillService {
   readonly _serviceBrand: undefined;
 
   activate(input: SkillActivationInput): Promise<Turn>;
+  activateInline(
+    invocations: readonly SkillActivationInput[],
+    userText: string,
+  ): Promise<Turn>;
   recordModelToolActivation(origin: SkillActivationOrigin): void;
 }
 

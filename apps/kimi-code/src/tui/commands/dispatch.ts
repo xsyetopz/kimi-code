@@ -45,6 +45,7 @@ import {
 } from "./info";
 import { handleAddDirCommand } from "./add-dir";
 import { parseSlashInput } from "./parse";
+import { parseInlineSkillInvocations } from "#/tui/utils/inline-skill";
 import { handlePluginsCommand } from "./plugins";
 import { handleProviderCommand } from "./provider";
 import {
@@ -200,6 +201,11 @@ export interface SlashCommandHost {
     skillName: string,
     skillArgs: string,
   ): void;
+  sendInlineSkillActivation(
+    session: Session,
+    invocations: readonly { skillName: string; args: string }[],
+    userText: string,
+  ): void;
   activatePluginCommand(
     session: Session,
     pluginId: string,
@@ -225,7 +231,60 @@ export function dispatchInput(host: SlashCommandHost, text: string): void {
     void executeSlashCommand(host, text);
     return;
   }
+  const inline = parseInlineSkillInvocations(text, host.skillCommandMap);
+  if (inline !== null) {
+    void dispatchInlineSkillInput(host, text, inline);
+    return;
+  }
   host.sendNormalUserInput(text);
+}
+
+async function dispatchInlineSkillInput(
+  host: SlashCommandHost,
+  text: string,
+  inline: NonNullable<ReturnType<typeof parseInlineSkillInvocations>>,
+): Promise<void> {
+  if (host.state.appState.model.trim().length === 0) {
+    host.showError(LLM_NOT_SET_MESSAGE);
+    return;
+  }
+  const busyReason = slashCommandBusyReason({
+    isStreaming: host.state.appState.streamingPhase !== "idle",
+    isCompacting: host.state.appState.isCompacting,
+  });
+  if (busyReason !== undefined) {
+    host.showError(slashBusyMessage("skill", busyReason));
+    return;
+  }
+
+  let session = host.session;
+  if (session === undefined) {
+    session = await ensureSessionForCommand(host);
+    if (session === undefined) return;
+    const busyAfterCreate = slashCommandBusyReason({
+      isStreaming: host.state.appState.streamingPhase !== "idle",
+      isCompacting: host.state.appState.isCompacting,
+    });
+    if (busyAfterCreate !== undefined) {
+      host.showError(slashBusyMessage("skill", busyAfterCreate));
+      return;
+    }
+  }
+
+  for (const invocation of inline.invocations) {
+    host.track("input_command", {
+      command: invocation.commandName,
+      skill_name: invocation.skillName,
+    });
+  }
+  host.sendInlineSkillActivation(
+    session,
+    inline.invocations.map((invocation) => ({
+      skillName: invocation.skillName,
+      args: "",
+    })),
+    text,
+  );
 }
 
 async function executeSlashCommand(

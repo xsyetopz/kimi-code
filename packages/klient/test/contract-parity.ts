@@ -25,6 +25,7 @@ import type { AgentContextData } from "@moonshot-ai/agent-core-v2/agent/contextM
 import type { TurnEndReason } from "@moonshot-ai/agent-core-v2/agent/loop/turnEvents";
 import type { PlanData } from "@moonshot-ai/agent-core-v2/agent/plan/plan";
 import type {
+  ActivateInlineSkillsPayload,
   ActivateSkillPayload,
   AgentAPI,
   CancelPlanPayload,
@@ -159,6 +160,7 @@ import {
   agentContextDataSchema,
   agentTaskInfoSchema,
   activateSkillPayloadSchema,
+  activateInlineSkillsPayloadSchema,
   cancelPayloadSchema,
   cancelPlanPayloadSchema,
   cancelShellCommandPayloadSchema,
@@ -655,6 +657,10 @@ const _steerPayload: AssertWireToEngine<
 const _activateSkillPayload: AssertWire<
   typeof activateSkillPayloadSchema,
   ActivateSkillPayload
+> = true;
+const _activateInlineSkillsPayload: AssertWire<
+  typeof activateInlineSkillsPayloadSchema,
+  ActivateInlineSkillsPayload
 > = true;
 const _promptLaunchResult: AssertWire<
   typeof promptLaunchResultSchema,

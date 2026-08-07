@@ -61,6 +61,11 @@ export const activateSkillPayloadSchema = z.object({
   args: z.string().optional(),
 });
 
+export const activateInlineSkillsPayloadSchema = z.object({
+  invocations: z.array(activateSkillPayloadSchema),
+  userText: z.string(),
+});
+
 export const promptLaunchResultSchema = z.object({
   turn_id: z.number(),
 });
@@ -208,6 +213,10 @@ export const agentRpcContract = {
   },
   activateSkill: {
     input: z.tuple([activateSkillPayloadSchema]),
+    output: maybe(promptLaunchResultSchema),
+  },
+  activateInlineSkills: {
+    input: z.tuple([activateInlineSkillsPayloadSchema]),
     output: maybe(promptLaunchResultSchema),
   },
   cancel: { input: z.tuple([cancelPayloadSchema]), output: noResult },

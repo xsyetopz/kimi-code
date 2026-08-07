@@ -28,6 +28,7 @@ import { IAgentLoopService } from '#/agent/loop/loop';
 import type {
   ActivatePluginCommandPayload,
   ActivateSkillPayload,
+  ActivateInlineSkillsPayload,
   CancelPayload,
   EmptyPayload,
   PromptLaunchResult,
@@ -166,6 +167,17 @@ export class AgentRPCService implements IAgentRPCService {
     // activation failures (unknown skill, busy) surface instead of vanishing.
     const turn = await this.skills.activate(payload);
     await this.updatePromptMetadata(promptMetadataTextFromSkill(payload));
+    return { turn_id: turn.id };
+  }
+
+  async activateInlineSkills(
+    payload: ActivateInlineSkillsPayload,
+  ): Promise<PromptLaunchResult | undefined> {
+    const turn = await this.skills.activateInline(payload.invocations, payload.userText);
+    const first = payload.invocations[0];
+    if (first !== undefined) {
+      await this.updatePromptMetadata(promptMetadataTextFromSkill(first));
+    }
     return { turn_id: turn.id };
   }
 

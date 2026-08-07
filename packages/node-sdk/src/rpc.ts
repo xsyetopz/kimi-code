@@ -126,6 +126,14 @@ export interface ActivateSkillRpcInput extends SessionIdRpcInput {
   readonly args?: string | undefined;
 }
 
+export interface ActivateInlineSkillsRpcInput extends SessionIdRpcInput {
+  readonly invocations: readonly {
+    readonly name: string;
+    readonly args?: string | undefined;
+  }[];
+  readonly userText: string;
+}
+
 export interface ActivatePluginCommandRpcInput extends SessionIdRpcInput {
   readonly pluginId: string;
   readonly commandName: string;
@@ -904,6 +912,18 @@ export abstract class SDKRpcClientBase {
       agentId: this.interactiveAgentId,
       name: input.name,
       args: input.args,
+    });
+  }
+
+  async activateInlineSkills(
+    input: ActivateInlineSkillsRpcInput,
+  ): Promise<void> {
+    const rpc = await this.getRpc();
+    return rpc.activateInlineSkills({
+      sessionId: input.sessionId,
+      agentId: this.interactiveAgentId,
+      invocations: input.invocations,
+      userText: input.userText,
     });
   }
 

@@ -236,6 +236,26 @@ export class MessageQueueController {
       });
   }
 
+  sendInlineSkillActivation(
+    session: Session,
+    invocations: readonly { skillName: string; args: string }[],
+    userText: string,
+  ): void {
+    this.beginSessionRequest();
+    void session
+      .activateInlineSkills(
+        invocations.map((invocation) => ({
+          name: invocation.skillName,
+          ...(invocation.args.length > 0 ? { args: invocation.args } : {}),
+        })),
+        userText,
+      )
+      .catch((error: unknown) => {
+        const message = formatErrorMessage(error);
+        this.failSessionRequest(`Inline skill activation failed: ${message}`);
+      });
+  }
+
   activatePluginCommand(
     session: Session,
     pluginId: string,

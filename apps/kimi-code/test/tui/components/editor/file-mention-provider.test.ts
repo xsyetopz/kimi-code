@@ -811,4 +811,36 @@ describe("FileMentionProvider", () => {
       expect(result?.items.map((item) => item.label)).toContain("shared/");
     });
   });
+
+  it("completes inline /skill:<name> tokens in the middle of a prompt", async () => {
+    const provider = new FileMentionProvider(
+      [],
+      workDir,
+      NO_FD,
+      [],
+      () => "prompt",
+      [
+        {
+          commandName: "skill:review",
+          skillName: "review",
+          description: "Review code",
+          label: "/skill:review",
+        },
+        {
+          commandName: "skill:deploy",
+          skillName: "deploy",
+          description: "Deploy app",
+          label: "/skill:deploy",
+        },
+      ],
+    );
+    const line = "please /skill:rev";
+    const result = await provider.getSuggestions([line], 0, line.length, {
+      signal: ctrl(),
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.prefix).toBe("/skill:rev");
+    expect(result!.items.map((item) => item.value)).toEqual(["/skill:review"]);
+  });
 });

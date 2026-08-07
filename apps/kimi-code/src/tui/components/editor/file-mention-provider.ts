@@ -15,6 +15,13 @@ import {
   type SlashCommand,
 } from "@moonshot-ai/kimi-tui";
 
+import {
+  extractInlineSkillPrefix,
+  filterSkillPickerEntries,
+  INLINE_SKILL_TOKEN_PREFIX,
+  type SkillPickerEntry,
+} from "#/tui/utils/inline-skill";
+
 const PATH_DELIMITERS = new Set([" ", "\t", '"', "'", "="]);
 const MAX_FALLBACK_SCAN = 2000;
 const MAX_FALLBACK_SUGGESTIONS = 50;
@@ -41,8 +48,10 @@ interface FsMentionCandidate {
  * wrapper also keeps Kimi-specific slash-command guards.
  */
 export class FileMentionProvider implements AutocompleteProvider {
+  readonly triggerCharacters = ["/"];
   private readonly inner: CombinedAutocompleteProvider;
   private readonly additionalDirs: readonly string[];
+  private readonly skillPickerEntries: readonly SkillPickerEntry[];
 
   constructor(
     private readonly slashCommands: SlashAutocompleteCommand[],
@@ -50,7 +59,9 @@ export class FileMentionProvider implements AutocompleteProvider {
     private readonly fdPath: string | null,
     additionalDirs: readonly string[] = [],
     private readonly getInputMode: () => "prompt" | "bash" = () => "prompt",
+    skillPickerEntries: readonly SkillPickerEntry[] = [],
   ) {
+    this.skillPickerEntries = skillPickerEntries;
     this.additionalDirs = additionalDirs.map((dir) =>
       normalizePath(resolve(workDir, dir)),
     );
@@ -115,6 +126,19 @@ export class FileMentionProvider implements AutocompleteProvider {
           options.signal,
         );
       }
+    }
+
+    const inlineSkillPrefix = extractInlineSkillPrefix(textBeforeCursor);
+    if (
+      inlineSkillPrefix !== null &&
+      this.getInputMode() !== "bash" &&
+      this.skillPickerEntries.length > 0
+    ) {
+      const inlineSkillSuggestions = getInlineSkillSuggestions(
+        inlineSkillPrefix,
+        this.skillPickerEntries,
+      );
+      if (inlineSkillSuggestions !== null) return inlineSkillSuggestions;
     }
 
     if (
@@ -256,6 +280,15 @@ export class FileMentionProvider implements AutocompleteProvider {
     if (this.getInputMode() === "bash" && prefix.startsWith("/")) {
       return applyPathCompletion(lines, cursorLine, cursorCol, item, prefix);
     }
+    if (prefix.startsWith(INLINE_SKILL_TOKEN_PREFIX)) {
+      return applyInlineSkillCompletion(
+        lines,
+        cursorLine,
+        cursorCol,
+        item,
+        prefix,
+      );
+    }
     return this.inner.applyCompletion(
       lines,
       cursorLine,
@@ -276,6 +309,42 @@ export function extractAtPrefix(text: string): string | null {
   }
   if (text[tokenStart] !== "@") return null;
   return text.slice(tokenStart);
+}
+
+function getInlineSkillSuggestions(
+  prefix: string,
+  entries: readonly SkillPickerEntry[],
+): AutocompleteSuggestions | null {
+  const matches = filterSkillPickerEntries(entries, prefix);
+  if (matches.length === 0) return null;
+  return {
+    prefix,
+    items: matches.map((entry) => ({
+      value: entry.label,
+      label: entry.skillName,
+      description: entry.description || undefined,
+    })),
+  };
+}
+
+function applyInlineSkillCompletion(
+  lines: string[],
+  cursorLine: number,
+  cursorCol: number,
+  item: AutocompleteItem,
+  prefix: string,
+): { lines: string[]; cursorLine: number; cursorCol: number } {
+  const currentLine = lines[cursorLine] ?? "";
+  const beforePrefix = currentLine.slice(0, cursorCol - prefix.length);
+  const afterCursor = currentLine.slice(cursorCol);
+  const newLine = beforePrefix + item.value + afterCursor;
+  const newLines = [...lines];
+  newLines[cursorLine] = newLine;
+  return {
+    lines: newLines,
+    cursorLine,
+    cursorCol: beforePrefix.length + item.value.length,
+  };
 }
 
 function isExecutableFd(fdPath: string): boolean {

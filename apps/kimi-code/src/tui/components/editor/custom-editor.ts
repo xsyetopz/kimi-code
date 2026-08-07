@@ -17,6 +17,7 @@ import { createEditorTheme } from "#/tui/theme/kimi-tui-theme";
 import { printableChar } from "#/tui/utils/printable-key";
 
 import { extractAtPrefix } from "./file-mention-provider";
+import { INLINE_SKILL_TOKEN_PREFIX } from "#/tui/utils/inline-skill";
 import { WrappingSelectList } from "./wrapping-select-list";
 import { normalizeCapsLockedCtrl } from "./custom-editor-caps-lock";
 import {
@@ -131,7 +132,7 @@ export class CustomEditor extends Editor {
     (
       this as unknown as AutocompleteListFactoryInternals
     ).createAutocompleteList = (prefix, items) => {
-      if (prefix.startsWith("/")) {
+      if (prefix.startsWith("/") || prefix.startsWith(INLINE_SKILL_TOKEN_PREFIX)) {
         return new WrappingSelectList(
           items,
           this.getAutocompleteMaxVisible(),

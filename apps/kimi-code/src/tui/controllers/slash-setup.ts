@@ -19,6 +19,7 @@ import {
   type SlashAutocompleteCommand,
 } from "#/tui/components/editor/file-mention-provider";
 import type { TUIState } from "#/tui/tui-state";
+import { buildDedupedSkillPickerEntries } from "#/tui/utils/inline-skill";
 
 export interface SlashSetupHost {
   readonly state: TUIState;
@@ -34,6 +35,7 @@ export interface SlashSetupHost {
 export class SlashSetupController {
   private skillCommands: readonly KimiSlashCommand[] = [];
   private pluginCommands: readonly KimiSlashCommand[] = [];
+  private skillPickerEntries = buildDedupedSkillPickerEntries([]);
 
   constructor(private readonly host: SlashSetupHost) {}
 
@@ -66,6 +68,7 @@ export class SlashSetupController {
       this.host.fdPath,
       this.host.state.appState.additionalDirs,
       () => this.host.state.appState.inputMode,
+      this.skillPickerEntries,
     );
     this.host.state.editor.setAutocompleteProvider(provider);
 
@@ -102,6 +105,7 @@ export class SlashSetupController {
         }
       }
       this.skillCommands = [];
+      this.skillPickerEntries = buildDedupedSkillPickerEntries([]);
       this.host.skillCommandMap.clear();
       this.setupAutocomplete();
       return;
@@ -119,6 +123,7 @@ export class SlashSetupController {
   private applySkillCommands(skills: readonly SkillSummary[]): void {
     const skillCommands = buildSkillSlashCommands(skills);
     this.skillCommands = skillCommands.commands;
+    this.skillPickerEntries = buildDedupedSkillPickerEntries(skills);
     this.host.skillCommandMap.clear();
     for (const [commandName, skillName] of skillCommands.commandMap) {
       this.host.skillCommandMap.set(commandName, skillName);
