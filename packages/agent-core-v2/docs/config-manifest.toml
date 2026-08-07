@@ -8,7 +8,7 @@
 # commented "# field: type" lines describe the remaining schema fields.
 # Values resolve as: default -> config.toml -> env overlay -> memory.
 
-# Index (25 sections · 3 overlay(s))
+# Index (26 sections · 3 overlay(s))
 #   background               src/agent/task/configSection.ts
 #   builtinProductSkills     src/app/skillCatalog/configSection.ts
 #   cron                     src/app/cron/configSection.ts
@@ -30,6 +30,7 @@
 #   secondaryModel           src/app/kosongConfig/configSection.ts
 #   services                 src/app/auth/configSection.ts
 #   subagent                 src/session/subagent/configSection.ts
+#   swarm                    src/session/swarm/configSection.ts
 #   task                     src/agent/task/configSection.ts
 #   thinking                 src/app/kosongConfig/configSection.ts
 #   tokenCounting            src/agent/tokenCounting/configSection.ts
@@ -382,6 +383,18 @@ merge_all_available_skills = true
 
 [subagent]
 timeout_ms = 7200000
+
+# ##########################################################################
+# swarm
+#   owner: src/session/swarm/configSection.ts
+#   scope: core
+#   hooks: stripEnv
+#   env:
+#     max_concurrent_workers <- KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY (custom parse)
+# ##########################################################################
+
+[swarm]
+max_concurrent_workers = 3
 
 # ##########################################################################
 # task

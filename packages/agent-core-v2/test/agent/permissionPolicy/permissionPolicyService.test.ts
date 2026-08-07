@@ -43,6 +43,8 @@ import {
   type ToolAccesses as ToolAccessList,
 } from "#/tool/toolContract";
 import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
+import { IWorkspaceLeaseService } from "#/workspace/workspaceLease/workspaceLease";
+import { WorkspaceLeaseService } from "#/workspace/workspaceLease/workspaceLeaseService";
 
 import { stubPermissionModeService } from "../permissionMode/stubs";
 import { recordingTelemetry } from "../../app/telemetry/stubs";
@@ -88,6 +90,7 @@ describe("AgentPermissionPolicyService chain", () => {
         reg.definePartialInstance(IGitService, {
           findWorkTree: async () => null,
         });
+        reg.defineInstance(IWorkspaceLeaseService, noopWorkspaceLeaseService());
         reg.define(IAgentPermissionPolicyService, AgentPermissionPolicyService);
       },
       strict: true,
@@ -248,6 +251,7 @@ describe("AgentPermissionPolicyService git cwd write approval", () => {
         reg.definePartialInstance(IGitService, {
           findWorkTree: (cwd: string) => findGitWorkTree(hostFs, cwd),
         });
+        reg.defineInstance(IWorkspaceLeaseService, noopWorkspaceLeaseService());
         reg.define(IAgentPermissionPolicyService, AgentPermissionPolicyService);
       },
       strict: true,
@@ -404,6 +408,74 @@ describe("AgentPermissionPolicyService git cwd write approval", () => {
     ).resolves.toMatchObject({
       policyName: "fallback-ask",
       result: { kind: "ask" },
+    });
+  });
+});
+
+describe("AgentPermissionPolicyService workspace lease write deny", () => {
+  let disposables: DisposableStore;
+  let ix: TestInstantiationService;
+
+  beforeEach(() => {
+    disposables = new DisposableStore();
+    const workspaceCtx = {
+      _serviceBrand: undefined,
+      cwd: "/workspace",
+      workspaceId: "w1",
+      osBackendId: "node-local",
+    } as import("#/workspace/workspaceContext/workspaceContext").IWorkspaceContext;
+    const leases = new WorkspaceLeaseService(workspaceCtx);
+    leases.acquire({
+      path: "/workspace/src/a.ts",
+      ownerAgentId: "worker-1",
+      ttlMs: 60_000,
+    });
+    ix = createServices(disposables, {
+      additionalServices: (reg) => {
+        reg.defineInstance(
+          IAgentPermissionModeService,
+          stubPermissionModeService(() => "manual"),
+        );
+        reg.defineInstance(
+          IAgentScopeContext,
+          makeAgentScopeContext({ agentId: "worker-2", agentScope: "" }),
+        );
+        reg.definePartialInstance(
+          IAgentPermissionRulesService,
+          permissionRulesStub(),
+        );
+        reg.defineInstance(
+          ISessionWorkspaceContext,
+          workspaceStub("/workspace").stub,
+        );
+        reg.defineInstance(IHostEnvironment, kaosStub());
+        reg.defineInstance(ITelemetryService, recordingTelemetry([]));
+        reg.defineInstance(IWorkspaceLeaseService, leases);
+        reg.definePartialInstance(IGitService, {
+          findWorkTree: async () => null,
+        });
+        reg.define(IAgentPermissionPolicyService, AgentPermissionPolicyService);
+      },
+      strict: true,
+    });
+  });
+
+  afterEach(() => {
+    disposables.dispose();
+  });
+
+  it("denies Write to a path leased to another swarm worker", async () => {
+    const svc = ix.get(IAgentPermissionPolicyService);
+    const result = await svc.evaluate(
+      policyContext({
+        toolName: "Write",
+        args: { path: "src/a.ts", content: "x" },
+        accesses: ToolAccesses.writeFile("/workspace/src/a.ts"),
+      }),
+    );
+    expect(result).toMatchObject({
+      policyName: "workspace-lease-write-deny",
+      result: { kind: "deny" },
     });
   });
 });
@@ -591,6 +663,18 @@ function stringArg(
 ): string {
   const value = args[key];
   return typeof value === "string" ? value : fallback;
+}
+
+function noopWorkspaceLeaseService(): IWorkspaceLeaseService {
+  return {
+    _serviceBrand: undefined,
+    acquire: () => {},
+    release: () => {},
+    releaseAll: () => {},
+    ownerForPath: () => undefined,
+    isWriteAllowed: () => true,
+    snapshot: () => [],
+  };
 }
 
 function workspaceStub(initialWorkDir: string): {

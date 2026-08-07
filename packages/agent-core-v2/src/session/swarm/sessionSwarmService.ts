@@ -46,6 +46,11 @@ import { ISessionContext } from '#/session/sessionContext/sessionContext';
 import { ISessionMetadata, type AgentMeta } from '#/session/sessionMetadata/sessionMetadata';
 import { ISessionProcessRunner } from '#/session/process/processRunner';
 import { ILogService } from '#/_base/log/log';
+import { IConfigService } from '#/app/config/config';
+import { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
+import { IWorkspaceLeaseService } from '#/workspace/workspaceLease/workspaceLease';
+import '#/workspace/workspaceLease/workspaceLeaseService';
+import { resolveSubagentTimeoutMs } from '#/session/subagent/configSection';
 
 import {
   ISessionSwarmService,
@@ -53,8 +58,8 @@ import {
   type SessionSwarmRunResult,
   type SessionSwarmTask,
 } from './sessionSwarm';
+import { resolveSwarmMaxConcurrency } from './configSection';
 import {
-  resolveSwarmMaxConcurrency,
   AgentRunBatch,
   type AgentRunAttemptOptions,
   type AgentSpawnAttemptOptions,
@@ -90,6 +95,9 @@ export class SessionSwarmService implements ISessionSwarmService {
     @ISessionProcessRunner private readonly processRunner: ISessionProcessRunner,
     @ILogService private readonly log: ILogService,
     @IModelCatalog private readonly modelCatalog: IModelCatalog,
+    @IConfigService private readonly config: IConfigService,
+    @ISessionWorkspaceContext private readonly workspace: ISessionWorkspaceContext,
+    @IWorkspaceLeaseService private readonly leases: IWorkspaceLeaseService,
   ) {}
 
   async getSwarmItem(args: {
@@ -124,7 +132,7 @@ export class SessionSwarmService implements ISessionSwarmService {
         });
       },
     };
-    const maxConcurrency = resolveSwarmMaxConcurrency();
+    const maxConcurrency = resolveSwarmMaxConcurrency(this.config);
     const promise = new AgentRunBatch(launcher, linkedTasks, { maxConcurrency }).run();
     void promise.finally(() => {
       for (const unlink of unlinks) unlink();
@@ -196,7 +204,7 @@ export class SessionSwarmService implements ISessionSwarmService {
     return this.observe(caller, child.id, options.profileName, {
       kind: 'prompt',
       prompt: promptText,
-    }, options);
+    }, options, options.swarmItem);
   }
 
   private async resumeAttempt(
@@ -225,7 +233,15 @@ export class SessionSwarmService implements ISessionSwarmService {
     const request = retryTurn
       ? ({ kind: 'retry' } as const)
       : ({ kind: 'prompt', prompt: options.prompt } as const);
-    return this.observe(caller, child.id, profileName, request, options);
+    const meta = await this.agentMeta(child.id);
+    return this.observe(
+      caller,
+      child.id,
+      profileName,
+      request,
+      options,
+      subagentSwarmItem(meta),
+    );
   }
 
   private async observe(
@@ -234,7 +250,19 @@ export class SessionSwarmService implements ISessionSwarmService {
     profileName: string,
     request: { kind: 'prompt'; prompt: string } | { kind: 'retry' },
     options: AgentRunAttemptOptions,
+    swarmItem?: string,
   ): Promise<AgentRunAttemptHandle> {
+    const leasedPath =
+      swarmItem !== undefined
+        ? this.workspace.resolve(swarmItem)
+        : undefined;
+    if (leasedPath !== undefined) {
+      this.leases.acquire({
+        path: leasedPath,
+        ownerAgentId: agentId,
+        ttlMs: resolveSubagentTimeoutMs(this.config),
+      });
+    }
     const run = await this.subagents.run(agentId, request, {
       signal: options.signal,
       onReady: options.onReady,
@@ -245,10 +273,17 @@ export class SessionSwarmService implements ISessionSwarmService {
       suppressRateLimitFailureEvent: options.suppressRateLimitFailureEvent,
       signal: options.signal,
     });
+    const completion = mirrored
+      .then((r) => ({ result: r.summary, usage: r.usage }))
+      .finally(() => {
+        if (leasedPath !== undefined) {
+          this.leases.release(leasedPath, agentId);
+        }
+      });
     return {
       agentId,
       profileName,
-      completion: mirrored.then((r) => ({ result: r.summary, usage: r.usage })),
+      completion,
     };
   }
 

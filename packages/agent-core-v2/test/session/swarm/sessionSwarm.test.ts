@@ -63,6 +63,18 @@ import {
 } from "#/session/swarm/sessionSwarm";
 import { Error2 } from "#/_base/errors/errors";
 import { ConfigErrors } from "#/app/config/errors";
+import { IConfigService } from "#/app/config/config";
+import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
+import {
+  IWorkspaceLeaseService,
+} from "#/workspace/workspaceLease/workspaceLease";
+import { WorkspaceLeaseService } from "#/workspace/workspaceLease/workspaceLeaseService";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
+import {
+  resolveSwarmMaxConcurrency as resolveSwarmMaxConcurrencyFromConfig,
+  SWARM_SECTION,
+  type SwarmConfig,
+} from "#/session/swarm/configSection";
 import { SessionSwarmService } from "#/session/swarm/sessionSwarmService";
 
 import { stubLog } from "../../_base/log/stubs";
@@ -104,6 +116,72 @@ describe("resolveSwarmMaxConcurrency", () => {
         KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY: " 8 ",
       }),
     ).toBe(8);
+  });
+});
+
+describe("resolveSwarmMaxConcurrency with config", () => {
+  it("reads max_concurrent_workers from the swarm config section", () => {
+    const config = {
+      get: (section: string) =>
+        section === SWARM_SECTION
+          ? ({ maxConcurrentWorkers: 5 } satisfies SwarmConfig)
+          : undefined,
+    } as IConfigService;
+    expect(resolveSwarmMaxConcurrencyFromConfig(config)).toBe(5);
+  });
+
+  it("prefers the env override over config.toml", () => {
+    const config = {
+      get: (section: string) =>
+        section === SWARM_SECTION
+          ? ({ maxConcurrentWorkers: 5 } satisfies SwarmConfig)
+          : undefined,
+    } as IConfigService;
+    const previous = process.env.KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY;
+    process.env.KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY = "2";
+    try {
+      expect(resolveSwarmMaxConcurrencyFromConfig(config)).toBe(2);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY;
+      } else {
+        process.env.KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY = previous;
+      }
+    }
+  });
+});
+
+describe("WorkspaceLeaseService", () => {
+  const workspaceCtx = {
+    _serviceBrand: undefined,
+    cwd: "/repo",
+    workspaceId: "w1",
+    osBackendId: "node-local",
+  } as IWorkspaceContext;
+
+  it("grants write access only to the lease owner for leased paths", () => {
+    const leases = new WorkspaceLeaseService(workspaceCtx);
+    leases.acquire({
+      path: "/repo/src/a.ts",
+      ownerAgentId: "worker-1",
+      ttlMs: 60_000,
+    });
+
+    expect(leases.isWriteAllowed("worker-1", "/repo/src/a.ts")).toBe(true);
+    expect(leases.isWriteAllowed("worker-2", "/repo/src/a.ts")).toBe(false);
+    expect(leases.isWriteAllowed("worker-2", "/repo/src/other.ts")).toBe(true);
+  });
+
+  it("releases a lease and allows other agents to write again", () => {
+    const leases = new WorkspaceLeaseService(workspaceCtx);
+    leases.acquire({
+      path: "/repo/src/a.ts",
+      ownerAgentId: "worker-1",
+      ttlMs: 60_000,
+    });
+    leases.release("/repo/src/a.ts", "worker-1");
+
+    expect(leases.isWriteAllowed("worker-2", "/repo/src/a.ts")).toBe(true);
   });
 });
 
@@ -1061,6 +1139,20 @@ describe("SessionSwarmService metadata compatibility", () => {
         return { id: alias } as Model;
       },
     } as IModelCatalog);
+    ix.stub(IConfigService, {
+      _serviceBrand: undefined,
+      get: () => undefined,
+      onDidChange: Event.None,
+    } as IConfigService);
+    ix.stub(ISessionWorkspaceContext, sessionWorkspaceContextStub("/repo"));
+    const workspaceCtx = {
+      _serviceBrand: undefined,
+      cwd: "/repo",
+      workspaceId: "w1",
+      osBackendId: "node-local",
+    } as IWorkspaceContext;
+    ix.stub(IWorkspaceContext, workspaceCtx);
+    ix.stub(IWorkspaceLeaseService, new WorkspaceLeaseService(workspaceCtx));
     ix.set(ISessionSwarmService, new SyncDescriptor(SessionSwarmService));
   });
 
@@ -1436,7 +1528,47 @@ describe("SessionSwarmService metadata compatibility", () => {
       expect.objectContaining({ type: "subagent.spawned" }),
     );
   });
+
+  it("acquires and releases workspace leases for swarm items during a run", async () => {
+    const leases = ix.get(IWorkspaceLeaseService);
+    const pending = createControlledPromise<{ summary: string }>();
+    runAgent.mockImplementationOnce(async (agentId: string) => ({
+      agentId,
+      turn: {} as never,
+      completion: pending,
+    }));
+
+    const service = ix.get(ISessionSwarmService);
+    const runPromise = service.run({
+      callerAgentId: "main",
+      tasks: [spawnSessionTask("src/a.ts")],
+    });
+
+    await vi.waitFor(() => {
+      expect(leases.ownerForPath("/repo/src/a.ts")).toBeDefined();
+    });
+    const ownerDuringRun = leases.ownerForPath("/repo/src/a.ts");
+    expect(ownerDuringRun).toBeTruthy();
+
+    pending.resolve({ summary: "done" });
+    await runPromise;
+
+    expect(leases.ownerForPath("/repo/src/a.ts")).toBeUndefined();
+    expect(leases.isWriteAllowed("other", "/repo/src/a.ts")).toBe(true);
+  });
 });
+
+function sessionWorkspaceContextStub(workDir: string): ISessionWorkspaceContext {
+  return {
+    _serviceBrand: undefined,
+    workDir,
+    additionalDirs: [],
+    resolve: (rel: string) =>
+      rel.startsWith("/") ? rel : `${workDir}/${rel}`,
+    isWithin: () => true,
+    assertAllowed: (path: string) => path,
+  };
+}
 
 function spawnSessionTask(swarmItem?: string): SessionSwarmSpawnTask {
   return {

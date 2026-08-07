@@ -701,12 +701,12 @@ export class AgentRunBatch<T> {
   }
 }
 
-export function resolveSwarmMaxConcurrency(
+export function resolveSwarmMaxConcurrencyFromEnv(
   env: Readonly<Record<string, string | undefined>> = process.env,
-): number {
+): number | undefined {
   const raw = env[AGENT_SWARM_MAX_CONCURRENCY_ENV];
   if (raw === undefined || raw.trim() === "") {
-    return DEFAULT_SWARM_MAX_CONCURRENCY;
+    return undefined;
   }
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) {
@@ -717,4 +717,12 @@ export function resolveSwarmMaxConcurrency(
     );
   }
   return value;
+}
+
+export function resolveSwarmMaxConcurrency(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): number {
+  return (
+    resolveSwarmMaxConcurrencyFromEnv(env) ?? DEFAULT_SWARM_MAX_CONCURRENCY
+  );
 }
