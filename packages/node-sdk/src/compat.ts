@@ -47,10 +47,18 @@ import {
   persistOriginalImage,
   sessionMediaOriginalsDir,
 } from "@moonshot-ai/agent-core-v2/agent/media/image-originals";
+import { installGlobalProxyDispatcher as installV2GlobalProxyDispatcher } from "@moonshot-ai/agent-core-v2/_base/utils/proxy";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+
+export {
+  flushDiagnosticLogs,
+  flushDiagnosticLogsSync,
+  log,
+  redact,
+} from "#/diagnostic-log";
 
 export {
   buildCompactionElisionText,
@@ -384,16 +392,6 @@ export function effectiveModelAlias(
   return effectiveModelConfig(model, providerType);
 }
 
-// ── Stub implementations ──
-export function transformTomlData<T>(data: T): T {
-  return data;
-}
-export function parseConfigString(_s: string): Record<string, unknown> {
-  return {};
-}
-export function createRPC(): Record<string, unknown> {
-  return {};
-}
 /** Keep the tail beginning at the latest `maxTurns` real user prompts. */
 export function limitAgentReplayByTurns(
   replay: readonly AgentReplayRecord[],
@@ -420,33 +418,26 @@ export function makeErrorPayload(
 ) {
   return { code, message: msg, ...extra };
 }
-export function installGlobalProxyDispatcher(): void {}
+export function installGlobalProxyDispatcher(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return installV2GlobalProxyDispatcher(env);
+}
 export {
   parseAgentFileText,
   resolveAgentPath,
 } from "@moonshot-ai/agent-core-v2";
-export const noopTelemetryClient = {
+
+/** Explicitly disabled host telemetry sink (engine events dropped unless a client is passed). */
+export const disabledTelemetryClient = {
   track: () => {},
   sendEvent: () => {},
   flush: () => Promise.resolve(),
   close: () => Promise.resolve(),
 } as const;
 
-/** Host-facing diagnostic logger; engine scopes own their file sinks. */
-export const log: Logger = {
-  error: () => {},
-  warn: () => {},
-  info: () => {},
-  debug: () => {},
-  child: () => log,
-};
-export function flushDiagnosticLogs(): Promise<void> {
-  return Promise.resolve();
-}
-export function flushDiagnosticLogsSync(): void {}
-export function redact<T>(value: T): T {
-  return value;
-}
+/** @deprecated Use `disabledTelemetryClient`. */
+export const noopTelemetryClient = disabledTelemetryClient;
 
 // ── Constants ──
 export const COMPACTION_ELISION_VARIANT = "standard" as const;
@@ -501,9 +492,9 @@ export type SDKAPI = Record<string, unknown>;
 export type RPCMethods = Record<string, unknown>;
 export type ToolCallRequest = unknown;
 export type ToolCallResponse = unknown;
-export type TelemetryClient = typeof noopTelemetryClient;
+export type TelemetryClient = typeof disabledTelemetryClient;
 export type TelemetryProperties = Record<string, unknown>;
 export type TelemetryContextPatch = Record<string, unknown>;
 export function withTelemetryContext(tc: unknown, _ctx?: unknown) {
-  return (tc as TelemetryClient) ?? noopTelemetryClient;
+  return (tc as TelemetryClient) ?? disabledTelemetryClient;
 }

@@ -134,7 +134,7 @@ import {
   HookDefSchema,
   KimiError,
   limitAgentReplayByTurns,
-  noopTelemetryClient,
+  disabledTelemetryClient,
   type AgentContextData,
   type BeginGlobalMcpServerAuthResult,
   type ExperimentalFeatureState,
@@ -436,7 +436,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       configPath: options.configPath,
     });
     ensureKimiHome(this.homeDir);
-    this.telemetry = options.telemetry ?? noopTelemetryClient;
+    this.telemetry = options.telemetry ?? disabledTelemetryClient;
     this.auth = new KimiAuthFacade({
       homeDir: this.homeDir,
       configPath: this.configPath,

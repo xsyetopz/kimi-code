@@ -1,11 +1,9 @@
 import {
-  createRPC,
   ErrorCodes,
   KimiError,
-  parseConfigString,
   resolveConfigPath,
-  type RPCMethods,
 } from "#/compat";
+import { parseConfigString } from "#/config-validate";
 import { z } from "zod";
 
 export type KimiConfigValidationPathSegment = string | number;
@@ -30,14 +28,7 @@ export interface KimiConfigRpc {
   validateConfigToml(input: ValidateKimiConfigTomlInput): Promise<void>;
 }
 
-interface KimiConfigCoreRpc {
-  resolveConfigPath(input: ResolveKimiConfigPathInput): string;
-  validateConfigToml(input: ValidateKimiConfigTomlInput): void;
-}
-
-interface KimiConfigClientRpc {}
-
-class KimiConfigCoreRpcImpl implements KimiConfigCoreRpc {
+class KimiConfigCoreRpcImpl {
   resolveConfigPath(input: ResolveKimiConfigPathInput): string {
     return resolveConfigPath(input);
   }
@@ -56,27 +47,16 @@ class KimiConfigCoreRpcImpl implements KimiConfigCoreRpc {
 }
 
 export class KimiConfigRpcClient implements KimiConfigRpc {
-  private readonly ready: Promise<RPCMethods<KimiConfigCoreRpc>>;
+  private readonly core = new KimiConfigCoreRpcImpl();
 
-  constructor() {
-    const [coreRpc, clientRpc] = createRPC<
-      KimiConfigCoreRpc,
-      KimiConfigClientRpc
-    >();
-    void coreRpc(new KimiConfigCoreRpcImpl());
-    this.ready = clientRpc({});
-  }
-
-  async resolveConfigPath(
+  resolveConfigPath(
     input: ResolveKimiConfigPathInput = {},
   ): Promise<string> {
-    const rpc = await this.ready;
-    return rpc.resolveConfigPath(input);
+    return Promise.resolve(this.core.resolveConfigPath(input));
   }
 
-  async validateConfigToml(input: ValidateKimiConfigTomlInput): Promise<void> {
-    const rpc = await this.ready;
-    await rpc.validateConfigToml(input);
+  validateConfigToml(input: ValidateKimiConfigTomlInput): Promise<void> {
+    return Promise.resolve(this.core.validateConfigToml(input));
   }
 }
 
