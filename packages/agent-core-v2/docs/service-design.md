@@ -132,7 +132,7 @@ This pattern recurs throughout the codebase and confirms the rule:
 
 - **Split** when the domain genuinely has both a global view and per-instance state.
 - **Do not split** when the domain has state at only one lifetime (e.g. purely `App` like
-  `log` / `telemetry`; purely `Agent` like `prompt`). **Do not pre-split for symmetry.**
+  `log`; purely `Agent` like `prompt`). **Do not pre-split for symmetry.**
 
 ### Dependency direction after the split
 
@@ -244,7 +244,7 @@ Derived from "what is more foundational", roughly (lower is depended on by highe
 reverse):
 
 1. **Root (depend on no business domain)**: `_base`, `log`, `environment`, `event`,
-   `telemetry`, `kaos`.
+   `kaos`.
 2. **Data / state**: `records`, `filestore`, `workspace`, `blobStore`, `config`.
 3. **Capabilities**: `tool`, `permission`, `prompt`, `contextMemory`, `chatProvider`,
    `modelRuntime`, `skill`, …

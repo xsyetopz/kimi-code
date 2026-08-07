@@ -11,7 +11,7 @@ unified `ErrorCodes` const.
 
 ## Where things live
 
-- `src/_base/errors/errors.ts`: base classes — `Error2`, `ExpectedError`, `ErrorNoTelemetry`, `BugIndicatingError`, `NotImplementedError`, plus the `isError2` guard and `unwrapErrorCause`.
+- `src/_base/errors/errors.ts`: base classes — `Error2`, `ExpectedError`, `BugIndicatingError`, `NotImplementedError`, plus the `isError2` guard and `unwrapErrorCause`.
 - `src/_base/errors/codes.ts`: the `ErrorDomain` contract, the `ErrorCode` type (aliased to the protocol's `KimiErrorCode`), the runtime registry (`registerErrorDomain` / `errorInfo` / `isErrorCode`), and the domain-independent `CoreErrors` (`internal`, `not_implemented`).
 - `src/_base/errors/serialize.ts`: `ErrorPayload`, `isCodedError`, `toErrorPayload`, `fromErrorPayload`, `makeErrorPayload`. Reads retryability from the registry via `errorInfo`. The wire-facing names (`KimiErrorPayload`, `toKimiErrorPayload`) mirror the protocol contract and keep their names even though the in-process class is `Error2`.
 - `src/_base/errors/errorMessage.ts`: `toErrorMessage(error, verbose?)` for logs/CLI.

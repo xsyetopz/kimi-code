@@ -214,7 +214,7 @@ If a stub is needed by two test files, it belongs in that domain's
 ## Service groups
 
 Most unit tests stub the same handful of collaborators (`ILogService`,
-`IAgentRecords`, `IConfigService`, `ITelemetryService`, …). Rather than repeat
+`IAgentRecords`, `IConfigService`, `IEventBus`, …). Rather than repeat
 `ix.stub(...)` lines in every `beforeEach`, each domain exports a
 `register*Services` function from its `stubs.ts` that registers the default test
 doubles for that domain:

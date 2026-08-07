@@ -16,7 +16,7 @@
 
 这个决策有三个特点，决定了它的架构取向：
 
-1. **决策携带行为**。返回 `ask` 不是一个枚举值，而是一条含 RPC 往返、hook、telemetry、状态写入、续体的工作流；返回 `deny` 可能是执行了一段外部 hook 的结果。
+1. **决策携带行为**。返回 `ask` 不是一个枚举值，而是一条含 RPC 往返、hook、状态写入、续体的工作流；返回 `deny` 可能是执行了一段外部 hook 的结果。
 2. **策略异质**。有的查工具名集合，有的数同批 AgentSwarm 个数，有的跑 hook，有的检查 plan 状态机——没有统一的 `(sub, obj, act)` 形状。
 3. **多 agent × 多 mode × 外部扩展**。不同 agent / mode 需要不同权限，且要允许外部（组织管理员、插件）解耦地贡献规则或行为。
 
@@ -117,9 +117,9 @@ priority 的痛点是「多模块各自贡献规则时数字撞车」。agent-co
 
 | policy | 返回 `ask` 后的真实行为 |
 |---|---|
-| `requestToolApproval` | 触发 hook → 异步 RPC 问用户 → 记 telemetry → 写 records/replay → 可选写会话缓存 → 调续体 |
+| `requestToolApproval` | 触发 hook → 异步 RPC 问用户 → 写 records/replay → 可选写会话缓存 → 调续体 |
 | `goal-start-review-ask` | 弹菜单 → 根据回答**切换 permission mode** → 放行 |
-| `exit-plan-mode-review-ask` | 推进 plan 状态机 → 记多种 telemetry → **合成工具结果**短路执行 |
+| `exit-plan-mode-review-ask` | 推进 plan 状态机 → **合成工具结果**短路执行 |
 | `pre-tool-call-hook` | `deny` 是**异步执行外部 hook** 的结果 |
 
 这些续体、副作用、合成结果没有槽位放进 Casbin 的标量 effect。即便让 Casbin 算出 `ask`，外面仍需重写一整套把 `ask` 关联到行为的逻辑——Casbin 降级成枚举生成器。
