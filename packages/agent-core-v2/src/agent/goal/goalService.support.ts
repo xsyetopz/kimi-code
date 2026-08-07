@@ -292,7 +292,7 @@ export function normalizeCompletionCriterion(
     : trimmed;
 }
 
-function hasStepBudgetRemaining(
+export function hasStepBudgetRemaining(
   maxSteps: number | undefined,
   currentStep: number,
 ): boolean {

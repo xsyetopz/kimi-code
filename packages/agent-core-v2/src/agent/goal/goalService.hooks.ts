@@ -120,6 +120,7 @@ import type {
   GoalStatus,
   GoalToolResult,
 } from "./types";
+import { hasStepBudgetRemaining } from "./goalService.support";
 
 const MAX_GOAL_OBJECTIVE_LENGTH = 4000;
 

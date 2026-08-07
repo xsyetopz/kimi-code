@@ -635,7 +635,7 @@ export class AgentProfileService extends AgentProfileServiceCore {
         this.eventBus.publish({
           type: "warning",
           code: "tool-pattern-no-match",
-          message: describeInactiveToolPattern(context, field, issue),
+          message: ps.describeInactiveToolPattern(context, field, issue),
         });
       }
     }
@@ -719,7 +719,7 @@ export class AgentProfileService extends AgentProfileServiceCore {
     for (const section of sections) {
       const block = `<!-- From: plugin ${section.pluginId} -->\n${section.content}`;
       const bytes = Buffer.byteLength(block, "utf8");
-      if (totalBytes + bytes > PLUGIN_SECTIONS_MAX_BYTES) {
+      if (totalBytes + bytes > ps.PLUGIN_SECTIONS_MAX_BYTES) {
         skipped.push(section.pluginId);
         continue;
       }
@@ -736,7 +736,7 @@ export class AgentProfileService extends AgentProfileServiceCore {
           type: "warning",
           message:
             `Plugin system-prompt contributions from ${newlySkipped.map((id) => `"${id}"`).join(", ")} ` +
-            `were skipped: the aggregate ${PLUGIN_SECTIONS_MAX_BYTES / 1024} KB budget is exhausted.`,
+            `were skipped: the aggregate ${ps.PLUGIN_SECTIONS_MAX_BYTES / 1024} KB budget is exhausted.`,
           code: "plugin-sections-oversized",
         });
       }

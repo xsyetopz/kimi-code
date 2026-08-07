@@ -48,6 +48,7 @@ import {
 } from "./types";
 import {
   checkGithubUpdate,
+  installedGithubSha,
   copyPluginToManagedRoot,
   isMcpServerEnabled,
   normalizeInstallRoot,

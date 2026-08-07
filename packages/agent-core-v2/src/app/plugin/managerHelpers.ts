@@ -2,6 +2,7 @@
  * `plugin` domain — plugin manager install and record helpers.
  */
 
+import { cp, mkdir, mkdtemp, realpath, rename, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -35,7 +36,7 @@ import {
   type ReloadSummary,
 } from "./types";
 
-async function installedGithubSha(
+export async function installedGithubSha(
   owner: string,
   repo: string,
   ref: PluginGithubMetadata["ref"],
