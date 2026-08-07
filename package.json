@@ -16,7 +16,7 @@
     "dev:cli:marketplace": "KIMI_CODE_DEV_MARKETPLACE_URL=https://code.kimi.com/kimi-code/plugins/marketplace.json bun run --cwd apps/kimi-code dev",
     "build:plugin-marketplace": "bun run --cwd apps/kimi-code build:plugin-marketplace",
     "typecheck": "for d in packages/* apps/kimi-code; do [ -f \"$d/package.json\" ] || continue; (cd \"$d\" && bun run typecheck) || exit 1; done",
-    "lint": "bun run typecheck",
+    "lint": "bun run format:check",
     "lint:fix": "biome format --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
