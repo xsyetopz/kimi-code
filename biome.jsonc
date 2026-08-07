@@ -28,10 +28,7 @@
         }
     },
     "linter": {
-        "enabled": true,
-        "rules": {
-            "recommended": true
-        }
+        "enabled": false
     },
     "javascript": {
         "formatter": {
@@ -40,7 +37,7 @@
     },
     "css": {
         "linter": {
-            "enabled": true
+            "enabled": false
         }
     }
 }

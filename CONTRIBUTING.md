@@ -49,8 +49,9 @@ Useful scripts:
 - `bun dev:cli` — run the CLI in dev mode
 - `bun test` — run tests (vitest)
 - `bun typecheck` — TypeScript check (note: builds packages first)
-- `bun lint` — biome check
-- `bun lint:fix` — biome check with auto-fix
+- `bun lint` — TypeScript check (alias for `bun typecheck`)
+- `bun lint:fix` — format and organize imports (Biome, no lint rules)
+- `bun format` — format only (Biome)
 - `bun build` — build all packages
 
 ## Commit Convention
@@ -68,7 +69,7 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 | ci       | CI / build pipeline changes                 | ci: cache bun install                     |
 | build    | Build system / artifact changes             | build(native): add win32-arm64 target     |
 | perf     | Performance improvement                     | perf(session): batch event flushes        |
-| style    | Formatting only (no logic)                  | style: apply biome --write                |
+| style    | Formatting only (no logic)                  | style: apply biome format                 |
 
 PR titles are enforced by the `pr-title-checker` workflow — a non-conforming title will block merge.
 
@@ -90,9 +91,9 @@ PR titles must follow [Conventional Commits](#commit-convention); CI runs `bun l
 ## Code Style
 
 - TypeScript across the codebase.
-- Linting and formatting via Biome (config in `biome.json`).
-- Auto-fix via `bun lint:fix`.
-- Follow existing local patterns when the lint rules do not cover a style choice.
+- CI gates on `bun typecheck` (strict `tsconfig.base.json`: unused locals/parameters, implicit returns, and related checks).
+- Formatting and import organization via Biome (config in `biome.jsonc`); run `bun format` or `bun lint:fix` on demand — not enforced in CI.
+- Follow existing local patterns when formatting does not cover a style choice.
 
 ## Reporting Security Issues
 

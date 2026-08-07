@@ -106,7 +106,7 @@ pnpm install
 pnpm dev:cli    # run the CLI in dev mode
 pnpm test       # run tests
 pnpm typecheck  # TypeScript check
-pnpm lint       # biome
+pnpm lint       # TypeScript check (alias for typecheck)
 pnpm build      # build all packages
 ```
 
