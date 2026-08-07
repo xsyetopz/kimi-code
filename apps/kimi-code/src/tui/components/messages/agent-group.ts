@@ -12,7 +12,8 @@
  *   Phase transitions (spawning -> running -> done/failed) flush immediately.
  * - Mounting: `KimiTUI` attaches the group to the transcript at the
  *   right time; the group handles `invalidate` plus `ui.requestRender`.
- * - Ungrouping is not implemented. Once formed, a group stays grouped.
+ * - Ungrouping: {@link ungroup} splits the group back into standalone tool
+ *   cards when a member is removed or the group collapses to a single agent.
  */
 
 import type { TUI } from "@moonshot-ai/kimi-tui";
@@ -102,6 +103,48 @@ export class AgentGroupComponent extends Container {
       this.scheduleRender();
     });
     this.flushRender();
+  }
+
+  /**
+   * Removes one borrowed agent card from the group. Returns the detached
+   * component when present.
+   */
+  detach(toolCallId: string): ToolCallComponent | undefined {
+    const index = this.entries.findIndex(
+      (entry) => entry.toolCallId === toolCallId,
+    );
+    if (index < 0) return undefined;
+    const [removed] = this.entries.splice(index, 1);
+    removed.tc.setSnapshotListener(undefined);
+    this.lastFlushPhases.delete(toolCallId);
+    if (this.entries.length > 0) {
+      this.flushRender();
+    }
+    return removed.tc;
+  }
+
+  /**
+   * Splits the group into its member tool cards. Clears listeners and timers.
+   */
+  ungroup(): readonly ToolCallComponent[] {
+    const components = this.getToolComponents();
+    for (const entry of this.entries) {
+      entry.tc.setSnapshotListener(undefined);
+    }
+    this.entries.length = 0;
+    this.dispose();
+    return components;
+  }
+
+  /**
+   * When only one agent remains, returns it so the host can replace this group
+   * with the standalone card.
+   */
+  collapseIfSolo(): ToolCallComponent | undefined {
+    if (this.entries.length !== 1) return undefined;
+    const solo = this.entries[0]!.tc;
+    this.detach(this.entries[0]!.toolCallId);
+    return solo;
   }
 
   /**

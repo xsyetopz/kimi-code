@@ -276,6 +276,18 @@ export class StreamingUIToolGroups {
     return group;
   }
 
+  ungroupAgentGroupInTranscript(group: AgentGroupComponent): void {
+    const { state } = this.host;
+    const children = state.transcriptContainer.children;
+    const idx = children.indexOf(group);
+    if (idx < 0) return;
+    const members = group.ungroup();
+    children.splice(idx, 1, ...members);
+    this.state.setPendingAgentGroup(null);
+    this.state.setAgentGroupInkEntryId(undefined);
+    this.host.requestTerminalRender();
+  }
+
   private upgradeSoloReadToGroup(solo: ToolCallComponent): ReadGroupComponent {
     const { state } = this.host;
     const group = new ReadGroupComponent(state.ui);

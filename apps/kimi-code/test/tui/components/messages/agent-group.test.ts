@@ -289,6 +289,46 @@ describe("AgentGroupComponent", () => {
     a.dispose();
     b.dispose();
   });
+
+  it("ungroups back into standalone tool cards", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const ui = stubTui();
+    const group = new AgentGroupComponent(ui);
+    const a = createAgent("call_agent_1", "inspect project", "explore", ui);
+    const b = createAgent("call_agent_2", "write tests", "coder", ui);
+    group.attach("call_agent_1", a);
+    group.attach("call_agent_2", b);
+
+    const detached = group.detach("call_agent_1");
+    expect(detached).toBe(a);
+    expect(group.size()).toBe(1);
+    expect(renderText(group)).toContain("Running 1 agents");
+
+    const members = group.ungroup();
+    expect(members).toEqual([b]);
+    expect(group.size()).toBe(0);
+
+    a.dispose();
+    b.dispose();
+  });
+
+  it("collapses to the remaining solo card", () => {
+    const ui = stubTui();
+    const group = new AgentGroupComponent(ui);
+    const a = createAgent("call_agent_1", "inspect project", "explore", ui);
+    const b = createAgent("call_agent_2", "write tests", "coder", ui);
+    group.attach("call_agent_1", a);
+    group.attach("call_agent_2", b);
+    group.detach("call_agent_1");
+
+    const solo = group.collapseIfSolo();
+    expect(solo).toBe(b);
+    expect(group.size()).toBe(0);
+
+    a.dispose();
+    b.dispose();
+  });
 });
 
 describe("projectAgentGroupLines", () => {
