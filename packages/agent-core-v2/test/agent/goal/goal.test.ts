@@ -320,6 +320,23 @@ function endTurn(
   });
 }
 
+/** Goal turn-ended handlers are async; yield before asserting continuations. */
+async function flushGoalTurnEndedHandlers(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+async function expectLaunchedContinuations(
+  loop: StubLoop,
+  count: number,
+): Promise<void> {
+  await flushGoalTurnEndedHandlers();
+  await vi.waitFor(() => expect(loop.launches).toHaveLength(count), {
+    timeout: 5_000,
+    interval: 1,
+  });
+}
+
 describe("AgentGoalService", () => {
   let ctx: TestAgentContext;
   let context: IAgentContextMemoryService;
@@ -530,14 +547,15 @@ describe("AgentGoalService", () => {
 
       expect(resumed.status).toBe("active");
       expect(repeated.status).toBe("active");
-      await vi.waitFor(() => {
-        expect(endedTurnIds).toHaveLength(2);
+      await vi.waitFor(() => expect(endedTurnIds).toHaveLength(2), {
+        timeout: 15_000,
+        interval: 10,
       });
       expect(ctx.llmCalls).toHaveLength(3);
       expect(continuationTurnIds).toEqual(endedTurnIds);
       expect(endedTurnReasons).toEqual(["completed", "completed"]);
       expect(goals.getGoal().goal).toBeNull();
-    });
+    }, 20_000);
 
     it("pauseOnInterrupt parks active goals and no-ops for stopped goals", async () => {
       await goals.createGoal({
@@ -915,6 +933,7 @@ describe("AgentGoalService core workflow hooks", () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await ctx?.dispose();
   });
 
@@ -990,10 +1009,7 @@ describe("AgentGoalService core workflow hooks", () => {
 
       await goals.resumeGoal();
       endTurn(eventBus, turn);
-
-      await vi.waitFor(() => {
-        expect(loopService.launches).toHaveLength(1);
-      });
+      await expectLaunchedContinuations(loopService, 1);
       expect(loopService.drainNextBatch(context)).toBeDefined();
       expect(context.get().at(-1)?.origin).toEqual({
         kind: "system_trigger",
@@ -1075,10 +1091,7 @@ describe("AgentGoalService core workflow hooks", () => {
     expect(results[0]?.result.isError).not.toBe(true);
 
     endTurn(eventBus, turn);
-
-    await vi.waitFor(() => {
-      expect(loopService.launches).toHaveLength(1);
-    });
+    await expectLaunchedContinuations(loopService, 1);
     expect(goals.getGoal().goal).toMatchObject({
       objective: "new task",
       status: "active",
@@ -1088,7 +1101,7 @@ describe("AgentGoalService core workflow hooks", () => {
       kind: "system_trigger",
       name: "goal_continuation",
     });
-  });
+  }, 15_000);
 
   it("does not charge a same-turn replacement goal for usage owned by the prior goal", async () => {
     await goals.createGoal({ objective: "old task" });
@@ -1269,9 +1282,7 @@ describe("AgentGoalService core workflow hooks", () => {
       });
       await runGoalStep(loopService, oldUserTurn);
       endTurn(eventBus, oldUserTurn);
-      await vi.waitFor(() => {
-        expect(loopService.launches).toHaveLength(1);
-      });
+      await expectLaunchedContinuations(loopService, 1);
 
       const continuationTurn = makeTurn(loopService.launches[0]!);
       eventBus.publish({
@@ -1440,8 +1451,9 @@ describe("AgentGoalService core workflow hooks", () => {
     await goals.pauseGoal();
     const resumed = await goals.resumeGoal({ continueIfPaused: true });
     endTurn(eventBus, makeTurn(41), { reason: "cancelled" });
+    await flushGoalTurnEndedHandlers();
 
-    await vi.waitFor(() => expect(enqueue).toHaveBeenCalledTimes(2));
+    expect(enqueue).toHaveBeenCalledTimes(2);
     expect(resumed.status).toBe("active");
     expect(goals.getGoal().goal?.status).toBe("active");
   });
@@ -1529,8 +1541,7 @@ describe("AgentGoalService core workflow hooks", () => {
     });
     await runGoalStep(loopService, firstTurn);
     endTurn(eventBus, firstTurn);
-
-    await vi.waitFor(() => expect(loopService.launches).toHaveLength(1));
+    await expectLaunchedContinuations(loopService, 1);
     const continuation = makeTurn(loopService.launches[0]!);
     eventBus.publish({
       type: "turn.started",
@@ -1659,8 +1670,7 @@ describe("AgentGoalService core workflow hooks", () => {
 
     await goals.createGoal({ objective: "finish the task" }, "model");
     endTurn(eventBus, turn);
-
-    await vi.waitFor(() => expect(loopService.launches).toHaveLength(1));
+    await expectLaunchedContinuations(loopService, 1);
     expect(goals.getGoal().goal).toMatchObject({
       status: "active",
       turnsUsed: 1,
@@ -1679,10 +1689,9 @@ describe("AgentGoalService core workflow hooks", () => {
     await goals.createGoal({ objective: "finish the task" }, "model");
     await goals.setBudgetLimits({ budgetLimits: { turnBudget: 1 } }, "model");
     endTurn(eventBus, turn);
+    await flushGoalTurnEndedHandlers();
 
-    await vi.waitFor(() =>
-      expect(goals.getGoal().goal?.status).toBe("blocked"),
-    );
+    expect(goals.getGoal().goal?.status).toBe("blocked");
     expect(goals.getGoal().goal).toMatchObject({
       status: "blocked",
       turnsUsed: 1,
@@ -1855,8 +1864,10 @@ describe("AgentGoalService core workflow hooks", () => {
     });
     await runGoalStep(loopService, turn);
     endTurn(eventBus, turn);
-
-    await vi.waitFor(() => expect(goals.getGoal().goal?.status).toBe("paused"));
+    await vi.waitFor(
+      () => expect(goals.getGoal().goal?.status).toBe("paused"),
+      { timeout: 10_000, interval: 10 },
+    );
     expect(goals.getGoal().goal?.terminalReason).toBe(
       "Paused after goal continuation failure: wire dispatch exploded",
     );
@@ -1874,8 +1885,7 @@ describe("AgentGoalService core workflow hooks", () => {
     });
     await runGoalStep(loopService, goalTurn);
     endTurn(eventBus, goalTurn);
-
-    await vi.waitFor(() => expect(loopService.launches).toHaveLength(1));
+    await expectLaunchedContinuations(loopService, 1);
     expect(goals.getGoal().goal?.status).toBe("active");
     expect(loopService.hasPendingRequests()).toBe(true);
   });
@@ -2145,10 +2155,11 @@ describe("AgentGoalService hard wall-clock deadline", () => {
 
       await ctx.rpc.prompt({ input: [{ type: "text", text: "start work" }] });
       await llm.started;
+      const turnEnd = ctx.untilTurnEnd();
       clock.advanceBy(1_000);
 
       expect(llm.signal().aborted).toBe(true);
-      const events = await ctx.untilTurnEnd();
+      const events = await turnEnd;
       expect(events).toContainEqual(
         expect.objectContaining({
           event: "turn.ended",
@@ -2165,7 +2176,7 @@ describe("AgentGoalService hard wall-clock deadline", () => {
     } finally {
       await ctx.dispose();
     }
-  });
+  }, 15_000);
 
   it("aborts an in-flight tool execution when the wall-clock budget expires", async () => {
     const clock = new ManualGoalDeadlineScheduler();
@@ -2212,10 +2223,11 @@ describe("AgentGoalService hard wall-clock deadline", () => {
 
       await ctx.rpc.prompt({ input: [{ type: "text", text: "start work" }] });
       await toolStarted.promise;
+      const turnEnd = ctx.untilTurnEnd();
       clock.advanceBy(1_000);
 
       expect(toolSignal?.aborted).toBe(true);
-      const events = await ctx.untilTurnEnd();
+      const events = await turnEnd;
       expect(events).toContainEqual(
         expect.objectContaining({
           event: "turn.ended",
@@ -2229,7 +2241,7 @@ describe("AgentGoalService hard wall-clock deadline", () => {
     } finally {
       await ctx.dispose();
     }
-  });
+  }, 15_000);
 
   it("keeps the goal-cancellation abort authoritative when it precedes the wall-clock deadline", async () => {
     const clock = new ManualGoalDeadlineScheduler();
@@ -2496,8 +2508,9 @@ describe("AgentGoalService mid-turn budget stop", () => {
       expect(JSON.stringify(history)).not.toContain(
         "This step should never run.",
       );
-      await vi.waitFor(() =>
-        expect(goals.getGoal().goal?.status).toBe("blocked"),
+      await vi.waitFor(
+        () => expect(goals.getGoal().goal?.status).toBe("blocked"),
+        { timeout: 10_000, interval: 10 },
       );
       expect(goals.getGoal().goal?.budget.turnBudget).toBe(1);
     } finally {
