@@ -25,33 +25,33 @@ We only merge PRs aligned with the roadmap. Drive-by refactors without context a
 
 ## Project Layout
 
-This is a pnpm monorepo. The most relevant entry points are:
+This is a bun workspaces monorepo. The product is a **CLI / TUI harness only** — see [ARCHITECTURE.md](ARCHITECTURE.md) for the north star. The most relevant entry points are:
 
-- `apps/kimi-code` — CLI / TUI (`kimi web` runs the API server only)
+- `apps/kimi-code` — CLI / TUI (the only app host)
 - `packages/node-sdk` — public TypeScript SDK (`@moonshot-ai/kimi-code-sdk`)
-- `packages/agent-core`, `kosong`, `kaos`, `oauth`, `telemetry` — internal engine packages
+- `packages/agent-core-v2`, `klient`, `kimi-tui`, `kosong`, `kaos`, `oauth`, `transcript` — engine and harness packages
 - `docs/` — VitePress bilingual docs site
 
 For the full project map, see [AGENTS.md](AGENTS.md).
 
 ## Development Setup
 
-Prerequisites: Node.js >= 24.15.0, pnpm 10.33.0, Git.
+Prerequisites: Node.js >= 24.15.0, bun 1.3.14, Git.
 
 ```sh
 git clone https://github.com/MoonshotAI/kimi-code.git
 cd kimi-code
-pnpm install
+bun install
 ```
 
 Useful scripts:
 
-- `pnpm dev:cli` — run the CLI in dev mode
-- `pnpm test` — run tests (vitest)
-- `pnpm typecheck` — TypeScript check (note: builds packages first)
-- `pnpm lint` — oxlint
-- `pnpm lint:fix` — oxlint with auto-fix
-- `pnpm build` — build all packages
+- `bun dev:cli` — run the CLI in dev mode
+- `bun test` — run tests (vitest)
+- `bun typecheck` — TypeScript check (note: builds packages first)
+- `bun lint` — biome check
+- `bun lint:fix` — biome check with auto-fix
+- `bun build` — build all packages
 
 ## Commit Convention
 
@@ -65,10 +65,10 @@ All commits and PR titles must follow [Conventional Commits](https://www.convent
 | chore    | Tooling / housekeeping                      | chore: bump dependencies                  |
 | refactor | Internal refactor without behavior change   | refactor(kosong): extract retry helper    |
 | test     | Adding or improving tests                   | test(agent-core): cover skill resolver    |
-| ci       | CI / build pipeline changes                 | ci: cache pnpm store                      |
+| ci       | CI / build pipeline changes                 | ci: cache bun install                     |
 | build    | Build system / artifact changes             | build(native): add win32-arm64 target     |
 | perf     | Performance improvement                     | perf(session): batch event flushes        |
-| style    | Formatting only (no logic)                  | style: apply oxlint --fix                 |
+| style    | Formatting only (no logic)                  | style: apply biome --write                |
 
 PR titles are enforced by the `pr-title-checker` workflow — a non-conforming title will block merge.
 
@@ -78,20 +78,20 @@ This repo uses [changesets](https://github.com/changesets/changesets) to manage 
 
 - Every PR that affects release artifacts (code, behavior, public API) **must** include a changeset.
 - Docs-only, test-only, or CI-only PRs may skip changesets.
-- Generate one with `pnpm changeset` and follow the prompts (which packages are touched, which bump level).
+- Generate one with `bun changeset` and follow the prompts (which packages are touched, which bump level).
 - For repo-specific conventions on package selection and bump levels, see `.changeset/README.md`. When working in this repo with coding agents, use the `gen-changesets` skill.
 
 ## Pull Requests
 
 Use the [PR template](.github/pull_request_template.md) when opening a feature pull request.
 
-PR titles must follow [Conventional Commits](#commit-convention); CI runs `pnpm lint`, `pnpm typecheck`, and `pnpm test` on every PR. Update user-facing docs in `docs/` when behavior changes — use the `gen-docs` skill when working with coding agents.
+PR titles must follow [Conventional Commits](#commit-convention); CI runs `bun lint`, `bun typecheck`, and `bun test` on every PR. Update user-facing docs in `docs/` when behavior changes — use the `gen-docs` skill when working with coding agents.
 
 ## Code Style
 
 - TypeScript across the codebase.
-- Linting via `oxlint` (config in `.oxlintrc.json`).
-- Auto-formatting via `pnpm lint:fix`.
+- Linting and formatting via Biome (config in `biome.json`).
+- Auto-fix via `bun lint:fix`.
 - Follow existing local patterns when the lint rules do not cover a style choice.
 
 ## Reporting Security Issues
