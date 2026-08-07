@@ -90,11 +90,25 @@ import {
 
 import { AnthropicStreamedMessage } from "./anthropic.stream";
 import {
+  applyResponseFormat,
   applyThinkingKeep,
+  ANTHROPIC_TOOL_CALL_ID_POLICY,
+  CACHE_CONTROL,
   convertAnthropicError,
+  convertMessage,
+  injectCacheControlOnLastBlock,
+  INTERLEAVED_THINKING_BETA,
+  isToolResultOnly,
+  resolveDefaultMaxTokens,
+  resolveThinkingProfile,
+  shouldKeepConvertedMessage,
+  type AnthropicGenerationKwargs,
+} from "./anthropic.convert";
+export {
+  convertAnthropicError,
+  getAnthropicModelCapability,
   resolveDefaultMaxTokens,
 } from "./anthropic.convert";
-export { getAnthropicModelCapability } from "./anthropic.convert";
 
 export class AnthropicChatProvider implements ChatProvider {
   readonly name: string = "anthropic";

@@ -90,7 +90,7 @@ export function normalizeResponsesFinishReason(
 }
 
 type RawObject = Record<string, unknown>;
-const OPENAI_RESPONSES_TOOL_CALL_ID_POLICY: ToolCallIdPolicy = {
+export const OPENAI_RESPONSES_TOOL_CALL_ID_POLICY: ToolCallIdPolicy = {
   normalize: (id) => sanitizeOpenAIResponsesCallId(id, 64),
   maxLength: 64,
 };

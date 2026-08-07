@@ -107,12 +107,14 @@ import {
 import {
   RgJsonAccumulator,
   buildFsEntry,
+  errnoCode,
   isHidden,
   isInsideOrEqual,
   isMissingPathError,
   isPrematureCloseError,
   mapFsError,
   sortChildren,
+  toWireError,
 } from "./fsService.support";
 
 const SEARCH_HARD_CAP = 500;

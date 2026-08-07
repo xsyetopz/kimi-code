@@ -112,10 +112,10 @@ export interface AnthropicOptions {
   hooks?: AnthropicHooks | undefined;
 }
 
-const INTERLEAVED_THINKING_BETA = "interleaved-thinking-2025-05-14";
+export const INTERLEAVED_THINKING_BETA = "interleaved-thinking-2025-05-14";
 const CONTEXT_MANAGEMENT_BETA = "context-management-2025-06-27";
 const CLEAR_THINKING_EDIT = "clear_thinking_20251015";
-const ANTHROPIC_TOOL_CALL_ID_POLICY: ToolCallIdPolicy = {
+export const ANTHROPIC_TOOL_CALL_ID_POLICY: ToolCallIdPolicy = {
   normalize: (id) => sanitizeToolCallId(id, 64),
   maxLength: 64,
 };

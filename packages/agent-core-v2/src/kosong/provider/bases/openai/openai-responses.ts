@@ -70,6 +70,7 @@ import {
   sanitizeOpenAIResponsesCallId,
 } from "../tool-call-id";
 import * as decode from "./openai-responses.decode";
+import { OPENAI_RESPONSES_TOOL_CALL_ID_POLICY } from "./openai-responses.decode";
 import * as convert from "./openai-responses.convert";
 
 export class OpenAIResponsesStreamedMessage implements StreamedMessage {
