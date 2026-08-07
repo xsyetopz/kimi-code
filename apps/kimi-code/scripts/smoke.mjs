@@ -7,7 +7,6 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const bundlePath = resolve(appRoot, "dist", "main.mjs");
-const webIndexPath = resolve(appRoot, "dist-web", "index.html");
 const packageJson = JSON.parse(
   await readFile(resolve(appRoot, "package.json"), "utf-8"),
 );
@@ -23,16 +22,6 @@ async function ensureBundleExists() {
     await stat(bundlePath);
   } catch {
     fail(`Bundle not found at ${bundlePath}. Run \`bun run build\` first.`);
-  }
-}
-
-async function ensureRuntimeAssetsExist() {
-  try {
-    await stat(webIndexPath);
-  } catch {
-    fail(
-      `Runtime asset not found at ${webIndexPath}. Run \`bun run build\` first.`,
-    );
   }
 }
 
@@ -66,7 +55,6 @@ function assertIncludes(output, expected, command) {
 }
 
 await ensureBundleExists();
-await ensureRuntimeAssetsExist();
 
 const versionOutput = await runBundle(["--version"]);
 assertIncludes(versionOutput, expectedVersion, "--version");

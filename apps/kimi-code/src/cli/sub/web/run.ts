@@ -1,15 +1,11 @@
 /**
- * `kimi web` — run the local server in the foreground and open the web UI.
+ * `kimi web` — run the local Kimi API server (REST + WebSocket) in the foreground.
  *
  * The server always runs in the current process, attached to the terminal,
- * and shuts down cleanly on SIGINT/SIGTERM. `--no-open` skips the browser.
- * Multiple instances can share the home directory: each registers itself in
- * the instance registry and takes the next free port (see kap-server's
- * `startServer`).
+ * and shuts down cleanly on SIGINT/SIGTERM. Multiple instances can share the
+ * home directory: each registers itself in the instance registry and takes the
+ * next free port (see kap-server's `startServer`).
  */
-
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 
 import {
   createServerLogger,
@@ -20,14 +16,11 @@ import chalk from "chalk";
 import { type Command } from "commander";
 
 import { WEB_USER_AGENT_SUFFIX } from "#/constant/app";
-import { getNativeWebAssetsDir } from "#/native/web-assets";
 import { darkColors } from "#/tui/theme/colors";
-import { openUrl as defaultOpenUrl } from "#/utils/open-url";
 import { getDataDir } from "#/utils/paths";
 
 import {
   createKimiCodeHostIdentity,
-  getHostPackageRoot,
   getVersion,
 } from "../../version";
 import {
@@ -49,8 +42,6 @@ import {
   type ServerCliOptions,
 } from "./shared";
 
-const WEB_ASSETS_DIR = "dist-web";
-
 /**
  * Minimal surface `runServerInProcess` needs from the server. kap-server's
  * `RunningServer` is adapted to it (it returns `{ host, port, close }`
@@ -62,9 +53,7 @@ interface RoutedServer {
   close(): Promise<void>;
 }
 
-export interface WebCliOptions extends ServerCliOptions {
-  open?: boolean;
-}
+export type WebCliOptions = ServerCliOptions;
 
 export interface StartForegroundHooks {
   /** Fires once the server is listening, before the foreground runner blocks. */
@@ -77,12 +66,8 @@ export interface WebCommandDeps {
     options: ParsedServerOptions,
     hooks?: StartForegroundHooks,
   ) => Promise<never>;
-  openUrl(url: string): void;
   /**
-   * Best-effort read of the server's persistent bearer token. When it returns
-   * a token, the ready banner prints it and the opened Web UI URL carries it in
-   * the `#token=` fragment (M5.5). Optional so callers/tests that don't supply
-   * it simply print/open the plain origin.
+   * Best-effort read of the server's persistent bearer token for the ready banner.
    */
   resolveToken?: () => string | undefined;
   /**
@@ -93,17 +78,6 @@ export interface WebCommandDeps {
   networkAddresses?: NetworkAddress[];
   stdout: Pick<NodeJS.WriteStream, "write">;
   stderr: Pick<NodeJS.WriteStream, "write">;
-}
-
-/**
- * Build the Web UI URL, carrying the bearer token in the URL fragment.
- *
- * The token rides in `#token=<token>` — a client-side fragment that is never
- * sent to the server (so it never appears in server access logs) and is not
- * logged by proxies. The Web UI reads it from `location.hash` after load.
- */
-export function buildWebUrl(origin: string, token: string): string {
-  return buildOpenableUrl(origin, token);
 }
 
 /** Build the `web` command, mounting the runner action on `cmd` itself. */
@@ -151,7 +125,6 @@ export function buildWebCommand(cmd: Command): Command {
       "Mount /api/v1/debug/* routes for test introspection. OFF by default; production callers leave this unset.",
       false,
     )
-    .option("--no-open", "Do not open the web UI in the default browser.", true)
     .action(async (opts: WebCliOptions) => {
       try {
         await handleWebCommand(opts);
@@ -191,9 +164,6 @@ export async function handleWebCommand(
             })
           : formatReadyLine(origin, token, parsed.dangerousBypassAuth),
       );
-      if (opts.open === true) {
-        deps.openUrl(token !== undefined ? buildWebUrl(origin, token) : origin);
-      }
     },
   });
 }
@@ -269,12 +239,6 @@ async function runServerInProcess(
   // logger, close }`, so adapt it to the `RoutedServer` surface the rest of
   // this runner consumes.
   const logger = createServerLogger({ level: options.logLevel });
-  const webAssetsDir = serverWebAssetsDir();
-  if (webAssetsDir === undefined) {
-    logger.info(
-      "dev mode: web assets not built; starting the API server without the web UI",
-    );
-  }
   const v2 = await startServer({
     host: options.host,
     port: options.port,
@@ -298,9 +262,8 @@ async function runServerInProcess(
     allowRemoteTerminals: options.allowRemoteTerminals,
     allowedHosts: options.allowedHosts,
     disableAuth: options.dangerousBypassAuth,
-    webAssetsDir,
   });
-  logger.info("serving the REST/WS API and the bundled web UI");
+  logger.info("serving the REST/WS API");
   running = {
     address: `http://${v2.host}:${v2.port}`,
     logger,
@@ -321,34 +284,6 @@ async function runServerInProcess(
   return new Promise<never>(() => {
     // Keeps the event loop alive; the process ends via shutdown()/process.exit.
   });
-}
-
-/**
- * Resolve the web assets directory passed to kap-server. In dev mode
- * (`KIMI_CODE_DEV_SERVER=1`, set by the repo's `dev:server` / `dev:kap-server*`
- * scripts) a missing `dist-web` build is tolerated: the server starts API-only
- * and the web UI is expected to come from the kimi-web Vite dev server.
- * Outside dev mode the directory is always returned and kap-server keeps
- * failing fast when the assets are missing.
- */
-export function serverWebAssetsDir(
-  env: NodeJS.ProcessEnv = process.env,
-  nativeWebAssetsDir: string | null = getNativeWebAssetsDir(),
-): string | undefined {
-  const dir = resolveServerWebAssetsDir(nativeWebAssetsDir);
-  if (
-    env["KIMI_CODE_DEV_SERVER"] === "1" &&
-    !existsSync(join(dir, "index.html"))
-  ) {
-    return undefined;
-  }
-  return dir;
-}
-
-export function resolveServerWebAssetsDir(
-  nativeWebAssetsDir: string | null = getNativeWebAssetsDir(),
-): string {
-  return nativeWebAssetsDir ?? join(getHostPackageRoot(), WEB_ASSETS_DIR);
 }
 
 interface FormatReadyBannerOptions {
@@ -387,7 +322,7 @@ export function formatReadyBanner(
   const lines: string[] = [
     "",
     `  ${primary(logo[0])}  ${title("Kimi server ready")}  ${dim(getVersion())}`,
-    `  ${primary(logo[1])}  ${dim("Local web UI is available from this machine.")}`,
+    `  ${primary(logo[1])}  ${dim("REST and WebSocket API for harness clients.")}`,
     "",
   ];
 
@@ -432,7 +367,6 @@ export function formatReadyBanner(
 
 const DEFAULT_WEB_COMMAND_DEPS: WebCommandDeps = {
   startServerForeground,
-  openUrl: defaultOpenUrl,
   resolveToken: () => {
     // Read the persistent `<homeDir>/server.token` written on first boot
     // (M5.1). Best-effort: a missing/older server yields undefined and the

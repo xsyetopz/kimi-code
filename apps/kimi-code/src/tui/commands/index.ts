@@ -39,7 +39,6 @@ export {
   handleTitleCommand,
 } from "./session";
 export { handleUndoCommand } from "./undo";
-export { handleWebCommand } from "./web";
 export {
   promptApiKey,
   promptCatalogProviderSelection,

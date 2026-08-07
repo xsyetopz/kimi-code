@@ -7,8 +7,6 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "apps/vis/server",
-    "apps/vis/web",
     "docs"
   ],
   "scripts": {
@@ -16,12 +14,10 @@
     "build:packages": "for d in packages/*; do [ -f \"$d/package.json\" ] || continue; (cd \"$d\" && bun run build) || exit 1; done",
     "dev:cli": "bun run --cwd apps/kimi-code dev",
     "dev:cli:marketplace": "KIMI_CODE_DEV_MARKETPLACE_URL=https://code.kimi.com/kimi-code/plugins/marketplace.json bun run --cwd apps/kimi-code dev",
-    "dev:web": "bun run --cwd apps/kimi-web dev",
     "dev:server": "bun run --cwd apps/kimi-code dev:server",
     "dev:kap-server": "bun run --cwd apps/kimi-code dev:kap-server",
     "dev:v2": "bun run --cwd apps/kimi-code dev:kap-server:multi",
     "build:plugin-marketplace": "bun run --cwd apps/kimi-code build:plugin-marketplace",
-    "vis": "bun run --cwd apps/vis dev",
     "typecheck": "for d in packages/* apps/kimi-code; do [ -f \"$d/package.json\" ] || continue; (cd \"$d\" && bun run typecheck) || exit 1; done",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -51,10 +47,7 @@
     "typescript": "^7.0.0",
     "vitest": "4.1.4"
   },
-  "overrides": {
-    "kimi-code>@tailwindcss/vite": "4.1.18",
-    "kimi-code>tailwindcss": "4.1.18"
-  },
+  "overrides": {},
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}": [
       "biome check --write --no-errors-on-unmatched"

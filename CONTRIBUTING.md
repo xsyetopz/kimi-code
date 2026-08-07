@@ -27,8 +27,7 @@ We only merge PRs aligned with the roadmap. Drive-by refactors without context a
 
 This is a pnpm monorepo. The most relevant entry points are:
 
-- `apps/kimi-code` — CLI / TUI
-- `apps/vis` — session replay & debugging visualizer
+- `apps/kimi-code` — CLI / TUI (`kimi web` runs the API server only)
 - `packages/node-sdk` — public TypeScript SDK (`@moonshot-ai/kimi-code-sdk`)
 - `packages/agent-core`, `kosong`, `kaos`, `oauth`, `telemetry` — internal engine packages
 - `docs/` — VitePress bilingual docs site

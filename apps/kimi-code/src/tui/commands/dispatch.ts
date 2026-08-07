@@ -68,7 +68,6 @@ import {
 } from "./session";
 import { handleSwarmCommand } from "./swarm";
 import { handleUndoCommand } from "./undo";
-import { handleWebCommand } from "./web";
 
 // ---------------------------------------------------------------------------
 // Re-exports — keep existing consumers working
@@ -111,8 +110,6 @@ export {
   handleTitleCommand,
 } from "./session";
 export { handleUndoCommand } from "./undo";
-export { handleWebCommand } from "./web";
-
 // ---------------------------------------------------------------------------
 // Host interface
 // ---------------------------------------------------------------------------
@@ -366,7 +363,6 @@ const SESSION_REQUIRING_COMMANDS: ReadonlySet<BuiltinSlashCommandName> =
     "plan",
     "swarm",
     "undo",
-    "web",
   ]);
 
 async function handleBuiltInSlashCommand(
@@ -533,9 +529,6 @@ async function handleBuiltInSlashCommand(
       return;
     case "undo":
       await handleUndoCommand(host, args);
-      return;
-    case "web":
-      await handleWebCommand(host);
       return;
     default:
       host.showError(`Unknown slash command: /${String(name)}`);

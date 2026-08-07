@@ -1,7 +1,7 @@
 /**
  * Tests for the `kimi web` Commander wiring and its subcommands.
  *
- * These tests don't actually start the server — the foreground runner is
+ * These tests don't actually start the server ? the foreground runner is
  * injected, so they verify option parsing, the ready banner / one-line ready
  * output, browser opening, and the rotate-token / deprecated `kimi server kill`
  * subcommands against fake deps.
@@ -105,7 +105,7 @@ describe("kimi web", () => {
     expect(longs).toContain("--dangerous-bypass-auth");
     expect(longs).toContain("--log-level");
     expect(longs).toContain("--debug-endpoints");
-    // web opens the browser by default → the option is the negative --no-open.
+    // web opens the browser by default ? the option is the negative --no-open.
     expect(longs).toContain("--no-open");
     // The background/daemon era flags are gone: the server always runs in the
     // foreground.
@@ -157,17 +157,16 @@ describe("kimi web", () => {
 describe("`kimi web` ready banner", () => {
   it("prints the TUI-style ready panel once listening", async () => {
     const { handleWebCommand } = await import("#/cli/sub/web/run");
-    // The runner reports the actual bound origin — the banner must take the
+    // The runner reports the actual bound origin ? the banner must take the
     // port from it, not from the requested --port.
     const { runner } = makeRunner("http://127.0.0.1:58628");
     const { stdout, stderr, readStdout } = makeIo();
 
     await handleWebCommand(
-      { port: "58627", open: false },
+      { port: "58627" },
       {
         startServerForeground: runner,
         resolveToken: () => "tok",
-        openUrl: vi.fn(),
         stdout,
         stderr,
       },
@@ -187,10 +186,10 @@ describe("`kimi web` ready banner", () => {
     expect(plain).toContain("Ctrl+C");
     // No bordered panel (the token URL must print in full for copying), but
     // the Kimi sprite stays next to the title.
-    expect(plain).not.toContain("╭");
-    expect(plain).not.toContain("╰");
-    expect(plain).toContain("▐█▛█▛█▌");
-    expect(plain).toContain("▐█████▌");
+    expect(plain).not.toContain("?");
+    expect(plain).not.toContain("?");
+    expect(plain).toContain("???????");
+    expect(plain).toContain("???????");
     expect(plain).not.toContain("Kimi server:");
 
     // Title is above the URLs; Logs/Stop are at the bottom.
@@ -209,8 +208,8 @@ describe("`kimi web` ready banner", () => {
 
     try {
       await handleWebCommand(
-        { port: "58627", host: "127.0.0.1", open: false },
-        { startServerForeground: runner, openUrl: vi.fn(), stdout, stderr },
+        { port: "58627", host: "127.0.0.1" },
+        { startServerForeground: runner, stdout, stderr },
       );
     } finally {
       chalk.level = previousChalkLevel;
@@ -218,7 +217,7 @@ describe("`kimi web` ready banner", () => {
 
     const out = readStdout();
     const color = new Chalk({ level: 3 });
-    expect(out).toContain(color.hex(darkColors.primary)("▐█▛█▛█▌"));
+    expect(out).toContain(color.hex(darkColors.primary)("???????"));
     expect(out).toContain(
       color.bold.hex(darkColors.primary)("Kimi server ready"),
     );
@@ -238,8 +237,8 @@ describe("`kimi web` ready banner", () => {
 
     try {
       await handleWebCommand(
-        { port: "58627", dangerousBypassAuth: true, open: false },
-        { startServerForeground: runner, openUrl: vi.fn(), stdout, stderr },
+        { port: "58627", dangerousBypassAuth: true },
+        { startServerForeground: runner, stdout, stderr },
       );
     } finally {
       chalk.level = previousChalkLevel;
@@ -248,7 +247,7 @@ describe("`kimi web` ready banner", () => {
     const color = new Chalk({ level: 3 });
     expect(readStdout()).toContain(
       color.bold.hex(darkColors.error)(
-        "⚠ DANGER: authentication is DISABLED (--dangerous-bypass-auth).",
+        "? DANGER: authentication is DISABLED (--dangerous-bypass-auth).",
       ),
     );
   });
@@ -257,35 +256,27 @@ describe("`kimi web` ready banner", () => {
     const { handleWebCommand } = await import("#/cli/sub/web/run");
     const { runner } = makeRunner();
     const { stdout, stderr, readStdout } = makeIo();
-    const openUrl = vi.fn();
 
     await handleWebCommand(
       {
         port: "58627",
         host: "127.0.0.1",
         dangerousBypassAuth: true,
-        open: true,
       },
       {
         startServerForeground: runner,
         resolveToken: () => "tok",
-        openUrl,
         stdout,
         stderr,
       },
     );
 
     const plain = stripAnsi(readStdout());
-    // Red, impossible-to-miss danger notice.
     expect(plain).toContain("DANGER: authentication is DISABLED");
     expect(plain).toContain("--dangerous-bypass-auth");
     expect(plain).toContain("Ctrl+C");
-    // The token is irrelevant when bypassed — neither printed nor carried in
-    // any URL (so it cannot leak via copy/paste of the banner).
     expect(plain).not.toContain("tok");
     expect(plain).not.toContain("#token=");
-    // The opened browser URL carries no token fragment either.
-    expect(openUrl).toHaveBeenCalledWith("http://127.0.0.1:58627");
   });
 });
 
@@ -296,7 +287,7 @@ describe("ready banner reflects the bind class", () => {
     const { stdout, stderr, readStdout } = makeIo();
 
     await handleWebCommand(
-      { host: "0.0.0.0", open: false },
+      { host: "0.0.0.0" },
       {
         startServerForeground: runner,
         resolveToken: () => "tok-xyz",
@@ -304,7 +295,6 @@ describe("ready banner reflects the bind class", () => {
           { address: "192.168.98.66", family: "IPv4" },
           { address: "10.8.12.216", family: "IPv4" },
         ],
-        openUrl: vi.fn(),
         stdout,
         stderr,
       },
@@ -321,7 +311,7 @@ describe("ready banner reflects the bind class", () => {
     expect(raw).toContain("http://10.8.12.216:58627/#token=tok-xyz");
     expect(raw).toContain("Token:");
     expect(raw).toContain("tok-xyz");
-    expect(raw).not.toContain("╭");
+    expect(raw).not.toContain("?");
   });
 
   it("lists only the Local URL for a 127.0.0.1 bind", async () => {
@@ -330,13 +320,12 @@ describe("ready banner reflects the bind class", () => {
     const { stdout, stderr, readStdout } = makeIo();
 
     await handleWebCommand(
-      { host: "127.0.0.1", open: false },
+      { host: "127.0.0.1" },
       {
         startServerForeground: runner,
         resolveToken: () => "tok-loop",
         // Injected interface addresses must NOT leak into a loopback banner.
         networkAddresses: [{ address: "192.168.98.66", family: "IPv4" }],
-        openUrl: vi.fn(),
         stdout,
         stderr,
       },
@@ -348,69 +337,11 @@ describe("ready banner reflects the bind class", () => {
     expect(raw).toContain("http://127.0.0.1:58627/#token=tok-loop");
     expect(raw).toContain("Token:");
     expect(raw).toContain("tok-loop");
-    // No network URLs on a loopback bind — just the "off" hint.
+    // No network URLs on a loopback bind ? just the "off" hint.
     expect(raw).toContain("use --host to enable");
     expect(raw).not.toContain("Network:  http");
     expect(raw).not.toContain("192.168.98.66");
-    expect(raw).not.toContain("╭");
-  });
-});
-
-describe("`kimi web` opens the browser", () => {
-  it("opens the Web UI URL with the #token= fragment by default", async () => {
-    const { handleWebCommand } = await import("#/cli/sub/web/run");
-    const { runner } = makeRunner();
-    const { stdout, stderr } = makeIo();
-    const openUrl = vi.fn();
-
-    await handleWebCommand(
-      { port: "58627", open: true },
-      {
-        startServerForeground: runner,
-        resolveToken: () => "tok-xyz",
-        openUrl,
-        stdout,
-        stderr,
-      },
-    );
-
-    expect(openUrl).toHaveBeenCalledWith(
-      "http://127.0.0.1:58627/#token=tok-xyz",
-    );
-  });
-
-  it("opens the plain origin when no token is resolvable", async () => {
-    const { handleWebCommand } = await import("#/cli/sub/web/run");
-    const { runner } = makeRunner();
-    const { stdout, stderr } = makeIo();
-    const openUrl = vi.fn();
-
-    await handleWebCommand(
-      { port: "58627", open: true },
-      {
-        startServerForeground: runner,
-        resolveToken: () => undefined,
-        openUrl,
-        stdout,
-        stderr,
-      },
-    );
-
-    expect(openUrl).toHaveBeenCalledWith("http://127.0.0.1:58627");
-  });
-
-  it("does not open the browser when open is false", async () => {
-    const { handleWebCommand } = await import("#/cli/sub/web/run");
-    const { runner } = makeRunner("http://127.0.0.1:9000");
-    const { stdout, stderr } = makeIo();
-    const openUrl = vi.fn();
-
-    await handleWebCommand(
-      { port: "58627", open: false },
-      { startServerForeground: runner, openUrl, stdout, stderr },
-    );
-
-    expect(openUrl).not.toHaveBeenCalled();
+    expect(raw).not.toContain("?");
   });
 });
 
@@ -430,9 +361,9 @@ describe("`kimi web` option threading", () => {
         debugEndpoints: true,
         allowRemoteShutdown: true,
         allowRemoteTerminals: true,
-        open: false,
+        
       },
-      { startServerForeground: runner, openUrl: vi.fn(), stdout, stderr },
+      { startServerForeground: runner, stdout, stderr },
     );
 
     expect(calls.options).toEqual({
@@ -454,8 +385,8 @@ describe("`kimi web` option threading", () => {
     const { stdout, stderr } = makeIo();
 
     await handleWebCommand(
-      { port: "58627", open: false },
-      { startServerForeground: runner, openUrl: vi.fn(), stdout, stderr },
+      { port: "58627" },
+      { startServerForeground: runner, stdout, stderr },
     );
 
     expect(calls.options).toMatchObject({
@@ -471,8 +402,8 @@ describe("`kimi web` option threading", () => {
     const { stdout, stderr } = makeIo();
 
     await handleWebCommand(
-      { port: "58627", host: true, open: false },
-      { startServerForeground: runner, openUrl: vi.fn(), stdout, stderr },
+      { port: "58627", host: true },
+      { startServerForeground: runner, stdout, stderr },
     );
 
     expect(calls.options).toMatchObject({
@@ -487,8 +418,8 @@ describe("`kimi web` option threading", () => {
     const { stdout, stderr } = makeIo();
 
     await handleWebCommand(
-      { port: "58627", logLevel: "debug", open: false },
-      { startServerForeground: runner, openUrl: vi.fn(), stdout, stderr },
+      { port: "58627", logLevel: "debug" },
+      { startServerForeground: runner, stdout, stderr },
     );
 
     expect(calls.options).toMatchObject({ logLevel: "debug" });
@@ -501,8 +432,8 @@ describe("`kimi web` option threading", () => {
 
     await expect(
       handleWebCommand(
-        { logLevel: "shout", open: false },
-        { startServerForeground, openUrl: vi.fn(), stdout, stderr },
+        { logLevel: "shout" },
+        { startServerForeground, stdout, stderr },
       ),
     ).rejects.toThrow(/invalid --log-level/);
     expect(startServerForeground).not.toHaveBeenCalled();
@@ -514,11 +445,10 @@ describe("`kimi web` option threading", () => {
     const { stdout, stderr, readStdout } = makeIo();
 
     await handleWebCommand(
-      { port: "58627", logLevel: "info", open: false },
+      { port: "58627", logLevel: "info" },
       {
         startServerForeground: runner,
         resolveToken: () => "tok",
-        openUrl: vi.fn(),
         stdout,
         stderr,
       },
@@ -553,54 +483,6 @@ describe("shared parsers stay strict", () => {
     expect(() => parseLogLevel("shout")).toThrow(/invalid --log-level/);
     expect(parseLogLevel(undefined)).toBe("info");
     expect(parseLogLevel("debug")).toBe("debug");
-  });
-});
-
-describe("server web asset directory resolution", () => {
-  it("uses extracted SEA web assets when available", async () => {
-    const { resolveServerWebAssetsDir } = await import("#/cli/sub/web/run");
-    expect(resolveServerWebAssetsDir("/cache/kimi/dist-web")).toBe(
-      "/cache/kimi/dist-web",
-    );
-  });
-
-  it("falls back to package dist-web outside SEA mode", async () => {
-    const { resolveServerWebAssetsDir } = await import("#/cli/sub/web/run");
-    expect(resolveServerWebAssetsDir(null)).toMatch(/[/\\]dist-web$/);
-  });
-
-  it("returns the assets dir when it is built, dev mode or not", async () => {
-    const { serverWebAssetsDir } = await import("#/cli/sub/web/run");
-    const dir = mkdtempSync(join(tmpdir(), "kimi-web-assets-"));
-    try {
-      writeFileSync(join(dir, "index.html"), "<html></html>");
-      expect(serverWebAssetsDir({}, dir)).toBe(dir);
-      expect(serverWebAssetsDir({ KIMI_CODE_DEV_SERVER: "1" }, dir)).toBe(dir);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("requires built assets outside dev mode", async () => {
-    const { serverWebAssetsDir } = await import("#/cli/sub/web/run");
-    const dir = mkdtempSync(join(tmpdir(), "kimi-web-assets-"));
-    try {
-      expect(serverWebAssetsDir({}, dir)).toBe(dir);
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("tolerates missing assets in dev mode (API-only server)", async () => {
-    const { serverWebAssetsDir } = await import("#/cli/sub/web/run");
-    const dir = mkdtempSync(join(tmpdir(), "kimi-web-assets-"));
-    try {
-      expect(
-        serverWebAssetsDir({ KIMI_CODE_DEV_SERVER: "1" }, dir),
-      ).toBeUndefined();
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
   });
 });
 
@@ -843,7 +725,7 @@ describe("readLegacyLock", () => {
   it("rejects a corrupt lock whose pid is not a positive integer", async () => {
     const { readLegacyLock } = await import("#/cli/sub/web/legacy-kill");
     const lockPath = join(dir, "lock");
-    // pid 0 / negative pids have process-group semantics on POSIX — the lock
+    // pid 0 / negative pids have process-group semantics on POSIX ? the lock
     // must be treated as unusable rather than signaled.
     for (const pid of [0, -1, 1.5, "1234"]) {
       writeFileSync(lockPath, JSON.stringify({ pid, port: 58627 }));
@@ -893,27 +775,6 @@ describe("authHeaders", () => {
   it("builds a Bearer Authorization header", async () => {
     const { authHeaders } = await import("#/cli/sub/web/shared");
     expect(authHeaders("abc")).toEqual({ Authorization: "Bearer abc" });
-  });
-});
-
-describe("buildWebUrl", () => {
-  it("carries the token in the URL fragment (not path or query)", async () => {
-    const { buildWebUrl } = await import("#/cli/sub/web/run");
-    const url = buildWebUrl("http://127.0.0.1:58627", "abc123");
-    expect(url).toBe("http://127.0.0.1:58627/#token=abc123");
-    const parsed = new URL(url);
-    expect(parsed.hash).toBe("#token=abc123");
-    // The token is client-side only: it must NOT appear in the path or query
-    // (which WOULD be sent to the server and logged).
-    expect(parsed.pathname).not.toContain("abc123");
-    expect(parsed.search).not.toContain("abc123");
-  });
-
-  it("normalizes a trailing slash", async () => {
-    const { buildWebUrl } = await import("#/cli/sub/web/run");
-    expect(buildWebUrl("http://127.0.0.1:58627/", "t")).toBe(
-      "http://127.0.0.1:58627/#token=t",
-    );
   });
 });
 

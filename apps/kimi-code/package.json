@@ -26,7 +26,6 @@
   },
   "files": [
     "dist",
-    "dist-web",
     "native",
     "scripts/postinstall.mjs",
     "scripts/postinstall",
@@ -38,10 +37,6 @@
     "#/tui/commands": "./src/tui/commands/index.ts",
     "#/cli/sub/web": "./src/cli/sub/web/index.ts",
     "#/cli/sub/web/*": "./src/cli/sub/web/*.ts",
-    "#/generated/vis-web-asset": [
-      "./src/generated/vis-web-asset.ts",
-      "./src/generated/vis-web-asset.d.ts"
-    ],
     "#/*": "./src/*.ts"
   },
   "publishConfig": {
@@ -49,8 +44,7 @@
     "provenance": true
   },
   "scripts": {
-    "build": "bun run --cwd ../kimi-web build && tsdown && node scripts/copy-native-assets.mjs && node scripts/copy-web-assets.mjs",
-    "prebuild": "node scripts/build-vis-asset.mjs",
+    "build": "tsdown && node scripts/copy-native-assets.mjs",
     "catalog:update": "node scripts/update-catalog.mjs --out dist/built-in-catalog.json",
     "smoke": "node scripts/smoke.mjs",
     "build:native:js": "node scripts/native/01-bundle.mjs",
