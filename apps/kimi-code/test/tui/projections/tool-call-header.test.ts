@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ToolCallComponent } from "#/tui/components/messages/tool-call";
 import { STATUS_BULLET } from "#/tui/constant/symbols";
 import { projectToolCallBodyLines } from "#/tui/projections/tool-call/body";
+import { projectAgentSwarmResultSummaryLines } from "#/tui/projections/tool-call/agent-swarm-result";
 import { projectWriteEditPreviewLines } from "#/tui/projections/tool-call/call-preview";
 import { projectToolCallHeader } from "#/tui/projections/tool-call/header";
 import { projectSingleSubagentHeader } from "#/tui/projections/tool-call/subagent";
@@ -188,6 +189,52 @@ describe("projectSingleSubagentHeader", () => {
     expect(plain).toContain("Explore Agent");
     expect(plain).toContain("Running");
     expect(plain).toContain("(Explore auth flow)");
+  });
+});
+
+describe("projectAgentSwarmResultSummaryLines", () => {
+  it("matches the live AgentSwarm result summary", () => {
+    currentTheme.setPalette(darkColors);
+    const output = [
+      "<agent_swarm_result>",
+      "<summary>completed: 1, failed: 1, aborted: 1</summary>",
+      '<subagent index="1" outcome="completed">Reviewed src/a.ts.</subagent>',
+      '<subagent index="2" outcome="failed">Agent timed out.</subagent>',
+      '<subagent index="3" outcome="aborted">User aborted.</subagent>',
+      "</agent_swarm_result>",
+    ].join("\n");
+    const component = new ToolCallComponent(
+      {
+        id: "call_swarm",
+        name: "AgentSwarm",
+        args: { description: "Review changed files" },
+      },
+      {
+        tool_call_id: "call_swarm",
+        output,
+        is_error: false,
+      },
+    );
+    const projected = projectAgentSwarmResultSummaryLines({
+      tool_call_id: "call_swarm",
+      output,
+      is_error: false,
+    });
+    const body = projectToolCallBodyLines({
+      toolCall: {
+        id: "call_swarm",
+        name: "AgentSwarm",
+        args: { description: "Review changed files" },
+      },
+      result: {
+        tool_call_id: "call_swarm",
+        output,
+        is_error: false,
+      },
+    });
+    const live = strip(component.render(120).join("\n"));
+    liveBodyContainsProjectedLines(live, projected);
+    liveBodyContainsProjectedLines(live, body);
   });
 });
 

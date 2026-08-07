@@ -4,6 +4,7 @@ import { pickResultRenderer } from "#/tui/components/messages/tool-renderers/reg
 import { currentTheme } from "#/tui/theme";
 import type { ToolCallBlockData, ToolResultBlockData } from "#/tui/types";
 
+import { projectAgentSwarmResultSummaryLines } from "./agent-swarm-result";
 import { projectWriteEditPreviewLines } from "./call-preview";
 import {
   interpretExitPlanModeOutcome,
@@ -86,6 +87,11 @@ export function projectToolCallBodyLines(
 
   if (result === undefined || skipResultBody) return lines;
   if (!result.output) return lines;
+
+  if (toolCall.name === "AgentSwarm") {
+    lines.push(...projectAgentSwarmResultSummaryLines(result));
+    return lines;
+  }
 
   if (result.output.trimStart().startsWith("<system-reminder>")) {
     return lines;

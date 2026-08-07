@@ -32,7 +32,7 @@ import { appendStreamingArgsPreview } from "#/tui/utils/event-payload";
 import { isRenderCacheEnabled } from "#/tui/utils/render-cache";
 import { formatTokenCount } from "#/utils/usage/usage-format";
 
-import { agentSwarmResultSummaryFromOutput } from "./agent-swarm-progress";
+import { projectAgentSwarmResultSummaryLines } from "#/tui/projections/tool-call/agent-swarm-result";
 import { PlanBoxComponent } from "./plan-box";
 import { ShellExecutionComponent } from "./shell-execution";
 import { countNonEmptyLines } from "./tool-renderers/chip";
@@ -64,7 +64,6 @@ import type { SubagentCardViewState, SubagentPhase } from "#/tui/types";
 const MAX_SUB_TOOL_CALLS_SHOWN = 4;
 const STREAMING_PROGRESS_INTERVAL_MS = 1000;
 const PROGRESS_URL_RE = /https?:\/\/\S+/g;
-const ABORTED_MARK = "⊘";
 const MAX_LIVE_OUTPUT_CHARS = 50_000;
 
 /** Delay before a long-running foreground Bash/Agent card advertises Ctrl+B. */
@@ -1739,62 +1738,9 @@ export class ToolCallComponent extends Container {
   }
 
   private buildAgentSwarmResultSummary(result: ToolResultBlockData): void {
-    const summary = agentSwarmResultSummaryFromOutput(result.output);
-    const dim = (s: string): string => currentTheme.fg("textDim", s);
-    const segments: string[] = [];
-
-    if (summary.completed > 0) {
-      segments.push(
-        currentTheme.fg(
-          "success",
-          `${SUCCESS_MARK.trimEnd()} ${String(summary.completed)} completed`,
-        ),
-      );
+    for (const line of projectAgentSwarmResultSummaryLines(result)) {
+      this.addChild(new Text(line, 2, 0));
     }
-    if (summary.failed > 0) {
-      segments.push(
-        currentTheme.fg(
-          "error",
-          `${FAILURE_MARK.trimEnd()} ${String(summary.failed)} failed`,
-        ),
-      );
-    }
-    if (summary.aborted > 0) {
-      segments.push(
-        currentTheme.fg(
-          "warning",
-          `${ABORTED_MARK} ${String(summary.aborted)} aborted`,
-        ),
-      );
-    }
-
-    if (segments.length > 0) {
-      this.addChild(
-        new Text(`${dim("Agent swarm: ")}${segments.join(dim(" · "))}`, 2, 0),
-      );
-      return;
-    }
-
-    const isAborted =
-      result.is_error === true &&
-      /\b(?:aborted|cancelled)\b/i.test(result.output);
-    const colorToken = isAborted
-      ? "warning"
-      : result.is_error === true
-        ? "error"
-        : "success";
-    const label = isAborted
-      ? `${ABORTED_MARK} Aborted.`
-      : result.is_error === true
-        ? `${FAILURE_MARK.trimEnd()} Failed.`
-        : `${SUCCESS_MARK.trimEnd()} Completed.`;
-    this.addChild(
-      new Text(
-        `${dim("Agent swarm: ")}${currentTheme.fg(colorToken, label)}`,
-        2,
-        0,
-      ),
-    );
   }
 
   /**
