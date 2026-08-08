@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -15,5 +16,8 @@ export default defineConfig({
     name: "agent-core-v2",
     include: ["test/**/*.{test,e2e,integration}.ts"],
     setupFiles: ["test/setup.ts"],
+    testTimeout: 15_000,
+    pool: "forks",
+    maxWorkers: Math.max(4, Math.floor(os.cpus().length / 2)),
   },
 });
