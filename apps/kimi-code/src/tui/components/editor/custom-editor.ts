@@ -172,6 +172,11 @@ export class CustomEditor extends Editor {
     this.handleInput = (data: string): void => {
       this.handleCustomInput(data, baseHandleInput);
     };
+
+    const baseRender = this.render.bind(this);
+    this.render = (width: number): string[] => {
+      return this.renderWithChrome(width, baseRender);
+    };
   }
 
   override setDisablePasteBurst(disabled: boolean): void {
@@ -226,8 +231,11 @@ export class CustomEditor extends Editor {
     (this as unknown as AutocompleteInternals).cancelAutocomplete();
   }
 
-  override render(width: number): string[] {
-    const lines = super.render(width);
+  private renderWithChrome(
+    width: number,
+    baseRender: (width: number) => string[],
+  ): string[] {
+    const lines = baseRender(width);
     if (lines.length < 3) return lines;
     const firstContentIdx = 1;
     const isBash = this.inputMode === "bash";

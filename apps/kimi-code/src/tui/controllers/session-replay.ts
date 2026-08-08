@@ -55,6 +55,7 @@ import {
   goalLifecycleReplayContent,
   isModelBlockedGoalLifecycle,
   isResumeNormalizationGoalPause,
+  stripCronEnvelope,
   type GoalReplayLifecycleChange,
 } from "./session-replay-helpers";
 
