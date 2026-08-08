@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -11,14 +11,13 @@ import {
   SDKRpcClientBase,
 } from "#/index";
 
+import { removeTempDirs } from "./session-runtime-helpers";
 import { TEST_IDENTITY } from "./test-identity";
 
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  for (const dir of tempDirs.splice(0)) {
-    await rm(dir, { recursive: true, force: true });
-  }
+  await removeTempDirs(tempDirs);
 });
 
 /**
