@@ -1,0 +1,24 @@
+{
+  "name": "@kimi-next/agent",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Agent loop, tools, permissions, context, swarm",
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {"@kimi-next/ir": "workspace:*","@kimi-next/model": "workspace:*","@kimi-next/adapters": "workspace:*","@kimi-next/session": "workspace:*","@kimi-next/exec": "workspace:*","@kimi-next/ext": "workspace:*"}
+}
