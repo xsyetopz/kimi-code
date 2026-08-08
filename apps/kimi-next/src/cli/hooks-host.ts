@@ -63,6 +63,7 @@ function decisionFromResult(
 export interface HookHost {
   readonly hooks: AgentHooks;
   readonly instructionPrompt?: string;
+  readonly instructionKind?: string;
 }
 
 async function safeInvoke(
@@ -105,6 +106,17 @@ export async function createHookHost(cwd: string): Promise<HookHost> {
       await run("PreCompact", { context });
     },
   };
-  if (instructionPrompt === undefined) return { hooks };
+  if (instructionPrompt === undefined) {
+    return instruction
+      ? { hooks, instructionKind: instruction.kind }
+      : { hooks };
+  }
+  if (instruction) {
+    return {
+      hooks,
+      instructionPrompt,
+      instructionKind: instruction.kind,
+    };
+  }
   return { hooks, instructionPrompt };
 }

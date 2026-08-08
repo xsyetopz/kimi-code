@@ -20,5 +20,13 @@
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
-  "dependencies": {"@kimi-next/ir": "workspace:*","@kimi-next/model": "workspace:*","@kimi-next/adapters": "workspace:*","@kimi-next/session": "workspace:*","@kimi-next/exec": "workspace:*","@kimi-next/ext": "workspace:*"}
+  "dependencies": {
+    "@a2a-js/sdk": "1.0.1",
+    "@kimi-next/adapters": "workspace:*",
+    "@kimi-next/exec": "workspace:*",
+    "@kimi-next/ext": "workspace:*",
+    "@kimi-next/ir": "workspace:*",
+    "@kimi-next/model": "workspace:*",
+    "@kimi-next/session": "workspace:*"
+  }
 }

@@ -1,0 +1,11 @@
+---
+description: Discuss before implement; scope before scanning the world
+alwaysApply: true
+---
+
+# Discuss before implement
+
+- When the user says plan/discuss first — or product `--plan` mode is on — do **not** rush into code or tool writes.
+- Point at real issues (hot files, couplings, specific modules). Vague “tidy the codebase” is forbidden.
+- Scope reads: navigate to relevant files; do not pretend to inhale the entire monorepo.
+- For destructive refactors, prefer a worktree/copy and keep an external golden test copy.

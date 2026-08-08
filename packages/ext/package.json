@@ -20,5 +20,9 @@
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
-  "dependencies": {"@kimi-next/ir": "workspace:*"}
+  "dependencies": {
+    "@kimi-next/discover": "workspace:*",
+    "@kimi-next/ir": "workspace:*",
+    "@modelcontextprotocol/client": "2.0.0"
+  }
 }

@@ -17,7 +17,9 @@
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:loc": "node scripts/check-loc.mjs",
     "check:arch": "node scripts/audit-kimi-next.mjs",
-    "check": "bun run check:boundaries && bun run check:loc && bun run check:arch",
+    "check:health": "node scripts/check-health.mjs",
+    "check:golden": "node scripts/check-golden.mjs",
+    "check": "bun run check:boundaries && bun run check:loc && bun run check:arch && bun run check:golden",
     "format": "biome format --write .",
     "clean": "for d in packages/* apps/*; do [ -f \"$d/package.json\" ] || continue; (cd \"$d\" && bun run clean) 2>/dev/null || true; done",
     "changeset": "changeset"

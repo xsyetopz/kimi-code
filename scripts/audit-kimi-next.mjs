@@ -48,7 +48,7 @@ const forbiddenLegacy = [
 
 for (const path of forbiddenLegacy) {
   if (existsSync(join(root, path))) {
-    console.error(`FAIL: legacy path still present: ${path}`);
+    console.error(`FAIL: deleted product path reintroduced: ${path}`);
     failed = true;
   }
 }

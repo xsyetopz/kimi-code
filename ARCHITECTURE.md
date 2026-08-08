@@ -29,7 +29,7 @@
 
 Instruction candidates: `AGENTS.md` → `agents.md` → `CLAUDE.md` → `GEMINI.md` → `AGENT.md` → `.agents.md`.
 
-Compat roots: `.agents/` → `.kimi-next/` → `.kimi-code/` → `.pi/` → `.claude/` → `.codex/` → `.goose/`.
+Compat roots: `.agents/` → `.kimi-next/` → `.pi/` → `.claude/` → `.codex/` → `.goose/`.
 
 ## Package topology
 
@@ -76,11 +76,26 @@ flowchart TB
 | Active LLM context | Yes — derived | `agent` |
 | TUI projection | Display only | `tui` + host |
 
+## Context diet
+
+- Skills: index (name/description/parent) in the prompt; bodies load on `/skill` or inline activation (size-capped).
+- MCP: catalog stubs + `mcp_list` / `mcp_schema`; full JSON Schemas are not sent every turn.
+- `--plan` / `/plan`: tools disabled until `/implement`.
+- Per-turn **receipts** record what was loaded (instruction, skills, MCP counts, plan mode).
+- **Privilege tiers** (`/privilege read|write|exec|mcp`): auto-allow up to a tier; user prompt text cannot elevate.
+- **Task-class model routing** (`KIMI_ROUTE_MODELS`): cheap/plan/review paths can use lighter models.
+- **Multi-model review** (`/review`, `KIMI_REVIEW_MODELS` + OpenRouter): concurrent design opinions, not a second agent loop.
+
 ## Programs
 
 - **A — CLI complete:** discover, hooks, real auth, models.dev/cache, real glob, mid-turn abort, steering, model/effort swaps.
 - **B — Ink TUI:** React+Ink (tura-next style) is the default interactive path over `InteractiveHost`; `--repl` remains as escape hatch.
+- **C — Protocol host surfaces:** `kimi-next --acp` serves ACP over stdio through the official ACP SDK; swarm federation can use the official A2A client seam in `packages/agent` without changing the agent loop.
+
+ACP usage: `bun run --cwd apps/kimi-next dev --acp --yolo` starts the stdio agent for an ACP editor. Process stdout is reserved for ACP messages; configure credentials and the model through normal CLI environment/options.
+
+A2A usage: `createA2aPeerRunner([{ id, url }])` in `@kimi-next/agent` discovers each peer's Agent Card through the official `ClientFactory`, then sends a standard message to every peer concurrently. It is an adapter seam for swarm/federation callers, not a replacement agent loop.
 
 ## Non-goals
 
-Windows; hooks beyond the five; upstream kimi-code merge; agent-core-v2/klient stack.
+Windows; hooks beyond the five named events. Deleted product lines (`apps/kimi-code`, `agent-core-v2`, `klient`, …) must not be reintroduced.

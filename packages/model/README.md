@@ -18,12 +18,15 @@ node packages/model/scripts/refresh-catalog.mjs
 ```
 
 Fetches `https://models.dev/api.json` by default (`MODELS_DEV_CATALOG_URL` to override),
-filters first-party providers (`openai`, `anthropic`, `google`, `moonshotai`), drops
-`deprecated` / `alpha` models, and rewrites `src/catalog-snapshot.json`. Exits non-zero
-with a message when the network request or JSON parse fails.
+includes all currently published models from first-party providers (`openai`, `anthropic`,
+`google`, `moonshotai`, and `xai`), drops only `deprecated` models, and rewrites
+`src/catalog-snapshot.json`. Exits non-zero with a message when the network request or JSON
+parse fails.
 
 After refreshing, run the model package tests and update `hand-profiles.ts` when a model
-needs a non-default transport (for example `openai/gpt-4.1` → `openai-responses`).
+needs a non-default transport. The script uses provider SDK metadata and an optional
+models.dev `api` field to infer transports; hand profiles remain the place for kimi-next
+specific replay or transport overrides.
 
 ## Prompt cache hit levers
 

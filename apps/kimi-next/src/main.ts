@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { helpText, parseArgs } from "./cli/args";
 import { initReplContext, runRepl } from "./cli/repl";
+import { runAcp } from "./cli/acp";
 import { runInkTui } from "./tui/run";
 
 async function main(): Promise<void> {
@@ -16,6 +17,10 @@ async function main(): Promise<void> {
   }
 
   const ctx = await initReplContext(args);
+  if (args.acp) {
+    await runAcp(ctx);
+    return;
+  }
   if (args.print || args.rpc || args.repl) {
     await runRepl(ctx);
     return;

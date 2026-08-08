@@ -1,0 +1,12 @@
+---
+description: Golden tests are sacred; do not rewrite them to hide failures
+alwaysApply: true
+---
+
+# Tests are sacred
+
+- Write or extend tests before large refactors. Regression tests are the seatbelt.
+- Never edit golden/vault fixtures or weaken assertions just to make a broken change green.
+- Rewriting goldens requires an explicit `ALLOW_GOLDEN_UPDATE=1` (or user instruction). Default is deny.
+- Prefer contract tests on host / ACP / A2A / discover over snapshot spam.
+- If tests fail after your change, fix the implementation first unless the test is proven wrong.

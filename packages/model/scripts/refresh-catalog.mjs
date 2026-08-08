@@ -24,29 +24,35 @@ const FIRST_PARTY_PROVIDERS = [
   "anthropic",
   "google",
   "moonshotai",
+  "xai",
 ];
 
-const EXCLUDED_STATUSES = new Set(["deprecated", "alpha"]);
+const EXCLUDED_STATUSES = new Set(["deprecated"]);
 
 /**
  * @param {string} providerId
  * @param {string | undefined} npm
- * @param {string} wireModel
+ * @param {Record<string, unknown>} model
  * @returns {"openai-chat" | "openai-responses" | "anthropic" | "gemini"}
  */
-function inferTransport(providerId, npm, wireModel) {
+function inferTransport(providerId, npm, model) {
+  const api = typeof model.api === "string" ? model.api : undefined;
+  if (api === "responses") return "openai-responses";
+  if (api === "chat" || api === "chat.completions") return "openai-chat";
   if (providerId === "anthropic" || npm === "@ai-sdk/anthropic") {
     return "anthropic";
   }
   if (providerId === "google" || npm === "@ai-sdk/google") {
     return "gemini";
   }
-  if (providerId === "openai" || npm === "@ai-sdk/openai") {
-    if (wireModel === "gpt-4.1") {
-      return "openai-responses";
-    }
+  if (
+    providerId === "openai" ||
+    providerId === "xai" ||
+    npm === "@ai-sdk/openai" ||
+    npm === "@ai-sdk/xai" ||
+    npm === "@ai-sdk/openai-compatible"
+  )
     return "openai-chat";
-  }
   return "openai-chat";
 }
 
@@ -74,8 +80,7 @@ function slimSnapshot(catalog) {
       continue;
     }
 
-    const npm =
-      typeof provider.npm === "string" ? provider.npm : undefined;
+    const npm = typeof provider.npm === "string" ? provider.npm : undefined;
     const providerModels = provider.models;
     if (!providerModels || typeof providerModels !== "object") {
       continue;
@@ -108,16 +113,12 @@ function slimSnapshot(catalog) {
       const id = toKimiNextId(providerId, wireModel);
       models.push({
         id,
-        displayName:
-          typeof model.name === "string" ? model.name : wireModel,
-        wireModel:
-          typeof model.id === "string" ? model.id : wireModel,
-        transport: inferTransport(providerId, npm, wireModel),
+        displayName: typeof model.name === "string" ? model.name : wireModel,
+        wireModel: typeof model.id === "string" ? model.id : wireModel,
+        transport: inferTransport(providerId, npm, model),
         contextTokens: limit.context ?? 128_000,
         maxOutputTokens: limit.output ?? 16_384,
-        images:
-          model.attachment === true ||
-          inputModalities.includes("image"),
+        images: model.attachment === true || inputModalities.includes("image"),
         toolCalls: model.tool_call === true,
         reasoning: model.reasoning === true,
         temperature: model.temperature !== false,
@@ -142,8 +143,7 @@ async function main() {
   try {
     response = await fetch(url);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
     console.error(`Failed to fetch models.dev catalog from ${url}: ${message}`);
     process.exit(1);
   }
@@ -159,8 +159,7 @@ async function main() {
   try {
     catalog = await response.json();
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
     console.error(`Failed to parse models.dev catalog JSON: ${message}`);
     process.exit(1);
   }

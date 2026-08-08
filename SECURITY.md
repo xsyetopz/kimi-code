@@ -2,32 +2,27 @@
 
 ## Supported Versions
 
-Currently, Kimi Code only provides security support for the latest released version.
+Security support covers the latest kimi-next release on darwin/linux.
 
 ## Reporting a Vulnerability
 
-We take security seriously. **Please do not open a public issue for security vulnerabilities.**
+Do not open a public issue for security vulnerabilities.
 
 Preferred channel:
 
-- GitHub Security Advisories — https://github.com/MoonshotAI/kimi-code/security/advisories/new
-  (private disclosure, tracked with the codebase)
+- GitHub Security Advisories for this repository (private disclosure)
 
-Alternative channel:
+Alternative:
 
-- Email: code@moonshot.ai (please include "[security]" in the subject)
+- Email the maintainers with `[security]` in the subject
 
 ## What to Include
 
-- Affected version (output of `kimi --version`)
+- Affected version (`kimi-next --help` / package version)
 - Reproduction steps
 - Impact assessment
-- Any suggested mitigation
+- Suggested mitigation if known
 
-## Our Response
+## Response
 
-We will acknowledge your report and provide an initial assessment as soon as we can.
-
-## Public Disclosure
-
-We will coordinate with you on disclosure timing once a fix is ready.
+Reports are acknowledged with an initial assessment as soon as practical. Disclosure timing is coordinated once a fix is ready.

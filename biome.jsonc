@@ -12,9 +12,7 @@
       "!!**/node_modules",
       "!!**/dist",
       "!!**/coverage",
-      "!!**/*.generated.{js,jsx,mjs,cjs,ts,tsx,mts,cts}",
-      "!!packages/agent-core-v2/scripts/debarrel.mjs",
-      "!!packages/agent-core-v2/scripts/gen-contract-types.mjs"
+      "!!**/*.generated.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"
     ],
     "ignoreUnknown": true
   },

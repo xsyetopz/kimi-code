@@ -2,8 +2,11 @@ export interface CliArgs {
   readonly print: boolean;
   readonly jsonl: boolean;
   readonly rpc: boolean;
+  readonly acp: boolean;
   /** Escape hatch: classic readline REPL instead of Ink TUI. */
   readonly repl: boolean;
+  /** Start in plan-only mode (tools disabled until /implement). */
+  readonly plan: boolean;
   readonly model: string;
   readonly compactModel?: string;
   readonly prompt?: string;
@@ -20,7 +23,9 @@ export function parseArgs(argv: string[]): CliArgs {
   let print = false;
   let jsonl = false;
   let rpc = false;
+  let acp = false;
   let repl = false;
+  let plan = false;
   let model = "openai/gpt-4.1-mini";
   let compactModel: string | undefined;
   let prompt: string | undefined;
@@ -51,8 +56,14 @@ export function parseArgs(argv: string[]): CliArgs {
         jsonl = true;
         print = true;
         break;
+      case "--acp":
+        acp = true;
+        break;
       case "--repl":
         repl = true;
+        break;
+      case "--plan":
+        plan = true;
         break;
       case "--model":
         model = argv[++i] ?? model;
@@ -92,7 +103,9 @@ export function parseArgs(argv: string[]): CliArgs {
     print: boolean;
     jsonl: boolean;
     rpc: boolean;
+    acp: boolean;
     repl: boolean;
+    plan: boolean;
     model: string;
     permissionMode: "manual" | "yolo";
     showThinking: boolean;
@@ -107,7 +120,9 @@ export function parseArgs(argv: string[]): CliArgs {
     print,
     jsonl,
     rpc,
+    acp,
     repl,
+    plan,
     model,
     permissionMode,
     showThinking,
@@ -140,7 +155,9 @@ Options:
   --print              Headless one-shot (requires prompt)
   --jsonl              Print agent events as JSONL
   --rpc                Read NDJSON commands from stdin
+  --acp                Serve Agent Client Protocol over stdin/stdout
   --repl               Readline REPL escape hatch (default is Ink TUI)
+  --plan               Start in plan-only mode (no tools until /implement)
   --model <id>         Model profile id (default: openai/gpt-4.1-mini)
   --compact-model <id> Model for /compact refinement (optional)
   --yolo               Auto-approve tools
@@ -163,6 +180,10 @@ REPL commands:
   /usage, /cost        Show token usage
   /diff                Show the latest write/edit tool arguments
   /stop                Abort the current turn
+  /plan                Enter plan-only mode (tools disabled)
+  /implement           Exit plan-only mode and allow tools
+  /privilege <tier>    Auto-allow tools up to read|write|exec|mcp
+  /review [topic]      Multi-model review via OpenRouter (KIMI_REVIEW_MODELS)
 
 Prompt shortcuts:
   @file or @dir/       Attach file contents or a directory listing

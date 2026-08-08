@@ -11,12 +11,25 @@ const skills: SkillMeta[] = [
     description: "Review code",
     body: "Review carefully.",
     dir: "/tmp/review",
+    skillPath: "/tmp/review/SKILL.md",
+    sourceRoot: "/tmp",
   },
   {
     name: "ship-it",
     description: "Ship changes",
     body: "Run the checks.",
     dir: "/tmp/ship-it",
+    skillPath: "/tmp/ship-it/SKILL.md",
+    sourceRoot: "/tmp",
+  },
+  {
+    name: "review.security",
+    description: "Security review",
+    body: "Check auth.",
+    dir: "/tmp/review/security",
+    skillPath: "/tmp/review/security/SKILL.md",
+    sourceRoot: "/tmp",
+    parent: "review",
   },
 ];
 
@@ -29,6 +42,12 @@ describe("inline skill calls", () => {
 
     expect(result.cleanText).toBe("Please this, then; repeat.");
     expect(result.skillNames).toEqual(["review", "ship-it"]);
+  });
+
+  it("extracts hierarchical skill names", () => {
+    const result = extractInlineSkillCalls("Run /review.security now.", skills);
+    expect(result.skillNames).toEqual(["review.security"]);
+    expect(result.cleanText).toBe("Run now.");
   });
 
   it("preserves unknown skills and whole-line REPL commands", () => {

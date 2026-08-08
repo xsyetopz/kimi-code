@@ -14,7 +14,6 @@ const INSTRUCTION_FILES = [
 export const COMPAT_ROOT_NAMES = [
   ".agents",
   ".kimi-next",
-  ".kimi-code",
   ".pi",
   ".claude",
   ".codex",
@@ -31,12 +30,21 @@ export const HOOK_EVENTS = [
 
 export type HookEvent = (typeof HOOK_EVENTS)[number];
 
+/** Default max chars kept when activating a skill body. */
+export const DEFAULT_SKILL_BODY_BUDGET = 32_000;
+
+/**
+ * Skill catalog entry. Index loads omit `body`; call `activateSkill` to load it.
+ */
 export interface SkillMeta {
   readonly name: string;
   readonly description: string;
-  readonly body: string;
   readonly dir: string;
+  readonly skillPath: string;
   readonly sourceRoot: string;
+  readonly parent?: string;
+  readonly body?: string;
+  readonly truncated?: boolean;
 }
 
 export interface HookEntry {
@@ -93,15 +101,19 @@ export function enumerateCompatRoots(cwd: string): string[] {
   return roots;
 }
 
-function parseSkill(
-  raw: string,
-  dir: string,
-  sourceRoot: string,
-): SkillMeta | null {
+interface SkillFrontmatter {
+  readonly name: string;
+  readonly description: string;
+  readonly parent?: string;
+  readonly body: string;
+}
+
+function parseSkillFrontmatter(raw: string): SkillFrontmatter | null {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/);
   if (!match) return null;
   let name = "";
   let description = "";
+  let parent: string | undefined;
   for (const line of match[1]!.split(/\r?\n/)) {
     const separator = line.indexOf(":");
     if (separator < 0) continue;
@@ -109,47 +121,85 @@ function parseSkill(
     const value = line.slice(separator + 1).trim();
     if (key === "name") name = value;
     if (key === "description") description = value;
+    if (key === "parent") parent = value;
   }
   if (!name || !description) return null;
-  return { name, description, body: match[2]!.trim(), dir, sourceRoot };
+  if (parent === undefined) {
+    return { name, description, body: match[2]!.trim() };
+  }
+  return { name, description, parent, body: match[2]!.trim() };
+}
+
+function isSafeSegment(name: string): boolean {
+  return name.length > 0 && !name.includes("..") && !name.includes("/");
+}
+
+async function walkSkillTree(
+  root: string,
+  sourceRoot: string,
+  pathParts: readonly string[],
+  out: SkillMeta[],
+): Promise<void> {
+  let entries;
+  try {
+    entries = await readdir(root, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  const skillPath = join(root, "SKILL.md");
+  if (pathParts.length > 0 && (await isFile(skillPath))) {
+    try {
+      const parsed = parseSkillFrontmatter(await readFile(skillPath, "utf8"));
+      if (parsed) {
+        const pathName = pathParts.join(".");
+        const name =
+          pathParts.length > 1 && !parsed.name.includes(".")
+            ? pathName
+            : parsed.name;
+        const parent =
+          parsed.parent ??
+          (pathParts.length > 1 ? pathParts.slice(0, -1).join(".") : undefined);
+        const entry: SkillMeta = {
+          name,
+          description: parsed.description,
+          dir: root,
+          skillPath,
+          sourceRoot,
+        };
+        if (parent !== undefined) {
+          out.push({ ...entry, parent });
+        } else {
+          out.push(entry);
+        }
+      }
+    } catch {
+      // Invalid or unreadable skills are non-fatal.
+    }
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !isSafeSegment(entry.name)) continue;
+    if (entry.name === "node_modules") continue;
+    await walkSkillTree(
+      join(root, entry.name),
+      sourceRoot,
+      [...pathParts, entry.name],
+      out,
+    );
+  }
 }
 
 async function readSkillsRoot(
   root: string,
   sourceRoot: string,
 ): Promise<SkillMeta[]> {
-  let entries;
-  try {
-    entries = await readdir(root, { withFileTypes: true });
-  } catch {
-    return [];
-  }
   const skills: SkillMeta[] = [];
-  for (const entry of entries) {
-    if (
-      !entry.isDirectory() ||
-      entry.name.includes("..") ||
-      entry.name.includes("/")
-    ) {
-      continue;
-    }
-    const dir = join(root, entry.name);
-    try {
-      const skillPath = join(dir, "SKILL.md");
-      if (!(await isFile(skillPath))) continue;
-      const skill = parseSkill(
-        await readFile(skillPath, "utf8"),
-        dir,
-        sourceRoot,
-      );
-      if (skill) skills.push(skill);
-    } catch {
-      // Invalid or unreadable skills are non-fatal.
-    }
-  }
+  await walkSkillTree(root, sourceRoot, [], skills);
   return skills;
 }
 
+/** Index skills without retaining bodies (activate with `activateSkill`). */
 export async function loadSkills(cwd: string): Promise<SkillMeta[]> {
   const directory = resolve(cwd);
   const roots = enumerateCompatRoots(directory);
@@ -158,14 +208,12 @@ export async function loadSkills(cwd: string): Promise<SkillMeta[]> {
     sourceRoot: root,
   }));
   const plainSkills = join(directory, "skills");
-  if ((await isFile(plainSkills)) === false) {
-    try {
-      if ((await stat(plainSkills)).isDirectory()) {
-        skillRoots.push({ path: plainSkills, sourceRoot: directory });
-      }
-    } catch {
-      // Plain skills root is optional.
+  try {
+    if ((await stat(plainSkills)).isDirectory()) {
+      skillRoots.push({ path: plainSkills, sourceRoot: directory });
     }
+  } catch {
+    // Plain skills root is optional.
   }
   const byName = new Map<string, SkillMeta>();
   for (const root of skillRoots) {
@@ -176,6 +224,40 @@ export async function loadSkills(cwd: string): Promise<SkillMeta[]> {
   return [...byName.values()].sort((left, right) =>
     left.name.localeCompare(right.name),
   );
+}
+
+/** Load skill body from disk; truncates past budget and sets `truncated`. */
+export async function activateSkill(
+  skill: SkillMeta,
+  budget: number = DEFAULT_SKILL_BODY_BUDGET,
+): Promise<SkillMeta> {
+  if (skill.body !== undefined) {
+    if (skill.body.length <= budget) return skill;
+    return {
+      ...skill,
+      body: skill.body.slice(0, budget),
+      truncated: true,
+    };
+  }
+  const raw = await readFile(skill.skillPath, "utf8");
+  const parsed = parseSkillFrontmatter(raw);
+  if (!parsed) throw new Error(`Invalid skill: ${skill.name}`);
+  const truncated = parsed.body.length > budget;
+  const body = truncated ? parsed.body.slice(0, budget) : parsed.body;
+  const next: SkillMeta = {
+    name: skill.name,
+    description: skill.description,
+    dir: skill.dir,
+    skillPath: skill.skillPath,
+    sourceRoot: skill.sourceRoot,
+    body,
+  };
+  if (skill.parent !== undefined) {
+    return truncated
+      ? { ...next, parent: skill.parent, truncated: true }
+      : { ...next, parent: skill.parent };
+  }
+  return truncated ? { ...next, truncated: true } : next;
 }
 
 interface RawHookConfig {

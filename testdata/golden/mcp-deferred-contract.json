@@ -1,0 +1,8 @@
+{
+  "contract": "mcp-deferred-schemas",
+  "notes": "MCP bridge definitions() must expose catalog stubs plus mcp_list/mcp_schema; fullSchemas() holds real inputSchema.",
+  "expected": {
+    "definitionsIncludeFullSchemaByDefault": false,
+    "metaTools": ["mcp_list", "mcp_schema"]
+  }
+}

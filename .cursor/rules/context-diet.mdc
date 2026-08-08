@@ -1,0 +1,11 @@
+---
+description: Context diet — skills and MCP must not flood the prompt
+alwaysApply: true
+---
+
+# Context diet
+
+- Skills: load **index** (name/description/parent) into prompts; activate bodies only via `/skill`, inline `/name`, or explicit activation. Cap oversized bodies.
+- MCP: send **catalog stubs** to the model by default; use `mcp_list` / `mcp_schema` for full JSON Schema. Do not reintroduce “all schemas every turn”.
+- Root `AGENTS.md` is a **router**. Put deep guidance in nearest package `AGENTS.md` or an activated skill — never grow a mega-doc.
+- Prefer hierarchical skills (`parent.child`) over a flat dump of dozens of peers.

@@ -1,0 +1,11 @@
+---
+description: Doc drift is a bug — update, quarantine, or delete
+alwaysApply: true
+---
+
+# Documentation garbage collection
+
+- Markdown that contradicts code is a **defect**. Fix the doc or **delete** it in the same change set.
+- Do not leave old product instructions in-tree for agents to read. Delete them.
+- Prefer code + short nearest `AGENTS.md` over long aspirational specs.
+- No HANDOFF piles — use `.tmp/` for scratch, then delete.

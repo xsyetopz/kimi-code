@@ -2,15 +2,34 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { stdout as output } from "node:process";
-import { SteeringQueue, type AgentEvent, type PermissionMode, type SwarmWorkerSpec } from "@kimi-next/agent";
 import {
+  SteeringQueue,
+  classifyTask,
   composeToolExecutors,
   createBuiltinToolExecutor,
   createManualPermissionGate,
+  createPrivilegePermissionGate,
   createYoloPermissionGate,
+  formatReviewPanel,
+  modelForTask,
+  parseReviewModels,
+  parseRouteTable,
   runAgentTurn,
+  runReviewPanel,
+  type AgentEvent,
+  type PermissionMode,
+  type SwarmWorkerSpec,
+  type ToolPrivilege,
 } from "@kimi-next/agent";
-import { type Credential, listAuthStatus, loadCredentials, loginProvider, logoutProvider, resolveApiKey } from "@kimi-next/auth";
+import {
+  OPENROUTER_API_KEY_ENV,
+  type Credential,
+  listAuthStatus,
+  loadCredentials,
+  loginProvider,
+  logoutProvider,
+  resolveApiKey,
+} from "@kimi-next/auth";
 import type { Conversation } from "@kimi-next/ir";
 import { type ModelProfile, resolveModel } from "@kimi-next/model";
 import {
@@ -40,11 +59,20 @@ import { refineCompactDraft } from "./compact";
 import { expandMentions } from "./mentions";
 import { loadMcpTools } from "./plugins";
 import { type ReplContext } from "./repl";
-import { activateInlineSkills, extractInlineSkillCalls, findSkill, formatSkillsMetadata, loadSkillsFromCwd, type SkillMeta } from "./skills";
+import {
+  activateInlineSkills,
+  activateSkill,
+  extractInlineSkillCalls,
+  findSkill,
+  formatSkillsMetadata,
+  loadSkillsFromCwd,
+  type SkillMeta,
+} from "./skills";
 import { liveSseStream } from "./stream";
 import { type ActiveTask, createTask } from "./task";
 import { ensureProjectTrust } from "./trust";
 import { createHookHost } from "./hooks-host";
+import { formatReceipt, type HarnessReceipt } from "./receipt";
 
 export type HostLine =
   | { kind: "user"; text: string }
@@ -69,6 +97,8 @@ export interface HostSnapshot {
   cachedInputTokens: number;
   swarmLines: readonly string[];
   busy: boolean;
+  planMode: boolean;
+  receipt?: HarnessReceipt;
   permissionPrompt?: { toolName: string };
   notice?: string;
 }
@@ -130,6 +160,10 @@ export function createInteractiveHost(
   let streamingText = "";
   let busy = false;
   let notice: string | undefined;
+  let planMode = args.plan === true;
+  let lastReceipt: HarnessReceipt | undefined;
+  let maxAutoPrivilege: ToolPrivilege = "read";
+  const routeTable = parseRouteTable(process.env["KIMI_ROUTE_MODELS"]);
   let toggles: WysiwygToggles = {
     ...DEFAULT_TOGGLES,
     showThinking: args.showThinking,
@@ -299,11 +333,17 @@ export function createInteractiveHost(
     if (activeSkillBody) parts.push(`[Active skill]\n${activeSkillBody}`);
     if (activeTask) parts.push(`[Active task: ${activeTask.title}]\n${activeTask.instruction}`);
     if (inlineSkillBody) parts.push(inlineSkillBody);
+    if (planMode) {
+      parts.push(
+        "[Plan-only mode: discuss approaches; do not claim file edits. Tools are disabled until /implement.]",
+      );
+    }
     const controller = new AbortController();
     activeAbortController = controller;
     const activeSteering = new SteeringQueue();
     steering = activeSteering;
-    const permission = permissionMode === "yolo" || args.print || args.rpc
+    const permissionInner =
+      permissionMode === "yolo" || args.print || args.rpc
         ? createYoloPermissionGate()
         : createManualPermissionGate(async (request) => {
             if (stickyPermissions.has(request.toolName)) return "allow";
@@ -320,13 +360,62 @@ export function createInteractiveHost(
             }
             return answer === "y" ? "allow" : "deny";
           });
+    const permission =
+      permissionMode === "yolo" || args.print || args.rpc
+        ? permissionInner
+        : createPrivilegePermissionGate(permissionInner, maxAutoPrivilege);
+    const taskClass = classifyTask(prompt, { planMode });
+    const routedId = modelForTask(taskClass, routeTable);
+    if (
+      process.env["KIMI_ROUTE_MODELS"] &&
+      routedId !== profile.id &&
+      taskClass !== "implement"
+    ) {
+      try {
+        const routed = resolveModel(routedId);
+        profile = routed;
+        adapter = adapterForTransport(routed.transport);
+      } catch {
+        // Keep current profile if routed id is unknown.
+      }
+    }
     const optional: { systemPrompt?: string; compactModelId?: string } = {};
     if (parts.length > 0) optional.systemPrompt = parts.join("\n\n");
     if (compactProfile !== undefined) optional.compactModelId = compactProfile.id;
+    const tools = planMode ? [] : toolExecutor.definitions();
+    const mcpCatalogCount = mcp
+      ? mcp.definitions().filter((definition) => definition.name.startsWith("mcp:")).length
+      : 0;
+    const mcpFullSchemaCount = mcp?.fullSchemas().size ?? 0;
+    const activatedSkills = [
+      ...(activeSkillBody ? ["(sticky)"] : []),
+      ...inline.skillNames,
+    ];
+    lastReceipt =
+      hookHost.instructionKind === undefined
+        ? {
+            skillIndexCount: skills.length,
+            activatedSkills,
+            mcpCatalogCount,
+            mcpFullSchemaCount,
+            toolsExposed: tools.length,
+            planMode,
+            permissionMode,
+          }
+        : {
+            skillIndexCount: skills.length,
+            activatedSkills,
+            mcpCatalogCount,
+            mcpFullSchemaCount,
+            toolsExposed: tools.length,
+            planMode,
+            permissionMode,
+            instructionKind: hookHost.instructionKind,
+          };
     const options: Parameters<typeof runAgentTurn>[2] = {
       profile,
       adapter,
-      tools: toolExecutor.definitions(),
+      tools,
       toolExecutor,
       permission,
       permissionMode,
@@ -363,6 +452,7 @@ export function createInteractiveHost(
           footerState.swarmLines = swarmLines;
         }
         console.log(renderFooter(footerState, toggles));
+        if (lastReceipt) console.log(formatReceipt(lastReceipt));
       }
     } finally {
       busy = false;
@@ -385,7 +475,62 @@ export function createInteractiveHost(
       try { await ready; session = await forkSession(session); conversation = await loadSession(session); setNotice(`forked session ${session.id}`); } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
     } else if (line === "/stop") { abort(); setNotice(activeAbortController ? "stopping current turn" : "no turn in flight"); }
     else if (line === "/compact" || line === "/segment") { try { await runCompact(); } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); } }
-    else if (line === "/usage" || line === "/cost") setNotice(`usage: input=${inputTokens} output=${outputTokens} cached=${cachedInputTokens}`);
+    else if (line === "/usage" || line === "/cost") {
+      const usage = `usage: input=${inputTokens} output=${outputTokens} cached=${cachedInputTokens}`;
+      setNotice(lastReceipt ? `${usage}\n${formatReceipt(lastReceipt)}` : usage);
+    }
+    else if (line === "/plan") {
+      planMode = true;
+      setNotice("plan mode on — tools disabled until /implement");
+    }
+    else if (line === "/implement") {
+      planMode = false;
+      setNotice("plan mode off — tools enabled");
+    }
+    else if (line.startsWith("/privilege ")) {
+      const level = line.slice("/privilege ".length).trim();
+      if (
+        level === "read" ||
+        level === "write" ||
+        level === "exec" ||
+        level === "mcp"
+      ) {
+        maxAutoPrivilege = level;
+        setNotice(`auto-allow privilege ≤ ${level} (prompt text cannot elevate)`);
+      } else {
+        setNotice("usage: /privilege read|write|exec|mcp");
+      }
+    }
+    else if (line.startsWith("/review")) {
+      const topic = line.slice("/review".length).trim() || "Review the current conversation approach.";
+      const models = parseReviewModels(process.env["KIMI_REVIEW_MODELS"]);
+      const apiKey =
+        resolveApiKey(credentials, "openrouter") ??
+        process.env[OPENROUTER_API_KEY_ENV];
+      if (!apiKey) {
+        setNotice(`Set ${OPENROUTER_API_KEY_ENV} (or /login openrouter <key>) for /review`);
+      } else if (models.length === 0) {
+        setNotice("Set KIMI_REVIEW_MODELS=model/a,model/b for /review");
+      } else {
+        try {
+          const opinions = await runReviewPanel({
+            models,
+            apiKey,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are a critical design/code reviewer. Be concrete. No fluff.",
+              },
+              { role: "user", content: topic },
+            ],
+          });
+          setNotice(formatReviewPanel(opinions));
+        } catch (error) {
+          setNotice(error instanceof Error ? error.message : String(error));
+        }
+      }
+    }
     else if (line === "/provider") setNotice(`provider: ${profile.transport} · ${baseUrl}`);
     else if (line.startsWith("/base-url ")) { baseUrl = line.slice(10).trim() || baseUrl; setNotice(`base URL: ${baseUrl}`); }
     else if (line.startsWith("/effort ")) { effort = line.slice(8).trim() || undefined; setNotice(`effort: ${effort ?? "default"}`); }
@@ -399,7 +544,22 @@ export function createInteractiveHost(
     } else if (line === "/task clear") { activeTask = undefined; setNotice("active task cleared"); }
     else if (line.startsWith("/task ")) { try { activeTask = createTask(line.slice(6)); await runCompact(); setNotice(`active task: ${activeTask.title}`); } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); } }
     else if (line === "/skills") { await ready; skills = await loadSkillsFromCwd(process.cwd()); setNotice(skills.length === 0 ? "No skills found in .kimi-next/skills or skills/" : skills.map((skill) => `${skill.name}: ${skill.description || "(no description)"}`).join("\n")); }
-    else if (line.startsWith("/skill ")) { await ready; const name = line.slice(7).trim(); const skill = findSkill(skills, name); if (!skill) setNotice(`Unknown skill: ${name}`); else { activeSkillBody = skill.body; setNotice(`activated skill: ${skill.name}`); } }
+    else if (line.startsWith("/skill ")) {
+      await ready;
+      const name = line.slice(7).trim();
+      const skill = findSkill(skills, name);
+      if (!skill) {
+        setNotice(`Unknown skill: ${name}`);
+      } else {
+        const activated = await activateSkill(skill);
+        activeSkillBody = activated.body;
+        setNotice(
+          activated.truncated
+            ? `activated skill: ${skill.name} (body truncated)`
+            : `activated skill: ${skill.name}`,
+        );
+      }
+    }
     else if (line === "/yolo") { permissionMode = "yolo"; setNotice("permission mode: yolo"); }
     else if (line === "/auth") { const statuses = await listAuthStatus(); setNotice(statuses.length === 0 ? "No auth providers configured." : statuses.map((status) => `${status.providerId} (${status.label}): ${status.configured ? status.kind : "not configured"}`).join("\n")); }
     else if (line.startsWith("/login ")) { const rest = line.slice(7).trim(); const space = rest.indexOf(" "); const provider = space >= 0 ? rest.slice(0, space) : rest; const apiKey = space >= 0 ? rest.slice(space + 1).trim() : undefined; try { const options: { apiKey?: string } = {}; if (apiKey) options.apiKey = apiKey; const result = await loginProvider(provider, options); setNotice(`${result.message}${result.authorizeUrl ? `\n${result.authorizeUrl}` : ""}`); credentials = await loadCredentials(); } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); } }
@@ -425,12 +585,28 @@ export function createInteractiveHost(
       cachedInputTokens,
       swarmLines: [...swarmLines],
       busy,
+      planMode,
     };
-    if (effort !== undefined) snapshot.effort = effort;
-    if (permissionWaiter !== undefined && pendingToolName !== undefined) {
-      snapshot.permissionPrompt = { toolName: pendingToolName };
+    if (effort !== undefined) {
+      return finalizeSnapshot({ ...snapshot, effort });
     }
-    if (notice !== undefined) snapshot.notice = notice;
+    return finalizeSnapshot(snapshot);
+  }
+
+  function finalizeSnapshot(base: HostSnapshot): HostSnapshot {
+    let snapshot = base;
+    if (lastReceipt !== undefined) {
+      snapshot = { ...snapshot, receipt: lastReceipt };
+    }
+    if (permissionWaiter !== undefined && pendingToolName !== undefined) {
+      snapshot = {
+        ...snapshot,
+        permissionPrompt: { toolName: pendingToolName },
+      };
+    }
+    if (notice !== undefined) {
+      snapshot = { ...snapshot, notice };
+    }
     return snapshot;
   }
 

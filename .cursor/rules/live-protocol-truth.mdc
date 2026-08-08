@@ -1,0 +1,17 @@
+---
+description: Fail-closed live verification and official protocol SDK law
+alwaysApply: true
+---
+
+# Live Truth and Official Standards
+
+This repository does not accept model-memory guesses:
+
+- Before coding, verify package APIs, protocol versions, catalogs, and “latest” claims using an official website, npm registry, or `curl`.
+- If live verification fails, stop and ask the user. Never invent an API, hand-stub a catalog, or commit fiction.
+- Use official SDKs for MCP (`@modelcontextprotocol/*`), ACP (`@agentclientprotocol/sdk`), A2A (`@a2a-js/sdk`), and models.dev. Custom framing needs explicit user approval.
+- Never commit placeholder credentials, fake timestamps, or hand-curated snapshots presented as refreshed vendor data.
+- Before adding a dependency, check its latest stable npm/docs release and record the exact verified version.
+- Completion claims require evidence: commands, URLs, versions, counts, and test results.
+
+Existing topology remains binding: `tui → agent` is forbidden, `ir` is a leaf, authored product files stay under 800 LOC, optional properties are omitted under `exactOptionalPropertyTypes`, the platform is POSIX-only, and only the five documented hooks exist.

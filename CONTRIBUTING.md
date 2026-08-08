@@ -1,10 +1,10 @@
 # Contributing to kimi-next
 
-Personal fork / heavily modified harness. See [ARCHITECTURE.md](ARCHITECTURE.md) and [AGENTS.md](AGENTS.md).
+See [ARCHITECTURE.md](ARCHITECTURE.md) and [AGENTS.md](AGENTS.md).
 
 ## Layout
 
-- `apps/kimi-next` — CLI (+ Ink TUI later)
+- `apps/kimi-next` — CLI + Ink TUI (`--repl`, `--acp`, `--plan`)
 - `packages/discover` — first-found instructions/skills/hooks
 - `packages/{ir,model,adapters,agent,session,exec,tui,ext,auth,bash-parse}`
 
@@ -22,3 +22,5 @@ bun run --cwd apps/kimi-next start -- --help
 ## Commits
 
 Conventional Commits. No co-author / agent attribution.
+
+Do not reintroduce deleted product lines (`apps/kimi-code`, `agent-core-v2`, `klient`, etc.).

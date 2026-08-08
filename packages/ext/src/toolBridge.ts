@@ -7,9 +7,21 @@ import {
   prefixMcpToolName,
 } from "./plugins";
 
+/** Minimal JSON Schema so the model sees the tool name without full arg schemas. */
+const CATALOG_PARAMETERS: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: true,
+};
+
+export const MCP_LIST_TOOL = "mcp_list";
+export const MCP_SCHEMA_TOOL = "mcp_schema";
+
 export interface McpToolExecutor {
   execute(call: ToolCall, generateId: () => string): Promise<ToolResult>;
+  /** Tool defs for the LLM — catalog stubs + mcp_list/mcp_schema, not full schemas. */
   definitions(): readonly ToolDefinition[];
+  /** Full input schemas keyed by prefixed tool name (for receipts / mcp_schema). */
+  fullSchemas(): ReadonlyMap<string, Record<string, unknown>>;
   close(): Promise<void>;
 }
 
@@ -18,6 +30,11 @@ export interface McpToolBridgeOptions extends McpClientOptions {
     server: McpStdioServer,
     options?: McpClientOptions,
   ) => McpClient;
+  /**
+   * When true (default), LLM-facing definitions use stub parameters.
+   * Full schemas stay available via mcp_schema / fullSchemas().
+   */
+  readonly deferSchemas?: boolean;
 }
 
 function parseArguments(raw: string): Record<string, unknown> {
@@ -32,14 +49,29 @@ function parseArguments(raw: string): Record<string, unknown> {
   throw new Error("MCP tool arguments must be a JSON object");
 }
 
+function catalogDefinition(
+  name: string,
+  description: string,
+  deferSchemas: boolean,
+  fullSchema: Record<string, unknown>,
+): ToolDefinition {
+  return {
+    name,
+    description,
+    parameters: deferSchemas ? CATALOG_PARAMETERS : fullSchema,
+  };
+}
+
 export async function createMcpToolBridge(
   servers: readonly McpStdioServer[],
   options?: McpToolBridgeOptions,
 ): Promise<McpToolExecutor> {
   const makeClient = options?.createClient ?? createMcpClient;
+  const deferSchemas = options?.deferSchemas !== false;
   const clients = new Map<string, McpClient>();
   const routes = new Map<string, { client: McpClient; toolName: string }>();
-  const definitions: ToolDefinition[] = [];
+  const schemaByName = new Map<string, Record<string, unknown>>();
+  const catalog: ToolDefinition[] = [];
 
   try {
     for (const server of servers) {
@@ -48,11 +80,15 @@ export async function createMcpToolBridge(
       for (const tool of await client.listTools()) {
         const name = prefixMcpToolName(server.id, tool.name);
         routes.set(name, { client, toolName: tool.name });
-        definitions.push({
-          name,
-          description: tool.description ?? `MCP tool ${tool.name}`,
-          parameters: tool.inputSchema,
-        });
+        schemaByName.set(name, tool.inputSchema);
+        catalog.push(
+          catalogDefinition(
+            name,
+            tool.description ?? `MCP tool ${tool.name}`,
+            deferSchemas,
+            tool.inputSchema,
+          ),
+        );
       }
     }
   } catch (error) {
@@ -60,12 +96,80 @@ export async function createMcpToolBridge(
     throw error;
   }
 
+  const metaTools: ToolDefinition[] =
+    deferSchemas && catalog.length > 0
+      ? [
+          {
+            name: MCP_LIST_TOOL,
+            description:
+              "List available MCP tools (names + short descriptions). Call mcp_schema before first use of a tool to load its full argument schema.",
+            parameters: {
+              type: "object",
+              properties: {},
+              additionalProperties: false,
+            },
+          },
+          {
+            name: MCP_SCHEMA_TOOL,
+            description:
+              "Load the full JSON Schema for one MCP tool by prefixed name (mcp:server:tool).",
+            parameters: {
+              type: "object",
+              properties: {
+                name: {
+                  type: "string",
+                  description: "Prefixed MCP tool name",
+                },
+              },
+              required: ["name"],
+              additionalProperties: false,
+            },
+          },
+        ]
+      : [];
+
+  const definitions = [...metaTools, ...catalog];
+
   return {
     definitions() {
       return definitions;
     },
+    fullSchemas() {
+      return schemaByName;
+    },
     async execute(call, generateId) {
       try {
+        if (call.name === MCP_LIST_TOOL) {
+          const lines = catalog.map(
+            (tool) => `- ${tool.name}: ${tool.description}`,
+          );
+          return {
+            kind: "tool_result",
+            id: generateId(),
+            callId: call.id,
+            content:
+              lines.length > 0
+                ? ["MCP tools:", ...lines].join("\n")
+                : "No MCP tools available.",
+            isError: false,
+          };
+        }
+        if (call.name === MCP_SCHEMA_TOOL) {
+          const args = parseArguments(call.arguments);
+          const name = args["name"];
+          if (typeof name !== "string" || name.length === 0) {
+            throw new Error("mcp_schema requires { \"name\": \"mcp:server:tool\" }");
+          }
+          const schema = schemaByName.get(name);
+          if (!schema) throw new Error(`Unknown MCP tool: ${name}`);
+          return {
+            kind: "tool_result",
+            id: generateId(),
+            callId: call.id,
+            content: JSON.stringify({ name, parameters: schema }, null, 2),
+            isError: false,
+          };
+        }
         const route = routes.get(call.name);
         if (!route) throw new Error(`Unknown MCP tool: ${call.name}`);
         const result = await route.client.callTool(

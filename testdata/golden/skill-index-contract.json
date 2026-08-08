@@ -1,0 +1,9 @@
+{
+  "contract": "skill-index-omits-body",
+  "notes": "Discover loadSkills must return catalog entries without body; activateSkill loads body. Hierarchical names use parent.child.",
+  "expected": {
+    "indexHasBody": false,
+    "activationLoadsBody": true,
+    "hierarchySeparator": "."
+  }
+}

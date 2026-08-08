@@ -10,12 +10,13 @@ import {
 describe("catalog", () => {
   it("lists known models", () => {
     const models = listModels();
-    expect(models.length).toBeGreaterThanOrEqual(3);
+    expect(models.length).toBeGreaterThanOrEqual(100);
     expect(models.map((m) => m.id)).toContain("openai/gpt-4.1-mini");
     expect(models.map((m) => m.id)).toContain(
       "anthropic/claude-sonnet-4-20250514",
     );
     expect(models.map((m) => m.id)).toContain("moonshotai/kimi-k2");
+    expect(models.map((m) => m.id)).toContain("xai/grok-4.3");
   });
 
   it("resolves a model by id", () => {
@@ -54,9 +55,9 @@ describe("validateRequest", () => {
 
   it("rejects vision on models without image input", () => {
     const profile = resolveModel("moonshotai/kimi-k2");
-    expect(() =>
-      validateRequest({ profile, vision: true }),
-    ).toThrow(ModelValidationError);
+    expect(() => validateRequest({ profile, vision: true })).toThrow(
+      ModelValidationError,
+    );
     try {
       validateRequest({ profile, vision: true });
     } catch (error) {
@@ -67,9 +68,9 @@ describe("validateRequest", () => {
 
   it("rejects unsupported reasoning mode", () => {
     const profile = resolveModel("openai/gpt-4.1-mini");
-    expect(() =>
-      validateRequest({ profile, reasoning: "exposed" }),
-    ).toThrow(ModelValidationError);
+    expect(() => validateRequest({ profile, reasoning: "exposed" })).toThrow(
+      ModelValidationError,
+    );
   });
 
   it("rejects unsupported parameters", () => {

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   createMcpClientStub,
   createMcpToolBridge,
-  encodeMcpFrame,
+  MCP_LIST_TOOL,
+  MCP_SCHEMA_TOOL,
   type McpClient,
-  McpFrameParser,
   prefixMcpToolName,
 } from "../src/index";
 
@@ -20,34 +20,24 @@ describe("ext seams", () => {
     await client.close();
   });
 
-  it("parses content-length frames split across chunks", () => {
-    const parser = new McpFrameParser();
-    const frame = encodeMcpFrame({
-      jsonrpc: "2.0",
-      id: 1,
-      result: { ok: true },
-    });
-    expect(parser.push(frame.subarray(0, 12))).toEqual([]);
-    expect(parser.push(frame.subarray(12))).toEqual([
-      { jsonrpc: "2.0", id: 1, result: { ok: true } },
-    ]);
-  });
-
-  it("routes prefixed tool calls to the matching server", async () => {
-    const calls: string[] = [];
+  it("defers full schemas and exposes mcp_list / mcp_schema", async () => {
+    const fullSchema = {
+      type: "object",
+      properties: { value: { type: "string" } },
+      required: ["value"],
+    };
     const client: McpClient = {
       async listTools() {
         return [
           {
             name: "echo",
             description: "Echo",
-            inputSchema: { type: "object" },
+            inputSchema: fullSchema,
           },
         ];
       },
-      async callTool(name, args) {
-        calls.push(`${name}:${String(args["value"])}`);
-        return { content: "done", isError: false };
+      async callTool(_name, args) {
+        return { content: `echo:${String(args["value"])}`, isError: false };
       },
       async close() {},
     };
@@ -55,14 +45,36 @@ describe("ext seams", () => {
       [{ id: "demo", command: "unused", args: [], env: {}, cwd: "." }],
       { createClient: () => client },
     );
-    const [definition] = bridge.definitions();
-    expect(definition?.name).toBe("mcp:demo:echo");
-    const result = await bridge.execute(
-      { id: "call-1", name: "mcp:demo:echo", arguments: '{"value":"x"}' },
-      () => "result-1",
+    const names = bridge.definitions().map((definition) => definition.name);
+    expect(names).toEqual([MCP_LIST_TOOL, MCP_SCHEMA_TOOL, "mcp:demo:echo"]);
+    const echo = bridge.definitions().find((definition) => definition.name === "mcp:demo:echo");
+    expect(echo?.parameters).toEqual({
+      type: "object",
+      additionalProperties: true,
+    });
+    expect(bridge.fullSchemas().get("mcp:demo:echo")).toEqual(fullSchema);
+
+    const listed = await bridge.execute(
+      { id: "c1", name: MCP_LIST_TOOL, arguments: "{}" },
+      () => "r1",
     );
-    expect(result.content).toBe("done");
-    expect(calls).toEqual(["echo:x"]);
+    expect(listed.content).toContain("mcp:demo:echo");
+
+    const schema = await bridge.execute(
+      {
+        id: "c2",
+        name: MCP_SCHEMA_TOOL,
+        arguments: JSON.stringify({ name: "mcp:demo:echo" }),
+      },
+      () => "r2",
+    );
+    expect(schema.content).toContain('"value"');
+
+    const result = await bridge.execute(
+      { id: "c3", name: "mcp:demo:echo", arguments: '{"value":"x"}' },
+      () => "r3",
+    );
+    expect(result.content).toBe("echo:x");
     await bridge.close();
   });
 });

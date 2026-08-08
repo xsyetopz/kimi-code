@@ -2,7 +2,12 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadHooks, loadSkills, resolveInstructionFile } from "../src/index";
+import {
+  activateSkill,
+  loadHooks,
+  loadSkills,
+  resolveInstructionFile,
+} from "../src/index";
 
 const temporaryDirs: string[] = [];
 
@@ -46,7 +51,7 @@ describe("instruction discovery", () => {
 });
 
 describe("skill discovery", () => {
-  it("keeps the first skill with a duplicate name", async () => {
+  it("keeps the first skill with a duplicate name and omits body", async () => {
     const cwd = await temporaryDirectory();
     const first = join(cwd, ".claude", "skills", "shared");
     const second = join(cwd, "skills", "other");
@@ -61,9 +66,45 @@ describe("skill discovery", () => {
     expect(skills).toHaveLength(1);
     expect(skills[0]).toMatchObject({
       name: "shared",
-      body: "claude",
       sourceRoot: join(cwd, ".claude"),
     });
+    expect(skills[0]?.body).toBeUndefined();
+
+    const activated = await activateSkill(skills[0]!);
+    expect(activated.body).toBe("claude");
+  });
+
+  it("indexes nested skills as parent.child", async () => {
+    const cwd = await temporaryDirectory();
+    const leaf = join(cwd, ".agents", "skills", "review", "security");
+    await mkdir(leaf, { recursive: true });
+    await writeFile(
+      join(leaf, "SKILL.md"),
+      "---\nname: review.security\ndescription: Security review\n---\nCheck auth.\n",
+    );
+
+    const skills = await loadSkills(cwd);
+    expect(skills).toHaveLength(1);
+    expect(skills[0]).toMatchObject({
+      name: "review.security",
+      parent: "review",
+      description: "Security review",
+    });
+    expect(skills[0]?.body).toBeUndefined();
+  });
+
+  it("truncates oversized skill bodies on activate", async () => {
+    const cwd = await temporaryDirectory();
+    const dir = join(cwd, "skills", "huge");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      join(dir, "SKILL.md"),
+      `---\nname: huge\ndescription: Big\n---\n${"x".repeat(100)}\n`,
+    );
+    const [skill] = await loadSkills(cwd);
+    const activated = await activateSkill(skill!, 40);
+    expect(activated.body?.length).toBe(40);
+    expect(activated.truncated).toBe(true);
   });
 });
 
