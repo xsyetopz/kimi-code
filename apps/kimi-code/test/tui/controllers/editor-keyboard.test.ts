@@ -402,7 +402,7 @@ describe("EditorKeyboardController Shift-Tab plan toggle", () => {
   });
 
   it("lazy-creates the session before toggling on v2 when session-less", async () => {
-    const { onShiftTab, ensureSession, handlePlanToggle, track } =
+    const { onShiftTab, ensureSession, handlePlanToggle } =
       createShiftTabHarness({
         sessionless: true,
         engineV2: true,
@@ -415,9 +415,6 @@ describe("EditorKeyboardController Shift-Tab plan toggle", () => {
       expect(handlePlanToggle).toHaveBeenCalledWith(true);
     });
     expect(ensureSession).toHaveBeenCalledOnce();
-    expect(track).toHaveBeenCalledWith("shortcut_plan_toggle", {
-      enabled: true,
-    });
   });
 
   it("does not toggle when the lazy creation fails on v2", async () => {

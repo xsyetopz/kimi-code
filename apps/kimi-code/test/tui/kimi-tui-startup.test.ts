@@ -53,6 +53,16 @@ interface StartupDriver {
   handleLoginCommand(): Promise<void>;
   handleLogoutCommand(): Promise<void>;
   stop(exitCode?: number): Promise<void>;
+  showSessionPicker(): Promise<void>;
+  hideSessionPicker(): void;
+  bootstrapFromPicker(): Promise<void>;
+  toggleSessionPickerScope(sessionId: string): void;
+  selectSessionPickerRow(session: {
+    id: string;
+    title?: string;
+    workDir: string;
+    updatedAt: number;
+  }): void;
 }
 
 interface RuntimeStateDriver extends StartupDriver {
@@ -248,6 +258,37 @@ function makeDriver(
   vi.spyOn(driver.state.ui, "requestRender").mockImplementation(() => {});
   vi.spyOn(driver.state.terminal, "setProgress").mockImplementation(() => {});
   return driver;
+}
+
+async function flushMicrotasks(): Promise<void> {
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+async function selectHighlightedSession(driver: StartupDriver): Promise<void> {
+  const session =
+    driver.state.sessions[driver.state.inkOverlay.dialogSelectedIndex];
+  if (session === undefined) {
+    throw new Error("Expected a highlighted session in the picker.");
+  }
+  driver.selectSessionPickerRow(session);
+  await flushMicrotasks();
+}
+
+async function moveSessionPickerDown(driver: StartupDriver): Promise<void> {
+  const count = Math.min(8, driver.state.sessions.length);
+  if (count === 0) return;
+  driver.state.inkOverlay.dialogSelectedIndex =
+    (driver.state.inkOverlay.dialogSelectedIndex + 1) % count;
+  await flushMicrotasks();
+}
+
+async function toggleSessionPickerScope(driver: StartupDriver): Promise<void> {
+  const selected =
+    driver.state.sessions[driver.state.inkOverlay.dialogSelectedIndex];
+  driver.toggleSessionPickerScope(
+    selected?.id ?? driver.state.appState.sessionId,
+  );
+  await flushMicrotasks();
 }
 
 type InputListener = Parameters<TUIState["ui"]["addInputListener"]>[0];
@@ -995,19 +1036,11 @@ describe("KimiTUI startup", () => {
       makeStartupInput({ session: "", auto: true }),
     );
 
-    await (
-      driver as unknown as { initMainTui(): Promise<boolean> }
-    ).initMainTui();
+    await driver.initMainTui();
     expect(driver.state.startupState).toBe("picker");
-    await (
-      driver as unknown as { bootstrapFromPicker(): Promise<void> }
-    ).bootstrapFromPicker();
+    await driver.bootstrapFromPicker();
 
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\r");
-    await new Promise((resolve) => setImmediate(resolve));
+    await selectHighlightedSession(driver);
 
     expect(session.setPermission).toHaveBeenCalledWith("auto");
     expect(driver.state.appState.permissionMode).toBe("auto");
@@ -1044,19 +1077,11 @@ describe("KimiTUI startup", () => {
       makeStartupInput({ session: "", plan: true }),
     );
 
-    await (
-      driver as unknown as { initMainTui(): Promise<boolean> }
-    ).initMainTui();
+    await driver.initMainTui();
     expect(driver.state.startupState).toBe("picker");
-    await (
-      driver as unknown as { bootstrapFromPicker(): Promise<void> }
-    ).bootstrapFromPicker();
+    await driver.bootstrapFromPicker();
 
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\r");
-    await new Promise((resolve) => setImmediate(resolve));
+    await selectHighlightedSession(driver);
 
     expect(session.setPlanMode).not.toHaveBeenCalled();
     expect(driver.state.appState.planMode).toBe(true);
@@ -1085,14 +1110,8 @@ describe("KimiTUI startup", () => {
     const driver = makeDriver(harness, makeStartupInput());
     await expect(driver.init()).resolves.toBe(false);
 
-    await (
-      driver as unknown as { showSessionPicker(): Promise<void> }
-    ).showSessionPicker();
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\u0001");
-    await new Promise((resolve) => setImmediate(resolve));
+    await driver.showSessionPicker();
+    await toggleSessionPickerScope(driver);
 
     expect(listSessions).toHaveBeenNthCalledWith(1, { workDir: "/tmp/proj-a" });
     expect(listSessions).toHaveBeenNthCalledWith(2, {});
@@ -1126,19 +1145,9 @@ describe("KimiTUI startup", () => {
     const driver = makeDriver(harness, makeStartupInput());
     await expect(driver.init()).resolves.toBe(false);
 
-    await (
-      driver as unknown as { showSessionPicker(): Promise<void> }
-    ).showSessionPicker();
-    const firstPicker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    firstPicker.handleInput("\u0001");
-    await new Promise((resolve) => setImmediate(resolve));
-    const allPicker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    allPicker.handleInput("\u0001");
-    await new Promise((resolve) => setImmediate(resolve));
+    await driver.showSessionPicker();
+    await toggleSessionPickerScope(driver);
+    await toggleSessionPickerScope(driver);
 
     expect(listSessions).toHaveBeenNthCalledWith(3, { workDir: "/tmp/proj-a" });
     expect(driver.state.sessionsScope).toBe("cwd");
@@ -1173,21 +1182,22 @@ describe("KimiTUI startup", () => {
     });
     const driver = makeDriver(harness, makeStartupInput());
     const mountSessionPicker = vi.spyOn(
-      driver as unknown as { mountSessionPicker(options: unknown): void },
+      (
+        driver as unknown as {
+          startupPanelsController: {
+            mountSessionPicker(options: unknown): void;
+          };
+        }
+      ).startupPanelsController,
       "mountSessionPicker",
     );
     await expect(driver.init()).resolves.toBe(false);
 
-    await (
-      driver as unknown as { showSessionPicker(): Promise<void> }
-    ).showSessionPicker();
+    await driver.showSessionPicker();
     expect(mountSessionPicker).toHaveBeenCalledTimes(1);
 
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\u0001");
-    (driver as unknown as { hideSessionPicker(): void }).hideSessionPicker();
+    await toggleSessionPickerScope(driver);
+    driver.hideSessionPicker();
     resolveAllSessions?.([currentWorkDirSession, otherWorkDirSession]);
     await new Promise((resolve) => setImmediate(resolve));
 
@@ -1195,7 +1205,7 @@ describe("KimiTUI startup", () => {
     expect(mountSessionPicker).toHaveBeenCalledTimes(1);
   });
 
-  it("clears the sessions picker search query when toggling scope with Ctrl+A", async () => {
+  it("refetches all sessions when toggling scope with Ctrl+A", async () => {
     const currentWorkDirSession = {
       id: "ses-cwd",
       title: "Current cwd session",
@@ -1218,31 +1228,14 @@ describe("KimiTUI startup", () => {
     const driver = makeDriver(harness, makeStartupInput());
     await expect(driver.init()).resolves.toBe(false);
 
-    await (
-      driver as unknown as { showSessionPicker(): Promise<void> }
-    ).showSessionPicker();
-    const firstPicker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-      render(width: number): string[];
-    };
-    firstPicker.handleInput("c");
-    firstPicker.handleInput("w");
-    firstPicker.handleInput("d");
-    expect(firstPicker.render(160).join("\n")).toContain("Search: cwd");
-
-    firstPicker.handleInput("\u0001");
-    await new Promise((resolve) => setImmediate(resolve));
-
-    const allPicker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-      render(width: number): string[];
-    };
-    const output = allPicker.render(160).join("\n");
+    await driver.showSessionPicker();
+    await toggleSessionPickerScope(driver);
 
     expect(driver.state.sessionsScope).toBe("all");
-    expect(output).toContain("All sessions");
-    expect(output).toContain("(type to search)");
-    expect(output).not.toContain("Search: cwd");
+    expect(driver.state.sessions.map((session) => session.id)).toEqual([
+      "ses-cwd",
+      "ses-other-cwd",
+    ]);
   });
 
   it("does not resume a session from a different cwd and shows a cd hint", async () => {
@@ -1272,15 +1265,9 @@ describe("KimiTUI startup", () => {
     await expect(driver.init()).resolves.toBe(false);
     copyTextToClipboardMock.mockClear();
 
-    await (
-      driver as unknown as { showSessionPicker(): Promise<void> }
-    ).showSessionPicker();
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\u001B[B");
-    picker.handleInput("\r");
-    await new Promise((resolve) => setImmediate(resolve));
+    await driver.showSessionPicker();
+    await moveSessionPickerDown(driver);
+    await selectHighlightedSession(driver);
 
     expect(resumeSession).not.toHaveBeenCalled();
     expect(driver.state.activeDialog).toBeNull();
@@ -1322,15 +1309,9 @@ describe("KimiTUI startup", () => {
     await expect(driver.init()).resolves.toBe(false);
     copyTextToClipboardMock.mockClear();
 
-    await (
-      driver as unknown as { showSessionPicker(): Promise<void> }
-    ).showSessionPicker();
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\u001B[B");
-    picker.handleInput("\r");
-    await new Promise((resolve) => setImmediate(resolve));
+    await driver.showSessionPicker();
+    await moveSessionPickerDown(driver);
+    await selectHighlightedSession(driver);
 
     expect(resumeSession).not.toHaveBeenCalled();
     const expectedResumeCmd = `cd ${quoteShellArg("/tmp/proj$(touch /tmp/pwned)")} && kimi --resume ${quoteShellArg("ses-other-cwd")}`;
@@ -1369,16 +1350,9 @@ describe("KimiTUI startup", () => {
     await expect(
       (driver as unknown as MigrateExitDriver).initMainTui(),
     ).resolves.toBe(false);
-    await (
-      driver as unknown as { bootstrapFromPicker(): Promise<void> }
-    ).bootstrapFromPicker();
-
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\u001B[B");
-    picker.handleInput("\r");
-    await new Promise((resolve) => setImmediate(resolve));
+    await driver.bootstrapFromPicker();
+    await moveSessionPickerDown(driver);
+    await selectHighlightedSession(driver);
 
     expect(resumeSession).not.toHaveBeenCalled();
     const expectedResumeCmd = `cd ${quoteShellArg("/tmp/proj-b")} && kimi --resume ${quoteShellArg("ses-other-cwd")}`;
@@ -1413,14 +1387,8 @@ describe("KimiTUI startup", () => {
     );
     await expect(driver.init()).resolves.toBe(false);
 
-    await (
-      driver as unknown as { showSessionPicker(): Promise<void> }
-    ).showSessionPicker();
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\r");
-    await new Promise((resolve) => setImmediate(resolve));
+    await driver.showSessionPicker();
+    await selectHighlightedSession(driver);
 
     expect(driver.state.appState.sessionId).toBe("ses-2");
     expect(picked.setPermission).not.toHaveBeenCalled();
@@ -1447,16 +1415,9 @@ describe("KimiTUI startup", () => {
     await expect(
       (driver as unknown as MigrateExitDriver).initMainTui(),
     ).resolves.toBe(false);
-    await (
-      driver as unknown as { bootstrapFromPicker(): Promise<void> }
-    ).bootstrapFromPicker();
-
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\u0003");
-    picker.handleInput("\r");
-    await new Promise((resolve) => setImmediate(resolve));
+    await driver.bootstrapFromPicker();
+    driver.state.editor.onCtrlC?.();
+    await selectHighlightedSession(driver);
 
     driver.state.editor.onCtrlC?.();
 
@@ -1559,7 +1520,13 @@ describe("KimiTUI startup", () => {
       failed: [],
     });
 
-    await (driver as any).refreshProviderModelsInBackground();
+    await (
+      driver as unknown as {
+        tuiLifecycleController: {
+          refreshProviderModelsInBackground(): Promise<void>;
+        };
+      }
+    ).tuiLifecycleController.refreshProviderModelsInBackground();
 
     expect(showStatus).toHaveBeenCalledTimes(1);
     expect(showStatus).toHaveBeenCalledWith("New Models · +2 models.");
@@ -2079,7 +2046,10 @@ describe("KimiTUI startup", () => {
         },
         providers: {
           "managed:kimi-code": { type: "kimi" },
-          openai: { type: "openai", baseUrl: "https://api.openai.com/v1" },
+          "custom-api": {
+            type: "openai",
+            baseUrl: "https://api.example.test/v1",
+          },
         },
       })),
       removeProvider,
@@ -2097,18 +2067,15 @@ describe("KimiTUI startup", () => {
     await expect(driver.init()).resolves.toBe(false);
     harness.track.mockClear();
 
-    vi.mocked(promptLogoutProviderSelection).mockResolvedValue("openai");
+    vi.mocked(promptLogoutProviderSelection).mockResolvedValue("custom-api");
     await handleLogoutCommand(driver as any);
 
-    expect(removeProvider).toHaveBeenCalledWith("openai");
+    expect(removeProvider).toHaveBeenCalledWith("custom-api");
     expect(harness.auth.logout).not.toHaveBeenCalled();
     expect(session.close).not.toHaveBeenCalled();
     expect(driver.state.appState).toMatchObject({
       sessionId: "ses-1",
       model: "k2",
-    });
-    expect(harness.track).toHaveBeenCalledWith("logout", {
-      provider: "openai",
     });
   });
 

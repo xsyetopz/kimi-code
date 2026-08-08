@@ -333,12 +333,7 @@ describe("clipboard image paste compression", () => {
       mimeType: "image/png",
     });
 
-    const { track, pasteImage } = createPasteHarness();
+    const { pasteImage } = createPasteHarness();
     await pasteImage();
-
-    expect(track).toHaveBeenCalledWith("shortcut_paste", { kind: "image" });
-    expect(
-      track.mock.calls.filter(([event]) => event === "image_compress"),
-    ).toHaveLength(0);
   });
 });

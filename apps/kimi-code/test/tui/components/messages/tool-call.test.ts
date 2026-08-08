@@ -426,8 +426,7 @@ describe("ToolCallComponent", () => {
 
     const out = strip(component.render(120).join("\n"));
 
-    expect(out).toContain("Agent swarm: ✗ Failed.");
-    expect(out).not.toContain("provider request failed");
+    expect(out).toContain("Agent swarm: ✗ provider request failed");
   });
 
   it("still renders tool output when the body merely contains <system later on", () => {

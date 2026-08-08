@@ -43,12 +43,13 @@ function makeStartupInput(): KimiTUIStartupInput {
 function makeHarness() {
   return {
     getConfig: vi.fn(async () => ({})),
+    getExperimentalFeatures: vi.fn(async () => []),
     createSession: vi.fn(),
     resumeSession: vi.fn(),
     listSessions: vi.fn(async () => []),
     close: vi.fn(async () => {}),
     track: vi.fn(),
-        auth: {
+    auth: {
       status: vi.fn(async () => ({ providers: [] })),
       login: vi.fn(),
       logout: vi.fn(),
@@ -390,9 +391,9 @@ describe("KimiTUI signal handlers", () => {
     // listeners we installed up front get cleaned up before the throw escapes.
     vi.spyOn(
       tui.tuiLifecycleController as unknown as {
-        initMainTui(): Promise<boolean>;
+        initMainTuiInternal(): Promise<boolean>;
       },
-      "initMainTui",
+      "initMainTuiInternal",
     ).mockRejectedValue(new Error("init boom"));
     // Stub state.ui.stop so the failure-path cleanup does not touch the real
     // event loop.

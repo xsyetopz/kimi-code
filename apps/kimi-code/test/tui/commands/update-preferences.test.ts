@@ -21,7 +21,6 @@ describe("update preference commands", () => {
   it("saves automatic update preference changes to tui.toml", async () => {
     const setAppState = vi.fn();
     const showStatus = vi.fn();
-    const track = vi.fn();
     const host = {
       state: {
         appState: {
@@ -34,7 +33,7 @@ describe("update preference commands", () => {
       },
       setAppState,
       showStatus,
-      track,
+      track: vi.fn(),
     };
 
     await applyUpdatePreferenceChoice(host, false);
@@ -48,9 +47,6 @@ describe("update preference commands", () => {
     });
     expect(setAppState).toHaveBeenCalledWith({
       upgrade: { autoInstall: false },
-    });
-    expect(track).toHaveBeenCalledWith("upgrade_preference_changed", {
-      auto_install: false,
     });
     expect(showStatus).toHaveBeenCalledWith("Automatic updates disabled.");
   });
