@@ -1,0 +1,42 @@
+{
+  "name": "@kimi-next/cli",
+  "version": "0.0.1",
+  "private": true,
+  "description": "kimi-next CLI and TUI host",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "kimi-next": "./src/main.ts"
+  },
+  "imports": {
+    "#/*": "./src/*.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/main.ts",
+    "start": "bun run src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "build": "echo 'bun binary; no emit'",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "dependencies": {
+    "@kimi-next/adapters": "workspace:*",
+    "@kimi-next/agent": "workspace:*",
+    "@kimi-next/auth": "workspace:*",
+    "@kimi-next/discover": "workspace:*",
+    "@kimi-next/exec": "workspace:*",
+    "@kimi-next/ext": "workspace:*",
+    "@kimi-next/ir": "workspace:*",
+    "@kimi-next/model": "workspace:*",
+    "@kimi-next/session": "workspace:*",
+    "@kimi-next/tui": "workspace:*",
+    "ink": "6",
+    "react": "19"
+  },
+  "devDependencies": {
+    "@types/react": "19"
+  }
+}
