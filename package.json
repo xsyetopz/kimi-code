@@ -1,52 +1,35 @@
 {
-  "name": "@moonshot-ai/monorepo",
-  "version": "0.1.1",
+  "name": "@kimi-next/monorepo",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",
   "workspaces": [
     "packages/*",
-    "apps/*",
-    "docs"
+    "apps/*"
   ],
   "scripts": {
-    "build": "bun run build:packages && bun run --cwd apps/kimi-code build",
-    "build:packages": "for d in packages/*; do [ -f \"$d/package.json\" ] || continue; (cd \"$d\" && bun run build) || exit 1; done",
-    "dev:cli": "bun run --cwd apps/kimi-code dev",
-    "dev:cli:marketplace": "KIMI_CODE_DEV_MARKETPLACE_URL=https://code.kimi.com/kimi-code/plugins/marketplace.json bun run --cwd apps/kimi-code dev",
-    "build:plugin-marketplace": "bun run --cwd apps/kimi-code build:plugin-marketplace",
-    "typecheck": "for d in packages/* apps/kimi-code; do [ -f \"$d/package.json\" ] || continue; (cd \"$d\" && bun run typecheck) || exit 1; done",
-    "format": "biome format --write .",
-    "lint:pkg": "bun run --cwd apps/kimi-code exec publint && bun run --cwd apps/kimi-code exec attw --pack . --profile node16",
+    "dev": "bun run --cwd apps/kimi-next dev",
+    "start": "bun run --cwd apps/kimi-next start",
+    "typecheck": "for d in packages/ir packages/discover packages/model packages/adapters packages/session packages/exec packages/bash-parse packages/ext packages/auth packages/agent packages/tui apps/kimi-next; do (cd \"$d\" && bun run typecheck) || exit 1; done",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:loc": "node scripts/check-loc.mjs",
+    "check:arch": "node scripts/audit-kimi-next.mjs",
+    "check": "bun run check:boundaries && bun run check:loc && bun run check:arch",
+    "format": "biome format --write .",
     "clean": "for d in packages/* apps/*; do [ -f \"$d/package.json\" ] || continue; (cd \"$d\" && bun run clean) 2>/dev/null || true; done",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "version:release": "changeset version"
+    "changeset": "changeset"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "0.18.2",
     "@biomejs/biome": "2.5.7",
-    "@changesets/changelog-github": "0.7.0",
     "@changesets/cli": "2.30.0",
-    "@microsoft/api-extractor": "7.58.7",
     "@types/node": "^22.15.3",
-    "@vitest/coverage-v8": "4.1.4",
     "bun-types": "^1.3.14",
-    "lint-staged": "16.4.0",
-    "pkg-pr-new": "0.0.75",
-    "publint": "0.3.18",
     "tsdown": "0.22.0",
     "typescript": "6.0.3",
     "vitest": "4.1.4"
-  },
-  "overrides": {},
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc}": [
-      "biome format --write --no-errors-on-unmatched"
-    ]
   },
   "packageManager": "bun@1.3.14"
 }

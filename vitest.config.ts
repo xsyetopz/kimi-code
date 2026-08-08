@@ -2,12 +2,18 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    projects: ["packages/*", "apps/kimi-code"],
-    coverage: {
-      provider: "v8",
-      include: ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"],
-      exclude: ["**/*.test.ts", "**/*.spec.ts", "**/dist/**"],
-      reporter: ["text", "html"],
-    },
+    projects: [
+      "packages/ir",
+      "packages/discover",
+      "packages/model",
+      "packages/adapters",
+      "packages/session",
+      "packages/exec",
+      "packages/agent",
+      "packages/ext",
+      "packages/auth",
+      "packages/tui",
+      "apps/kimi-next",
+    ],
   },
 });

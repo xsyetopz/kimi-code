@@ -1,64 +1,15 @@
-.PHONY: prepare build typecheck lint lint-fix lint-pkg test test-watch test-coverage clean changeset version publish release dev vis
+# kimi-next Makefile
 
-## Setup
+.PHONY: test typecheck check help
 
-prepare:
-	bun install
+help:
+	@echo "make test | typecheck | check | help"
 
-## Build
-
-build:
-	bun run build
-
-## Quality
+test:
+	bunx vitest run
 
 typecheck:
 	bun run typecheck
 
-lint:
-	bun run lint
-
-lint-fix:
-	bun run lint:fix
-
-lint-pkg:
-	bun run lint:pkg
-
-## Test
-
-test:
-	bun run test
-
-test-watch:
-	bun run test:watch
-
-test-coverage:
-	bun run test:coverage
-
-## Clean
-
-clean:
-	bun run clean
-
-## Release
-
-changeset:
-	bun run changeset
-
-version:
-	bun run version
-
-publish:
-	bun run publish
-
-release: version publish
-
-## Development
-
-dev:
-	bun run dev:cli
-
-## vis
-
-vis:
-	bun run vis
+check:
+	bun run check
