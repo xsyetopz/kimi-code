@@ -20,8 +20,12 @@ export type PromptEditorAction =
   | { readonly type: "insert"; readonly text: string }
   | { readonly type: "backspace" }
   | { readonly type: "delete" }
+  | { readonly type: "delete-to-line-start" }
+  | { readonly type: "delete-word-backward" }
   | { readonly type: "move-left" }
   | { readonly type: "move-right" }
+  | { readonly type: "move-word-left" }
+  | { readonly type: "move-word-right" }
   | { readonly type: "move-up" }
   | { readonly type: "move-down" }
   | { readonly type: "move-home" }
@@ -94,12 +98,36 @@ export function reducePromptEditor(
         state.text.slice(0, state.cursor) + state.text.slice(state.cursor + 1);
       return resetCompletion({ ...state, text });
     }
+    case "delete-to-line-start": {
+      const lineStart = state.text.lastIndexOf("\n", state.cursor - 1) + 1;
+      if (state.cursor <= lineStart) return state;
+      const text =
+        state.text.slice(0, lineStart) + state.text.slice(state.cursor);
+      return resetCompletion({ ...state, text, cursor: lineStart });
+    }
+    case "delete-word-backward": {
+      if (state.cursor === 0) return state;
+      const deleteFrom = findWordBoundaryLeft(state.text, state.cursor);
+      const text =
+        state.text.slice(0, deleteFrom) + state.text.slice(state.cursor);
+      return resetCompletion({ ...state, text, cursor: deleteFrom });
+    }
     case "move-left":
       return { ...state, cursor: Math.max(0, state.cursor - 1) };
     case "move-right":
       return {
         ...state,
         cursor: Math.min(state.text.length, state.cursor + 1),
+      };
+    case "move-word-left":
+      return {
+        ...state,
+        cursor: findWordBoundaryLeft(state.text, state.cursor),
+      };
+    case "move-word-right":
+      return {
+        ...state,
+        cursor: findWordBoundaryRight(state.text, state.cursor),
       };
     case "move-up":
       return moveVertical(state, -1);
@@ -157,7 +185,27 @@ export function reducePromptEditor(
       };
       return next;
     }
+    default: {
+      const _exhaustive: never = action;
+      return _exhaustive;
+    }
   }
+}
+
+function findWordBoundaryLeft(text: string, cursor: number): number {
+  if (cursor <= 0) return 0;
+  let index = cursor;
+  while (index > 0 && /\s/u.test(text[index - 1]!)) index -= 1;
+  while (index > 0 && !/\s/u.test(text[index - 1]!)) index -= 1;
+  return index;
+}
+
+function findWordBoundaryRight(text: string, cursor: number): number {
+  if (cursor >= text.length) return text.length;
+  let index = cursor;
+  while (index < text.length && !/\s/u.test(text[index]!)) index += 1;
+  while (index < text.length && /\s/u.test(text[index]!)) index += 1;
+  return index;
 }
 
 function historyMove(

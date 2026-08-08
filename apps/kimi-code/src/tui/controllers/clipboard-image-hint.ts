@@ -1,13 +1,16 @@
 import type { TUI } from "@moonshot-ai/kimi-tui";
-
+import {
+  TERMINAL_FOCUS_IN,
+  TERMINAL_FOCUS_IN_NO_ESC,
+  TERMINAL_FOCUS_OUT,
+  TERMINAL_FOCUS_OUT_NO_ESC,
+} from "#/tui/constant/terminal";
 import { clipboardHasImage } from "#/utils/clipboard/clipboard-has-image";
-
+import type { FooterComponent } from "../components/chrome/footer";
 import {
   FOCUS_DEBOUNCE_MS,
   HINT_DISPLAY_MS,
 } from "../constant/clipboard-image-hint";
-import { TERMINAL_FOCUS_IN, TERMINAL_FOCUS_OUT } from "../utils/terminal-focus";
-import type { FooterComponent } from "../components/chrome/footer";
 
 export interface ClipboardImageHintHost {
   readonly ui: TUI;
@@ -63,12 +66,12 @@ export class ClipboardImageHintController {
   }
 
   private handleInput(data: string): void {
-    if (data === TERMINAL_FOCUS_IN) {
+    if (data === TERMINAL_FOCUS_IN || data === TERMINAL_FOCUS_IN_NO_ESC) {
       this.focused = true;
       this.scheduleCheck();
       return;
     }
-    if (data === TERMINAL_FOCUS_OUT) {
+    if (data === TERMINAL_FOCUS_OUT || data === TERMINAL_FOCUS_OUT_NO_ESC) {
       this.focused = false;
       this.clearDebounceTimer();
       return;

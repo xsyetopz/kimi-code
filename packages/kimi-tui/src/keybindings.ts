@@ -73,12 +73,20 @@ export const TUI_KEYBINDINGS = {
     defaultKeys: ["alt+right", "ctrl+right", "alt+f"],
     description: "Move cursor word right",
   },
+  "tui.editor.deleteToLineStart": {
+    defaultKeys: ["ctrl+u", "super+backspace"],
+    description: "Delete to line start",
+  },
+  "tui.editor.deleteToLineEnd": {
+    defaultKeys: "ctrl+k",
+    description: "Delete to line end",
+  },
   "tui.editor.cursorLineStart": {
-    defaultKeys: ["home", "ctrl+a"],
+    defaultKeys: ["home", "ctrl+a", "super+left"],
     description: "Move to line start",
   },
   "tui.editor.cursorLineEnd": {
-    defaultKeys: ["end", "ctrl+e"],
+    defaultKeys: ["end", "ctrl+e", "super+right"],
     description: "Move to line end",
   },
   "tui.editor.jumpForward": {
@@ -106,14 +114,6 @@ export const TUI_KEYBINDINGS = {
   "tui.editor.deleteWordForward": {
     defaultKeys: ["alt+d", "alt+delete"],
     description: "Delete word forward",
-  },
-  "tui.editor.deleteToLineStart": {
-    defaultKeys: "ctrl+u",
-    description: "Delete to line start",
-  },
-  "tui.editor.deleteToLineEnd": {
-    defaultKeys: "ctrl+k",
-    description: "Delete to line end",
   },
   "tui.editor.yank": { defaultKeys: "ctrl+y", description: "Yank" },
   "tui.editor.yankPop": { defaultKeys: "alt+y", description: "Yank pop" },

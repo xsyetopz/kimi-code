@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-
+import { routePromptEditorInput } from "#/tui/renderer/prompt-editor-input";
 import {
   createPromptEditorState,
   promptEditorLineColumn,
   reducePromptEditor,
 } from "#/tui/renderer/prompt-editor-state";
-import { routePromptEditorInput } from "#/tui/renderer/prompt-editor-input";
 
 function apply(
   text: string,
@@ -100,5 +99,37 @@ describe("routePromptEditorInput", () => {
       type: "semantic",
       action: "paste-image",
     });
+  });
+
+  it("routes macOS Cmd/Option editing chords", () => {
+    const state = createPromptEditorState({ text: "hello world", cursor: 11 });
+    expect(routePromptEditorInput(state, "\u001b[127;9u")).toEqual({
+      type: "action",
+      action: { type: "delete-to-line-start" },
+    });
+    expect(routePromptEditorInput(state, "\u001b\u007f")).toEqual({
+      type: "action",
+      action: { type: "delete-word-backward" },
+    });
+    expect(routePromptEditorInput(state, "\u001b[1;9D")).toEqual({
+      type: "action",
+      action: { type: "move-home" },
+    });
+    expect(routePromptEditorInput(state, "\u001b[1;3D")).toEqual({
+      type: "action",
+      action: { type: "move-word-left" },
+    });
+
+    const cleared = reducePromptEditor(state, {
+      type: "delete-to-line-start",
+    });
+    expect(cleared.text).toBe("");
+    expect(cleared.cursor).toBe(0);
+
+    const wordDeleted = reducePromptEditor(state, {
+      type: "delete-word-backward",
+    });
+    expect(wordDeleted.text).toBe("hello ");
+    expect(wordDeleted.cursor).toBe(6);
   });
 });

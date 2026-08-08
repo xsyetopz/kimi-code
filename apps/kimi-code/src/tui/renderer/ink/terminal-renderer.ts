@@ -1,8 +1,7 @@
 import { type Instance, type RenderOptions, render } from "ink";
 import { createElement } from "react";
-
-import { InkTerminalView, type InkTerminalViewProps } from "./terminal-view";
 import type { TerminalViewState } from "../terminal-view-state";
+import { InkTerminalView, type InkTerminalViewProps } from "./terminal-view";
 
 export interface InkTerminalRenderer {
   update(view: TerminalViewState): void;
@@ -33,12 +32,22 @@ export function mountInkTerminalRenderer(
   };
   // KimiTUI handles Ctrl+C itself (including the double-Esc/exit policy), so
   // Ink must not terminate the process before dispatching that input.
+  // Kitty keyboard protocol is required for macOS Cmd (super) chords such as
+  // Cmd+Backspace; without it Ink never sets key.super.
   const instance = render(node(initialView), {
     ...renderOptions,
     exitOnCtrlC: false,
     interactive:
       renderOptions?.interactive ??
       (process.stdin.isTTY === true && process.stdout.isTTY === true),
+    kittyKeyboard: renderOptions.kittyKeyboard ?? {
+      mode: "auto",
+      flags: [
+        "disambiguateEscapeCodes",
+        "reportEventTypes",
+        "reportAlternateKeys",
+      ],
+    },
   });
   return {
     update(view: TerminalViewState): void {

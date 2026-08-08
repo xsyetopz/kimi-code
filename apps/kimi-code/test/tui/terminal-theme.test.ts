@@ -1,19 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { TUIState } from "#/tui/kimi-tui";
-import { darkColors, lightColors } from "#/tui/theme/colors";
 import { getBuiltInPalette } from "#/tui/theme";
+import { darkColors, lightColors } from "#/tui/theme/colors";
 import {
+  createTerminalThemeInputState,
   DISABLE_TERMINAL_THEME_REPORTING,
   ENABLE_TERMINAL_THEME_REPORTING,
+  handleTerminalThemeInput,
+  hasTerminalThemeReport,
+  installTerminalThemeTracking,
   OSC11_QUERY,
   QUERY_TERMINAL_THEME,
   TERMINAL_THEME_DARK,
   TERMINAL_THEME_LIGHT,
-  createTerminalThemeInputState,
-  hasTerminalThemeReport,
-  handleTerminalThemeInput,
-  installTerminalThemeTracking,
 } from "#/tui/utils/terminal-theme";
 
 type InputListener = Parameters<TUIState["ui"]["addInputListener"]>[0];
@@ -145,6 +145,29 @@ describe("terminal theme tracking", () => {
     });
     expect(onTheme).toHaveBeenCalledWith("dark");
     expect(inputState.osc11Buffer).toBe("");
+  });
+
+  it("consumes Ink-stripped OSC 11 and theme CSI reports", () => {
+    const terminal = { write: vi.fn() };
+    const onTheme = vi.fn();
+
+    expect(
+      handleTerminalThemeInput(
+        "]11;rgb:2828/2c2c/3434\u0007",
+        terminal,
+        onTheme,
+      ),
+    ).toEqual({ consume: true });
+    expect(onTheme).toHaveBeenCalledWith("dark");
+
+    expect(
+      handleTerminalThemeInput("]11;rgb:1414/1414/1414\\", terminal, onTheme),
+    ).toEqual({ consume: true });
+
+    expect(handleTerminalThemeInput("[?997;1n", terminal, onTheme)).toEqual({
+      consume: true,
+    });
+    expect(terminal.write).toHaveBeenCalledWith(OSC11_QUERY);
   });
 
   it("enables reporting, queries current theme, and disables on dispose", () => {

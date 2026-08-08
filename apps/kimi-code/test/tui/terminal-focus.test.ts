@@ -4,10 +4,10 @@ import type { TUIState } from "#/tui/kimi-tui";
 import {
   DISABLE_TERMINAL_FOCUS_REPORTING,
   ENABLE_TERMINAL_FOCUS_REPORTING,
-  TERMINAL_FOCUS_IN,
-  TERMINAL_FOCUS_OUT,
   handleTerminalFocusInput,
   installTerminalFocusTracking,
+  TERMINAL_FOCUS_IN,
+  TERMINAL_FOCUS_OUT,
 } from "#/tui/utils/terminal-focus";
 
 describe("terminal focus tracking", () => {
@@ -25,6 +25,22 @@ describe("terminal focus tracking", () => {
     expect(state.focused).toBe(true);
 
     expect(handleTerminalFocusInput(state, "x")).toBeUndefined();
+  });
+
+  it("consumes Ink-stripped focus reports and coalesced startup replies", () => {
+    const state = { focused: true };
+
+    expect(handleTerminalFocusInput(state, "[O")).toEqual({ consume: true });
+    expect(state.focused).toBe(false);
+
+    expect(handleTerminalFocusInput(state, "[I")).toEqual({ consume: true });
+    expect(state.focused).toBe(true);
+
+    expect(
+      handleTerminalFocusInput(state, "[I]11;rgb:1414/1414/1414\u0007[?997;1n"),
+    ).toEqual({ data: "]11;rgb:1414/1414/1414\u0007[?997;1n" });
+    // Do not eat ordinary user text that merely starts with "[I".
+    expect(handleTerminalFocusInput(state, "[Info]")).toBeUndefined();
   });
 
   it("enables focus reporting and removes the listener on dispose", () => {

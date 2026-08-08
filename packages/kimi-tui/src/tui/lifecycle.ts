@@ -36,6 +36,37 @@ export function removeInputListener(this: TUI, listener: InputListener): void {
   this.inputListeners.delete(listener);
 }
 
+/**
+ * Run registered input listeners without forwarding to the focused component.
+ * Used when Ink owns stdin: capability replies still need theme/focus handlers,
+ * but leftovers must go to the Ink prompt path rather than the legacy editor.
+ *
+ * Returns `{ consume: true }` when fully consumed, otherwise the remaining data.
+ */
+export function filterInput(
+  this: TUI,
+  data: string,
+): { consume: true } | { data: string } {
+  if (this.inputListeners.size === 0) {
+    return { data };
+  }
+
+  let current = data;
+  for (const listener of this.inputListeners) {
+    const result = listener(current);
+    if (result?.consume) {
+      return { consume: true };
+    }
+    if (result?.data !== undefined) {
+      current = result.data;
+    }
+  }
+  if (current.length === 0) {
+    return { consume: true };
+  }
+  return { data: current };
+}
+
 export function onTerminalColorSchemeChange(
   this: TUI,
   listener: (scheme: TerminalColorScheme) => void,

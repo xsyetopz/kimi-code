@@ -5,27 +5,27 @@ import {
   loadInputHistory,
 } from "#/utils/history/input-history";
 import { getInputHistoryFile } from "#/utils/paths";
-
-import * as slashCommands from "../commands/dispatch";
-import type { SlashCommandHost } from "../commands/dispatch";
 import type { KimiSlashCommand } from "../commands";
-import { LLM_NOT_SET_MESSAGE } from "../constant/kimi-tui";
+import type { SlashCommandHost } from "../commands/dispatch";
+import * as slashCommands from "../commands/dispatch";
 import { ShellRunComponent } from "../components/messages/shell-run";
+import { LLM_NOT_SET_MESSAGE } from "../constant/kimi-tui";
+import type { InkOverlayState } from "../renderer/ink/overlay-state";
 import {
-  routePromptEditorInput,
   type PromptSemanticAction,
+  routePromptEditorInput,
 } from "../renderer/prompt-editor-input";
 import {
   type PromptEditorAction,
   type PromptEditorState,
   reducePromptEditor,
 } from "../renderer/prompt-editor-state";
-import type { InkOverlayState } from "../renderer/ink/overlay-state";
 import { currentTheme } from "../theme";
 import type { AppState, ShellRunViewState, TranscriptEntry } from "../types";
 import { formatErrorMessage } from "../utils/event-payload";
 import type { ImageAttachmentStore } from "../utils/image-attachment-store";
 import { extractMediaAttachments } from "../utils/image-placeholder";
+import { drainInkTerminalInput } from "../utils/ink-input-drain";
 import { formatBashOutputForDisplay } from "../utils/shell-output";
 import { markTranscriptComponent } from "../utils/transcript-component-metadata";
 import { nextTranscriptId } from "../utils/transcript-id";
@@ -83,6 +83,13 @@ export class PromptInputController {
 
   /** Route normal prompt input through the renderer-neutral editor model. */
   handleInkInput(data: string): void {
+    // Ink owns stdin and strips ESC from unrecognized CSI/OSC replies.
+    // Drain theme/focus/OSC capability replies through TUI listeners first so
+    // they never land in the prompt buffer as literal text.
+    const drained = drainInkTerminalInput(data, this.host.state.ui);
+    if (drained === null) return;
+    data = drained;
+
     if (this.host.inkOverlay.approvalPreviewBlock !== null) {
       if (this.host.inkDialogsController.handleApprovalPreviewInput(data))
         return;

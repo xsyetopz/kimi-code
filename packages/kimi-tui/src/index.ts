@@ -74,6 +74,11 @@ export {
   parseKey,
   setKittyProtocolActive,
 } from "./keys.ts";
+// macOS native modifier polling (Cmd/Option/Shift) for terminals that omit them
+export {
+  isNativeModifierPressed,
+  type ModifierKey,
+} from "./native-modifiers.ts";
 // Input buffering for batch splitting
 export {
   StdinBuffer,

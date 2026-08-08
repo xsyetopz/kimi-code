@@ -13,6 +13,7 @@ import {
 import {
   addInputListener,
   dispatchInput,
+  filterInput,
   onTerminalColorSchemeChange,
   queryTerminalBackgroundColor,
   queryTerminalColorScheme,
@@ -168,6 +169,7 @@ export class TUI extends Container {
   start = start;
   addInputListener = addInputListener;
   removeInputListener = removeInputListener;
+  filterInput = filterInput;
   onTerminalColorSchemeChange = onTerminalColorSchemeChange;
   setTerminalColorSchemeNotifications = setTerminalColorSchemeNotifications;
   queryCellSize = queryCellSize;

@@ -46,6 +46,19 @@ export function routePromptEditorInput(
     }
     return { type: "action", action: { type: "backspace" } };
   }
+  // Cmd/super+Backspace (Kitty) and Ctrl+U — delete to start of current line.
+  if (data === "\u001b[127;9u" || data === "\u0015") {
+    return { type: "action", action: { type: "delete-to-line-start" } };
+  }
+  // Option/alt+Backspace and Ctrl+W — delete previous word.
+  if (
+    data === "\u001b\u007f" ||
+    data === "\u001b\b" ||
+    data === "\u0017" ||
+    data === "\u001b[127;3u"
+  ) {
+    return { type: "action", action: { type: "delete-word-backward" } };
+  }
   if (data === "\u0004") {
     return state.text.length === 0
       ? { type: "semantic", action: "ctrl-d" }
@@ -89,10 +102,19 @@ export function routePromptEditorInput(
     return { type: "action", action: { type: "move-right" } };
   if (data === "\u001b[D")
     return { type: "action", action: { type: "move-left" } };
-  if (data === "\u001b[H")
+  // Cmd/super+Left/Right → line edges; Option/alt/ctrl+Left/Right → word hops.
+  if (data === "\u001b[1;9D" || data === "\u001b[H") {
     return { type: "action", action: { type: "move-home" } };
-  if (data === "\u001b[F")
+  }
+  if (data === "\u001b[1;9C" || data === "\u001b[F") {
     return { type: "action", action: { type: "move-end" } };
+  }
+  if (data === "\u001b[1;3D" || data === "\u001b[1;5D" || data === "\u001bb") {
+    return { type: "action", action: { type: "move-word-left" } };
+  }
+  if (data === "\u001b[1;3C" || data === "\u001b[1;5C" || data === "\u001bf") {
+    return { type: "action", action: { type: "move-word-right" } };
+  }
   if (data === "\u001b[3~")
     return { type: "action", action: { type: "delete" } };
   if (data === "\t") {

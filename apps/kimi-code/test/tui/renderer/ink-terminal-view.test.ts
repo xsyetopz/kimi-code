@@ -8,24 +8,24 @@ vi.mock("ink", async () => {
   return { ...actual, render: inkRender };
 });
 
-import { renderToString } from "ink";
 import { visibleWidth } from "@moonshot-ai/kimi-tui";
+import { renderToString } from "ink";
 
 import {
   InkDialogView,
   projectInkHelpLines,
 } from "#/tui/renderer/ink/terminal-dialog";
+import type { InkTerminalRenderer } from "#/tui/renderer/ink/terminal-renderer";
+import { mountInkTerminalRenderer as mountRenderer } from "#/tui/renderer/ink/terminal-renderer";
 import {
-  InkTerminalView,
   encodeInkInput,
+  InkTerminalView,
+  projectInkActivity,
   projectInkChrome,
   projectInkEditor,
-  projectInkActivity,
   projectInkQueue,
   projectInkTranscript,
 } from "#/tui/renderer/ink/terminal-view";
-import type { InkTerminalRenderer } from "#/tui/renderer/ink/terminal-renderer";
-import { mountInkTerminalRenderer as mountRenderer } from "#/tui/renderer/ink/terminal-renderer";
 import {
   createTerminalViewState,
   type TerminalViewState,
@@ -204,6 +204,19 @@ describe("InkTerminalView", () => {
     expect(encodeInkInput("c", key({ ctrl: true }))).toBe("\u0003");
     expect(encodeInkInput("x", key({ meta: true }))).toBe("\u001bx");
     expect(encodeInkInput("hello", key())).toBe("hello");
+    expect(encodeInkInput("", key({ backspace: true }))).toBe("\u007f");
+    expect(encodeInkInput("", key({ backspace: true, super: true }))).toBe(
+      "\u001b[127;9u",
+    );
+    expect(encodeInkInput("", key({ backspace: true, meta: true }))).toBe(
+      "\u001b\u007f",
+    );
+    expect(encodeInkInput("", key({ leftArrow: true, super: true }))).toBe(
+      "\u001b[1;9D",
+    );
+    expect(encodeInkInput("", key({ rightArrow: true, meta: true }))).toBe(
+      "\u001b[1;3C",
+    );
   });
 
   it("renders transcript, activity, and queue projections in order", () => {

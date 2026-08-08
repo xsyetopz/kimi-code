@@ -1,19 +1,20 @@
-import { Box, Static, type Key, Text, useInput, useStdout } from "ink";
+import { isNativeModifierPressed } from "@moonshot-ai/kimi-tui";
+import { Box, type Key, Static, Text, useInput, useStdout } from "ink";
 import { createElement, type ReactNode, useEffect, useState } from "react";
 
 import { SELECT_POINTER } from "../../constant/symbols";
-import { InkDialogView } from "./components/dialogs/InkDialogView";
-import { InkApprovalPreview } from "./components/dialogs/InkApprovalPreview";
-import { InkFooter } from "./components/InkFooter";
-import { InkQueue } from "./components/InkQueue";
-import { splitInkTranscript } from "./transcript-split";
+import type { TranscriptEntry } from "../../types";
 import type {
   TerminalActivityView,
   TerminalQueueView,
   TerminalViewState,
 } from "../terminal-view-state";
-import type { TranscriptEntry } from "../../types";
+import { InkApprovalPreview } from "./components/dialogs/InkApprovalPreview";
+import { InkDialogView } from "./components/dialogs/InkDialogView";
+import { InkFooter } from "./components/InkFooter";
+import { InkQueue } from "./components/InkQueue";
 import { TranscriptEntryView } from "./components/TranscriptEntry";
+import { splitInkTranscript } from "./transcript-split";
 
 export type InkTranscriptProjection = TranscriptEntry;
 
@@ -142,16 +143,49 @@ function autocompleteIdentity(view: TerminalViewState): string {
  * input semantics in one place while the visual tree moves to React.
  */
 export function encodeInkInput(input: string, key: Key): string {
+  // Modifier chords must win over the bare special-key table. Ink reports
+  // Cmd as `super` (Kitty) and Option as `meta`; without this, Cmd+Backspace
+  // collapses to plain backspace and never reaches delete-to-line-start.
+  if (key.backspace) {
+    if (key.super || isNativeModifierPressed("command")) {
+      return "\u001b[127;9u"; // Cmd/super+backspace → delete to line start
+    }
+    if (key.meta || isNativeModifierPressed("option")) {
+      return "\u001b\u007f"; // Option/alt+backspace → delete word
+    }
+    if (key.ctrl) return "\u0008";
+    return "\u007f";
+  }
+  if (key.delete) {
+    if (key.super || isNativeModifierPressed("command")) return "\u001b[3;9~";
+    if (key.meta || isNativeModifierPressed("option")) return "\u001b[3;3~";
+    return "\u001b[3~";
+  }
+  if (key.leftArrow) {
+    if (key.super || isNativeModifierPressed("command")) return "\u001b[1;9D";
+    if (key.meta || isNativeModifierPressed("option")) return "\u001b[1;3D";
+    if (key.ctrl) return "\u001b[1;5D";
+    return "\u001b[D";
+  }
+  if (key.rightArrow) {
+    if (key.super || isNativeModifierPressed("command")) return "\u001b[1;9C";
+    if (key.meta || isNativeModifierPressed("option")) return "\u001b[1;3C";
+    if (key.ctrl) return "\u001b[1;5C";
+    return "\u001b[C";
+  }
+  if (key.upArrow) {
+    if (key.meta || key.super) return "\u001b[1;3A";
+    return "\u001b[A";
+  }
+  if (key.downArrow) {
+    if (key.meta || key.super) return "\u001b[1;3B";
+    return "\u001b[B";
+  }
+
   const special: ReadonlyArray<readonly [keyof Key, string]> = [
     ["return", key.shift ? "\n" : "\r"],
     ["escape", "\u001b"],
     ["tab", key.shift ? "\u001b[Z" : "\t"],
-    ["backspace", "\u007f"],
-    ["delete", "\u001b[3~"],
-    ["upArrow", "\u001b[A"],
-    ["downArrow", "\u001b[B"],
-    ["rightArrow", "\u001b[C"],
-    ["leftArrow", "\u001b[D"],
     ["home", "\u001b[H"],
     ["end", "\u001b[F"],
     ["pageUp", "\u001b[5~"],

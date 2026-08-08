@@ -6,13 +6,15 @@ import {
   OSC11_RESPONSE_PREFIX,
   OSC11_RESPONSE_PREFIX_NO_ESC,
   QUERY_TERMINAL_THEME,
-  TERMINAL_THEME_INPUT_BUFFER_MAX_LENGTH,
   TERMINAL_THEME_DARK,
+  TERMINAL_THEME_DARK_NO_ESC,
+  TERMINAL_THEME_INPUT_BUFFER_MAX_LENGTH,
   TERMINAL_THEME_LIGHT,
+  TERMINAL_THEME_LIGHT_NO_ESC,
 } from "#/tui/constant/terminal";
-import type { TUIState } from "#/tui/tui-state";
 import type { ResolvedTheme } from "#/tui/theme/colors";
 import { parseOsc11BackgroundTheme } from "#/tui/theme/terminal-background";
+import type { TUIState } from "#/tui/tui-state";
 
 export {
   DISABLE_TERMINAL_THEME_REPORTING,
@@ -23,10 +25,15 @@ export {
   TERMINAL_THEME_LIGHT,
 } from "#/tui/constant/terminal";
 
+const THEME_REPORTS = [
+  TERMINAL_THEME_DARK,
+  TERMINAL_THEME_LIGHT,
+  TERMINAL_THEME_DARK_NO_ESC,
+  TERMINAL_THEME_LIGHT_NO_ESC,
+] as const;
+
 export function hasTerminalThemeReport(data: string): boolean {
-  return (
-    data.includes(TERMINAL_THEME_DARK) || data.includes(TERMINAL_THEME_LIGHT)
-  );
+  return THEME_REPORTS.some((report) => data.includes(report));
 }
 
 export interface TerminalThemeInputState {
@@ -105,7 +112,7 @@ function stripTerminalThemeReports(
   let remaining = data;
   let strippedReport = false;
 
-  for (const report of [TERMINAL_THEME_DARK, TERMINAL_THEME_LIGHT]) {
+  for (const report of THEME_REPORTS) {
     if (!remaining.includes(report)) continue;
     remaining = remaining.split(report).join("");
     strippedReport = true;
