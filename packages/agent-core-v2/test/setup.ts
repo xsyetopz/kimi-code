@@ -1,3 +1,6 @@
+import { rmSync } from "node:fs";
+import { join } from "node:path";
+
 /**
  * Hermetic experimental-flag state for tests: scrub ambient
  * `KIMI_CODE_EXPERIMENTAL_*` env vars inherited from the developer shell
@@ -11,3 +14,7 @@ for (const key of Object.keys(process.env)) {
     delete process.env[key];
   }
 }
+
+// Strip leftover project-local config from interrupted runs so parallel suites
+// do not read corrupt `.kimi-code/local.toml` at the package root.
+rmSync(join(process.cwd(), ".kimi-code"), { recursive: true, force: true });

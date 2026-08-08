@@ -121,10 +121,12 @@ describe("AgentDateChangeService", () => {
   let clock: TestHostClock;
   let loop: IAgentLoopService;
   let profile: IAgentProfileService;
+  let workDir: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    workDir = await mkdtemp(join(tmpdir(), "kimi-date-change-"));
     clock = testHostClock(INITIAL_INSTANT);
-    ctx = createTestAgent(appService(IHostClock, clock));
+    ctx = createTestAgent({ cwd: workDir }, appService(IHostClock, clock));
     context = ctx.get(IAgentContextMemoryService);
     loop = ctx.get(IAgentLoopService);
     profile = ctx.get(IAgentProfileService);
@@ -135,6 +137,7 @@ describe("AgentDateChangeService", () => {
       await ctx.expectResumeMatches();
     } finally {
       await ctx.dispose();
+      await rm(workDir, { recursive: true, force: true });
     }
   });
 
@@ -222,7 +225,7 @@ describe("AgentDateChangeService", () => {
   it("injects on the first step when a persisted prompt crosses midnight before resume", async () => {
     const persistence = new InMemoryWireRecordPersistence();
     await ctx.dispose();
-    ctx = createTestAgent({ persistence }, appService(IHostClock, clock));
+    ctx = createTestAgent({ persistence, cwd: workDir }, appService(IHostClock, clock));
     profile = ctx.get(IAgentProfileService);
     updateSystemPromptWithDate(
       profile,
@@ -235,7 +238,7 @@ describe("AgentDateChangeService", () => {
 
     clock.set("2026-07-30T04:00:00.000Z");
     ctx = createTestAgent(
-      { autoConfigure: false, persistence },
+      { autoConfigure: false, persistence, cwd: workDir },
       appService(IHostClock, clock),
     );
     context = ctx.get(IAgentContextMemoryService);
@@ -254,7 +257,7 @@ describe("AgentDateChangeService", () => {
   it("seeds and announces after resuming a legacy profile without disclosure metadata", async () => {
     const persistence = new InMemoryWireRecordPersistence();
     await ctx.dispose();
-    ctx = createTestAgent({ persistence }, appService(IHostClock, clock));
+    ctx = createTestAgent({ persistence, cwd: workDir }, appService(IHostClock, clock));
     profile = ctx.get(IAgentProfileService);
     profile.applyBindingSnapshot({
       modelAlias: "mock-model",
@@ -272,7 +275,7 @@ describe("AgentDateChangeService", () => {
 
     clock.set("2026-07-30T04:00:00.000Z");
     ctx = createTestAgent(
-      { autoConfigure: false, persistence },
+      { autoConfigure: false, persistence, cwd: workDir },
       appService(IHostClock, clock),
     );
     context = ctx.get(IAgentContextMemoryService);

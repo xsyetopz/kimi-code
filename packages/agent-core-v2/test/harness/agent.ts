@@ -1,5 +1,7 @@
 import { EventEmitter } from "node:events";
-import { isAbsolute, relative, resolve } from "node:path";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { Readable, type Writable } from "node:stream";
 
 import { createControlledPromise } from "@antfu/utils";
@@ -250,6 +252,14 @@ import {
 } from "./snapshots";
 
 const TEST_HOME_DIR = "/home/test";
+
+function createHarnessHomeDir(): string {
+  return `/tmp/kimi-code-agent-app-v2-test-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function createHarnessWorkDir(): string {
+  return mkdtempSync(join(tmpdir(), "kimi-agent-workdir-"));
+}
 
 const MOCK_PROVIDER = {
   type: "kimi",
@@ -1162,7 +1172,10 @@ export class AgentTestContext {
   private suppressWireSnapshot = false;
   private pluginSessionStartRegistered = false;
   kimiConfig: KimiConfig;
-  private cwd = process.cwd();
+  private readonly harnessHomeDir = createHarnessHomeDir();
+  private readonly harnessWorkDir = createHarnessWorkDir();
+  private readonly ownsWorkDir: boolean;
+  private cwd: string;
   private closed = false;
 
   readonly snapshots = recordAgentEvents();
@@ -1181,7 +1194,13 @@ export class AgentTestContext {
     options: TestAgentOptions = {},
   ) {
     this.options = options;
-    if (options.cwd !== undefined) this.cwd = options.cwd;
+    if (options.cwd !== undefined) {
+      this.cwd = options.cwd;
+      this.ownsWorkDir = false;
+    } else {
+      this.cwd = this.harnessWorkDir;
+      this.ownsWorkDir = true;
+    }
     this.serviceOverrides = flattenServiceOverrides(overrides);
     this.emitter.on("error", () => {});
     this.kimiConfig = applyTestAgentOptionsToConfig(emptyConfig(), options);
@@ -1195,7 +1214,7 @@ export class AgentTestContext {
       [
         (reg) => {
           for (const [id, value] of bootstrapSeed({
-            homeDir: "/tmp/kimi-code-agent-app-v2-test",
+            homeDir: this.harnessHomeDir,
             cwd: this.cwd,
             osHomeDir: TEST_HOME_DIR,
             env: process.env,
@@ -1227,8 +1246,7 @@ export class AgentTestContext {
           reg.defineInstance(ILogService, createLogService(undefined));
           reg.defineInstance(ILogOptions, {
             level: "off",
-            globalLogPath:
-              "/tmp/kimi-code-agent-app-v2-test/logs/kimi-code.log",
+            globalLogPath: `${this.harnessHomeDir}/logs/kimi-code.log`,
             globalMaxBytes: 6 * 1024 * 1024,
             globalFiles: 1,
             sessionMaxBytes: 5 * 1024 * 1024,
@@ -2108,6 +2126,14 @@ export class AgentTestContext {
     }
     await this.closeWire();
     this.root.dispose();
+    try {
+      rmSync(this.harnessHomeDir, { recursive: true, force: true });
+      if (this.ownsWorkDir) {
+        rmSync(this.harnessWorkDir, { recursive: true, force: true });
+      }
+    } catch {
+      // Best-effort cleanup for isolated harness dirs.
+    }
   }
 
   async dispose(): Promise<void> {
