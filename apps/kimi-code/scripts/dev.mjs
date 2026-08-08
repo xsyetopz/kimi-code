@@ -143,23 +143,28 @@ function loadRepoDotenv(repoRoot, target) {
   }
 }
 
+function isBlankEnv(value) {
+  return value === undefined || value.trim().length === 0;
+}
+
 /**
  * Map SYNTHETIC_API_KEY from `.env` into the KIMI_MODEL_* overlay channel so
  * `bun run dev -- -p` can hit synthetic.new without editing config.toml.
+ *
+ * SYNTHETIC_API_KEY always wins for the API key: a stale or empty
+ * `KIMI_MODEL_API_KEY` in the shell must not block the dev overlay.
  */
 function applySyntheticDevModelEnv(target) {
   const syntheticKey = target.SYNTHETIC_API_KEY?.trim();
   if (syntheticKey === undefined || syntheticKey.length === 0) return;
-  if (target.KIMI_MODEL_API_KEY === undefined) {
-    target.KIMI_MODEL_API_KEY = syntheticKey;
-  }
-  if (target.KIMI_MODEL_NAME === undefined) {
+  target.KIMI_MODEL_API_KEY = syntheticKey;
+  if (isBlankEnv(target.KIMI_MODEL_NAME)) {
     target.KIMI_MODEL_NAME = "syn:large:text";
   }
-  if (target.KIMI_MODEL_BASE_URL === undefined) {
+  if (isBlankEnv(target.KIMI_MODEL_BASE_URL)) {
     target.KIMI_MODEL_BASE_URL = "https://api.synthetic.new/v1";
   }
-  if (target.KIMI_MODEL_PROVIDER_TYPE === undefined) {
+  if (isBlankEnv(target.KIMI_MODEL_PROVIDER_TYPE)) {
     target.KIMI_MODEL_PROVIDER_TYPE = "openai";
   }
 }
