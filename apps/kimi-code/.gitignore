@@ -1,5 +1,0 @@
-# Copied from packages/kimi-core at build time
-agents/
-
-# Copied from packages/pi-tui/native at build time by scripts/copy-native-assets.mjs
-/native/
