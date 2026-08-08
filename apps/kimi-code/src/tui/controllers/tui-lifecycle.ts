@@ -137,7 +137,7 @@ export class TuiLifecycleController {
         await this.host.maybeRunWorkspaceTrustPrompt();
       startupTrace("trustPrompt:end");
       startupTrace("initMainTui:begin");
-      const shouldReplayHistory = await this.initMainTui();
+      const shouldReplayHistory = await this.initMainTuiInternal();
       startupTrace("initMainTui:end");
       // Debug-only input→render latency overlay (KIMI_TUI_INPUT_LATENCY=1).
       if (process.env["KIMI_TUI_INPUT_LATENCY"])
@@ -149,7 +149,7 @@ export class TuiLifecycleController {
       try {
         this.startBackgroundFdAutocomplete();
         startupTrace("finishStartup:begin");
-        await this.finishStartup(shouldReplayHistory);
+        await this.finishStartupInternal(shouldReplayHistory);
         startupTrace("finishStartup:end");
       } catch (error) {
         this.disposeTerminalTracking();
@@ -238,7 +238,17 @@ export class TuiLifecycleController {
     return this.initSession();
   }
 
-  private async initMainTui(): Promise<boolean> {
+  /** @internal Test hook — post-init startup UI without the event loop. */
+  finishStartup(shouldReplayHistory: boolean): Promise<void> {
+    return this.finishStartupInternal(shouldReplayHistory);
+  }
+
+  /** @internal Test hook — session init plus footer/welcome mount without the event loop. */
+  initMainTui(): Promise<boolean> {
+    return this.initMainTuiInternal();
+  }
+
+  private async initMainTuiInternal(): Promise<boolean> {
     const shouldReplayHistory = await this.initSession();
 
     // Mount only after init() succeeds; see mountFooter().
@@ -388,7 +398,7 @@ export class TuiLifecycleController {
     }
   }
 
-  private async finishStartup(shouldReplayHistory: boolean): Promise<void> {
+  private async finishStartupInternal(shouldReplayHistory: boolean): Promise<void> {
     if (this.host.startupNotice !== undefined) {
       this.host.showStatus(this.host.startupNotice);
       this.host.startupNotice = undefined;

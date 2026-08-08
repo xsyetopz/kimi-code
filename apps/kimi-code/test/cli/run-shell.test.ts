@@ -179,12 +179,7 @@ describe("runShell", () => {
           productName: "kimi-code-cli",
           version: "1.2.3-test",
         }),
-        sessionStartedProperties: {
-          yolo: true,
-          auto: false,
-          plan: true,
-          afk: false,
-        },
+        homeDir: "/tmp/kimi-code-test-home",
       }),
     );
     expect(mocks.harnessEnsureConfigFile).toHaveBeenCalledOnce();

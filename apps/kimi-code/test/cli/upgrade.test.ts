@@ -84,7 +84,6 @@ function createDeps(
     promptForInstallChoice:
       overrides.promptForInstallChoice ?? vi.fn().mockResolvedValue("install"),
     installUpdate,
-    track: vi.fn(),
     logger: {
       info: vi.fn(),
       warn: vi.fn(),
@@ -118,28 +117,6 @@ describe("handleUpgrade", () => {
       "0.5.0",
       "darwin",
     );
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_prompted",
-      expect.objectContaining({
-        current_version: "0.4.0",
-        target_version: "0.5.0",
-        source: "npm-global",
-      }),
-    );
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_install_selected",
-      expect.objectContaining({
-        target_version: "0.5.0",
-        source: "npm-global",
-      }),
-    );
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_succeeded",
-      expect.objectContaining({
-        target_version: "0.5.0",
-        source: "npm-global",
-      }),
-    );
     expect(deps.logger.info).toHaveBeenCalledWith(
       "manual upgrade install succeeded",
       expect.objectContaining({
@@ -167,13 +144,6 @@ describe("handleUpgrade", () => {
 
     expect(deps.promptForInstallChoice).toHaveBeenCalledTimes(1);
     expect(deps.installUpdate).not.toHaveBeenCalled();
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_skipped",
-      expect.objectContaining({
-        target_version: "0.5.0",
-        source: "npm-global",
-      }),
-    );
     expect(stdout.join("")).toBe("");
   });
 
@@ -187,12 +157,6 @@ describe("handleUpgrade", () => {
 
     expect(deps.detectInstallSource).not.toHaveBeenCalled();
     expect(deps.installUpdate).not.toHaveBeenCalled();
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_no_update",
-      expect.objectContaining({
-        current_version: "0.4.0",
-      }),
-    );
     expect(stdout.join("")).toContain(
       "Kimi Code is already up to date (v0.4.0).",
     );
@@ -208,13 +172,6 @@ describe("handleUpgrade", () => {
 
     expect(deps.installUpdate).not.toHaveBeenCalled();
     expect(deps.promptForInstallChoice).not.toHaveBeenCalled();
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_manual_command",
-      expect.objectContaining({
-        target_version: "0.5.0",
-        source: "unsupported",
-      }),
-    );
     expect(stdout.join("")).toContain(
       "To update manually, run: npm install -g @moonshot-ai/kimi-code@0.5.0",
     );
@@ -234,13 +191,6 @@ describe("handleUpgrade", () => {
 
     expect(deps.promptForInstallChoice).not.toHaveBeenCalled();
     expect(deps.installUpdate).not.toHaveBeenCalled();
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_manual_command",
-      expect.objectContaining({
-        target_version: "0.5.0",
-        source: "npm-global",
-      }),
-    );
     expect(stdout.join("")).toContain(
       "To update manually, run: npm install -g @moonshot-ai/kimi-code@0.5.0",
     );
@@ -262,14 +212,6 @@ describe("handleUpgrade", () => {
 
     expect(stderr.join("")).toContain(
       "warning: failed to install @moonshot-ai/kimi-code@0.5.0: npm exited with code 1",
-    );
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_failed",
-      expect.objectContaining({
-        target_version: "0.5.0",
-        source: "npm-global",
-        stage: "install",
-      }),
     );
     expect(deps.logger.warn).toHaveBeenCalledWith(
       "manual upgrade install failed",
@@ -295,13 +237,6 @@ describe("handleUpgrade", () => {
 
     expect(deps.detectInstallSource).not.toHaveBeenCalled();
     expect(deps.installUpdate).not.toHaveBeenCalled();
-    expect(deps.track).toHaveBeenCalledWith(
-      "upgrade_command_failed",
-      expect.objectContaining({
-        current_version: "0.4.0",
-        stage: "refresh",
-      }),
-    );
     expect(stderr.join("")).toContain(
       "error: failed to check for updates: cdn unavailable",
     );

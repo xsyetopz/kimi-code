@@ -266,6 +266,16 @@ export class KimiTUI {
     return this.tuiLifecycleController.init();
   }
 
+  /** @internal Test hook — post-init startup UI without the event loop. */
+  finishStartup(shouldReplayHistory: boolean): Promise<void> {
+    return this.tuiLifecycleController.finishStartup(shouldReplayHistory);
+  }
+
+  /** @internal Test hook — session init plus footer/welcome mount without the event loop. */
+  initMainTui(): Promise<boolean> {
+    return this.tuiLifecycleController.initMainTui();
+  }
+
   private renderWelcome(): void {
     this.transcriptCoordinator.renderWelcome();
   }

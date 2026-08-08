@@ -48,6 +48,8 @@ const copyTextToClipboardMock = vi.mocked(copyTextToClipboard);
 interface StartupDriver {
   state: TUIState;
   init(): Promise<boolean>;
+  initMainTui(): Promise<boolean>;
+  finishStartup(shouldReplayHistory: boolean): Promise<void>;
   handleLoginCommand(): Promise<void>;
   handleLogoutCommand(): Promise<void>;
   stop(exitCode?: number): Promise<void>;

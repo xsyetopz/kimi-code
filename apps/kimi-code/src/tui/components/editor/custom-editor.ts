@@ -167,6 +167,11 @@ export class CustomEditor extends Editor {
         explicitTab,
       });
     };
+
+    const baseHandleInput = this.handleInput.bind(this);
+    this.handleInput = (data: string): void => {
+      this.handleCustomInput(data, baseHandleInput);
+    };
   }
 
   override setDisablePasteBurst(disabled: boolean): void {
@@ -291,7 +296,10 @@ export class CustomEditor extends Editor {
     return trailingSpace.length > 0 ? hint : ` ${hint}`;
   }
 
-  override handleInput(data: string): void {
+  private handleCustomInput(
+    data: string,
+    baseHandleInput: (input: string) => void,
+  ): void {
     const normalized = normalizeCapsLockedCtrl(data);
     if (isKeyRelease(normalized)) {
       return;
@@ -341,7 +349,7 @@ export class CustomEditor extends Editor {
         const handler = this.onPasteImage;
         const pasteAsText = (): void => {
           this.onTextPaste?.();
-          super.handleInput.call(this, normalized);
+          baseHandleInput(normalized);
         };
         void handler().then(
           (handled) => {
@@ -465,7 +473,7 @@ export class CustomEditor extends Editor {
 
     const emptyPromptBeforeInput =
       this.inputMode === "prompt" && this.getText().length === 0;
-    super.handleInput(normalized);
+    baseHandleInput(normalized);
 
     // Enter bash mode when `!...` is pasted into an empty prompt. The typed path
     // above handles the single `!` keystroke; this catches bracketed / Ctrl-V
