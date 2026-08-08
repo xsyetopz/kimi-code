@@ -1,0 +1,20 @@
+{
+  "name": "@kimi-next/discover",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Universal first-found project discovery",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  }
+}
